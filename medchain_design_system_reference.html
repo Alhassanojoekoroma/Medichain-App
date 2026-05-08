@@ -1,0 +1,155 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.wrap{padding:1rem 0;display:flex;flex-direction:column;gap:1.5rem}
+.section-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--color-text-secondary);margin-bottom:.75rem}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatch-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+.swatch{width:44px;height:44px;border-radius:10px;border:.5px solid var(--color-border-tertiary)}
+.swatch-label{font-size:10px;color:var(--color-text-secondary);text-align:center;max-width:48px}
+.swatch-hex{font-size:9px;color:var(--color-text-tertiary);font-family:var(--font-mono)}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.token-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--color-background-secondary);border-radius:8px}
+.token-name{font-size:11px;color:var(--color-text-secondary)}
+.token-val{font-size:11px;font-family:var(--font-mono);color:var(--color-text-primary);font-weight:500}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500}
+.btn{display:inline-flex;align-items:center;padding:7px 16px;border-radius:999px;font-size:12px;font-weight:500;border:none;cursor:default}
+.card{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:16px;padding:12px 14px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.divider{height:.5px;background:var(--color-border-tertiary)}
+</style>
+<div class="wrap">
+
+  <div>
+    <div class="section-title">Color tokens — MedChain Design System</div>
+    <div class="swatches">
+      <div class="swatch-item"><div class="swatch" style="background:#1F38F1"></div><div class="swatch-label">Primary</div><div class="swatch-hex">#1F38F1</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#1228C8"></div><div class="swatch-label">Primary Dark</div><div class="swatch-hex">#1228C8</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#E6EAFD"></div><div class="swatch-label">Primary Light</div><div class="swatch-hex">#E6EAFD</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#BFFF00;border-color:#ccc"></div><div class="swatch-label">Accent Lime</div><div class="swatch-hex">#BFFF00</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#1D9E75"></div><div class="swatch-label">Success</div><div class="swatch-hex">#1D9E75</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#E1F5EE"></div><div class="swatch-label">Success Light</div><div class="swatch-hex">#E1F5EE</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#EF9F27"></div><div class="swatch-label">Warning</div><div class="swatch-hex">#EF9F27</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#FAEEDA"></div><div class="swatch-label">Warning Light</div><div class="swatch-hex">#FAEEDA</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#E24B4A"></div><div class="swatch-label">Danger</div><div class="swatch-hex">#E24B4A</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#FCEBEB"></div><div class="swatch-label">Danger Light</div><div class="swatch-hex">#FCEBEB</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#E6E0F8"></div><div class="swatch-label">Lavender</div><div class="swatch-hex">#E6E0F8</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#EAF7EB"></div><div class="swatch-label">Mint</div><div class="swatch-hex">#EAF7EB</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#1A1A1A"></div><div class="swatch-label">Neutral 900</div><div class="swatch-hex">#1A1A1A</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#6B7280"></div><div class="swatch-label">Neutral 600</div><div class="swatch-hex">#6B7280</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#E5E7EB"></div><div class="swatch-label">Neutral 200</div><div class="swatch-hex">#E5E7EB</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#F3F4F6"></div><div class="swatch-label">Neutral 100</div><div class="swatch-hex">#F3F4F6</div></div>
+      <div class="swatch-item"><div class="swatch" style="background:#F9FAFB"></div><div class="swatch-label">Neutral 50</div><div class="swatch-hex">#F9FAFB</div></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Border radius scale</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:40px;height:40px;background:#1F38F1;border-radius:12px;opacity:.85"></div>
+        <div style="font-size:10px;color:var(--color-text-secondary)">sm · 12</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:52px;height:52px;background:#1F38F1;border-radius:16px;opacity:.85"></div>
+        <div style="font-size:10px;color:var(--color-text-secondary)">md · 16</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:64px;height:64px;background:#1F38F1;border-radius:24px;opacity:.85"></div>
+        <div style="font-size:10px;color:var(--color-text-secondary)">lg · 24</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:76px;height:76px;background:#1F38F1;border-radius:32px;opacity:.85"></div>
+        <div style="font-size:10px;color:var(--color-text-secondary)">xl · 32</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:44px;height:30px;background:#1F38F1;border-radius:999px;opacity:.85"></div>
+        <div style="font-size:10px;color:var(--color-text-secondary)">full · pill</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Buttons</div>
+    <div class="pills">
+      <div class="btn" style="background:#1F38F1;color:#fff">Share records</div>
+      <div class="btn" style="background:transparent;color:#1F38F1;border:1.5px solid #1F38F1">Generate QR</div>
+      <div class="btn" style="background:#F3F4F6;color:#1A1A1A;border:.5px solid #E5E7EB">Cancel</div>
+      <div class="btn" style="background:#BFFF00;color:#1A1A1A">Book appointment</div>
+      <div class="btn" style="background:#FCEBEB;color:#A32D2D;border:.5px solid #F09595">Revoke access</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Status chips / badges</div>
+    <div class="pills">
+      <div class="chip" style="background:#E6EAFD;color:#1228C8">Active session</div>
+      <div class="chip" style="background:#E1F5EE;color:#0F6E56">Verified</div>
+      <div class="chip" style="background:#FAEEDA;color:#854F0B">Pending</div>
+      <div class="chip" style="background:#FCEBEB;color:#A32D2D">Revoked</div>
+      <div class="chip" style="background:#E6E0F8;color:#3C3489">Blockchain</div>
+      <div class="chip" style="background:#F5FFB3;color:#3B6D11">On-chain</div>
+      <div class="chip" style="background:#F3F4F6;color:#6B7280">Expired</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Card anatomy</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="card">
+        <div style="font-size:10px;font-weight:500;color:#6B7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Standard card</div>
+        <div style="font-size:13px;color:var(--color-text-primary);font-weight:500">CBC Panel — Lab result</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:3px">Dr. Bangura · Apr 18 2025</div>
+        <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-family:var(--font-mono);font-size:10px;color:#6B7280;background:#F3F4F6;padding:2px 6px;border-radius:4px">a3f8c192…b16</div>
+          <div class="chip" style="background:#E1F5EE;color:#0F6E56">Verified</div>
+        </div>
+      </div>
+      <div style="background:var(--color-background-primary);border:.5px solid #E5E7EB;border-radius:24px;border-top:3px solid #1F38F1;padding:12px 14px">
+        <div style="font-size:10px;font-weight:500;color:#6B7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Elevated card</div>
+        <div style="font-size:13px;color:var(--color-text-primary);font-weight:500">Dr. Samuel Diallo</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:2px">General Practitioner · Active QR session</div>
+        <div style="margin-top:8px;background:#E1F5EE;border:.5px solid #9FE1CB;border-radius:10px;padding:6px 8px;font-size:11px;color:#085041;font-weight:500">QR scan verified · 28 min remaining</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Blockchain badge · Progress bar · Toggle</div>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div style="display:inline-flex;align-items:center;gap:4px;background:#1A1A1A;color:#fff;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:500">
+        <div style="width:6px;height:6px;border-radius:50%;background:#BFFF00"></div>
+        On-chain verified
+      </div>
+      <div style="flex:1;min-width:120px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;color:#6B7280">Medical history</span>
+          <span style="font-size:11px;font-weight:500;color:#1A1A1A">72%</span>
+        </div>
+        <div style="height:6px;background:#E5E7EB;border-radius:99px;overflow:hidden">
+          <div style="width:72%;height:100%;background:#1F38F1;border-radius:99px"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:38px;height:22px;border-radius:99px;background:#1F38F1;position:relative;flex-shrink:0">
+          <div style="position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;right:3px"></div>
+        </div>
+        <div style="width:38px;height:22px;border-radius:99px;background:#E5E7EB;position:relative;flex-shrink:0">
+          <div style="position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

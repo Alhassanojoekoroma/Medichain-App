@@ -1,0 +1,876 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2952FF;
+    --primary-light: #EEF2FF;
+    --primary-mid: #B8C9FF;
+    --primary-dark: #1A35CC;
+    --purple: #8F76FF;
+    --purple-light: #EDE9FF;
+    --green: #11C137;
+    --green-light: #E6F9EB;
+    --orange: #FA6E3C;
+    --orange-light: #FEF0EB;
+    --white: #FFFFFF;
+    --bg: #EAEEF2;
+    --gray: #5D6582;
+    --dark: #101326;
+    --text-body: #3D4259;
+    --text-muted: #8C91A8;
+    --border: #D8DCE8;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-pill: 100px;
+  }
+  body { font-family: 'Neue Haas Grotesk Text', 'Inter', 'Helvetica Neue', sans-serif; background: #F5F7FB; color: var(--dark); }
+  .ds { padding: 0 0 3rem; }
+  .section { margin-bottom: 3rem; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+  .section-title { font-size: 22px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+  .section-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+  /* COVER */
+  .cover { background: var(--primary); border-radius: var(--radius-xl); padding: 2rem; margin-bottom: 3rem; }
+  .cover-tag { display: inline-block; background: rgba(255,255,255,0.15); color: white; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: var(--radius-pill); margin-bottom: 1rem; }
+  .cover-title { font-size: 32px; font-weight: 700; color: white; margin-bottom: 6px; line-height: 1.2; }
+  .cover-sub { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; }
+  .cover-meta { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .cover-pill { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 12px; padding: 4px 12px; border-radius: var(--radius-pill); }
+
+  /* COLOR PALETTE */
+  .color-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .color-swatch { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+  .color-block { height: 64px; }
+  .color-info { background: white; padding: 10px 12px; }
+  .color-name { font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 2px; }
+  .color-hex { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+  .color-role { font-size: 10px; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .palette-row { display: flex; gap: 4px; margin-bottom: 8px; }
+  .palette-stop { flex: 1; height: 32px; border-radius: 6px; }
+
+  /* TYPOGRAPHY */
+  .type-row { padding: 16px 0; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 1.5rem; }
+  .type-meta { font-size: 11px; color: var(--text-muted); min-width: 120px; font-family: monospace; line-height: 1.6; }
+  .type-sample { color: var(--dark); }
+  .t-h1 { font-size: 32px; font-weight: 700; line-height: 1.2; }
+  .t-h2 { font-size: 24px; font-weight: 700; line-height: 1.3; }
+  .t-h3 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+  .t-h4 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+  .t-body-lg { font-size: 16px; font-weight: 400; line-height: 1.6; }
+  .t-body { font-size: 14px; font-weight: 400; line-height: 1.6; }
+  .t-body-sm { font-size: 13px; font-weight: 400; line-height: 1.5; }
+  .t-caption { font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--text-muted); }
+  .t-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+
+  /* SPACING */
+  .spacing-row { display: flex; align-items: center; gap: 1rem; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .spacing-block { background: var(--primary-light); border: 1px solid var(--primary-mid); border-radius: 4px; height: 24px; }
+  .spacing-label { font-size: 12px; font-family: monospace; color: var(--text-muted); min-width: 60px; }
+  .spacing-name { font-size: 12px; color: var(--dark); }
+
+  /* RADIUS */
+  .radius-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+  .radius-demo { background: white; border: 2px solid var(--primary); height: 64px; display: flex; align-items: center; justify-content: center; }
+  .radius-label { font-size: 11px; font-family: monospace; color: var(--text-muted); text-align: center; margin-top: 6px; }
+  .radius-name { font-size: 12px; font-weight: 600; color: var(--dark); text-align: center; margin-top: 2px; }
+
+  /* BUTTONS */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 1rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; border-radius: var(--radius-pill); white-space: nowrap; }
+  .btn-primary { background: var(--primary); color: white; padding: 12px 24px; font-size: 14px; }
+  .btn-secondary { background: var(--primary-light); color: var(--primary); padding: 12px 24px; font-size: 14px; }
+  .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); padding: 11px 24px; font-size: 14px; }
+  .btn-ghost { background: transparent; color: var(--gray); padding: 12px 24px; font-size: 14px; }
+  .btn-danger { background: #FEE2E2; color: #DC2626; padding: 12px 24px; font-size: 14px; }
+  .btn-success { background: var(--green-light); color: #0D9226; padding: 12px 24px; font-size: 14px; }
+  .btn-sm { padding: 8px 16px; font-size: 12px; }
+  .btn-lg { padding: 16px 32px; font-size: 16px; }
+  .btn-icon { width: 40px; height: 40px; border-radius: 50%; padding: 0; background: var(--primary-light); color: var(--primary); font-size: 16px; }
+  .btn-icon-sm { width: 32px; height: 32px; border-radius: 50%; padding: 0; background: var(--bg); color: var(--gray); font-size: 13px; }
+  .btn-fab { width: 56px; height: 56px; border-radius: 50%; padding: 0; background: var(--primary); color: white; font-size: 22px; }
+  .btn-disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-label { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px; }
+
+  /* INPUTS */
+  .input-group { margin-bottom: 1rem; }
+  .input-label { font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 6px; display: block; }
+  .input-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .input-error-text { font-size: 11px; color: #DC2626; margin-top: 4px; }
+  .input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; font-size: 14px; font-family: inherit; color: var(--dark); background: white; outline: none; }
+  .input-focus { border-color: var(--primary); }
+  .input-error { border-color: #DC2626; background: #FFF8F8; }
+  .input-success { border-color: var(--green); }
+  .input-disabled { background: var(--bg); color: var(--text-muted); }
+  .input-with-icon { position: relative; }
+  .input-icon-left { padding-left: 42px; }
+  .input-icon-right { padding-right: 42px; }
+  .input-icon { position: absolute; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; }
+  .input-icon.left { left: 14px; }
+  .input-icon.right { right: 14px; }
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .textarea { min-height: 100px; resize: vertical; }
+  .select-wrap { position: relative; }
+  .select-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; font-size: 12px; }
+
+  /* CARDS */
+  .card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1.25rem; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+
+  /* DOCTOR CARD */
+  .doc-card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1rem; display: flex; gap: 12px; align-items: flex-start; }
+  .doc-avatar { width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--primary-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .doc-name { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 2px; }
+  .doc-spec { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .doc-price { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+  .doc-stats { display: flex; gap: 12px; }
+  .doc-stat { font-size: 11px; color: var(--text-muted); }
+  .doc-stat b { color: var(--dark); font-weight: 600; }
+
+  /* BADGES */
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); }
+  .badge-primary { background: var(--primary-light); color: var(--primary); }
+  .badge-success { background: var(--green-light); color: #0D9226; }
+  .badge-warning { background: #FFF7ED; color: #B45309; }
+  .badge-danger { background: #FEF2F2; color: #DC2626; }
+  .badge-purple { background: var(--purple-light); color: #6644CC; }
+  .badge-gray { background: var(--bg); color: var(--gray); }
+  .badge-dark { background: var(--dark); color: white; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-green { background: var(--green); }
+  .dot-primary { background: var(--primary); }
+  .dot-orange { background: var(--orange); }
+  .dot-red { background: #DC2626; }
+
+  /* ICONS */
+  .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+  .icon-item { background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .icon-box { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .icon-box-primary { background: var(--primary-light); }
+  .icon-box-purple { background: var(--purple-light); }
+  .icon-box-green { background: var(--green-light); }
+  .icon-box-orange { background: var(--orange-light); }
+  .icon-box-gray { background: var(--bg); }
+  .icon-name { font-size: 10px; color: var(--text-muted); text-align: center; }
+
+  /* SPECIALTY CHIPS */
+  .spec-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .spec-chip { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px; border-radius: var(--radius-md); background: white; border: 1.5px solid var(--border); min-width: 72px; cursor: pointer; }
+  .spec-chip.active { border-color: var(--primary); background: var(--primary-light); }
+  .spec-chip-icon { font-size: 20px; }
+  .spec-chip-label { font-size: 11px; font-weight: 500; color: var(--dark); text-align: center; }
+  .spec-chip.active .spec-chip-label { color: var(--primary); }
+
+  /* NAVIGATION */
+  .nav-bar { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .nav-brand { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .nav-tabs { display: flex; background: var(--bg); border-radius: var(--radius-pill); padding: 4px; gap: 2px; }
+  .nav-tab { font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--radius-pill); color: var(--text-muted); cursor: pointer; }
+  .nav-tab.active { background: white; color: var(--primary); font-weight: 600; }
+  .bottom-nav { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 12px 16px; display: flex; justify-content: space-around; }
+  .bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .bottom-nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-muted); }
+  .bottom-nav-label { font-size: 10px; color: var(--text-muted); }
+  .bottom-nav-item.active .bottom-nav-icon { color: var(--primary); }
+  .bottom-nav-item.active .bottom-nav-label { color: var(--primary); font-weight: 600; }
+  .bottom-nav-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); margin-top: 2px; }
+
+  /* ALERTS */
+  .alert { border-radius: var(--radius-md); padding: 12px 16px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .alert-body { font-size: 12px; line-height: 1.5; }
+  .alert-info { background: var(--primary-light); border-left: 3px solid var(--primary); }
+  .alert-info .alert-title { color: var(--primary-dark); }
+  .alert-info .alert-body { color: #3B5CC4; }
+  .alert-success { background: var(--green-light); border-left: 3px solid var(--green); }
+  .alert-success .alert-title { color: #0D9226; }
+  .alert-success .alert-body { color: #166534; }
+  .alert-warning { background: #FFF7ED; border-left: 3px solid var(--orange); }
+  .alert-warning .alert-title { color: #B45309; }
+  .alert-warning .alert-body { color: #92400E; }
+  .alert-danger { background: #FEF2F2; border-left: 3px solid #DC2626; }
+  .alert-danger .alert-title { color: #DC2626; }
+  .alert-danger .alert-body { color: #991B1B; }
+
+  /* AVATAR */
+  .avatar-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; flex-shrink: 0; overflow: hidden; }
+  .avatar-xl { width: 64px; height: 64px; font-size: 22px; }
+  .avatar-lg { width: 52px; height: 52px; font-size: 18px; }
+  .avatar-md { width: 40px; height: 40px; font-size: 14px; }
+  .avatar-sm { width: 32px; height: 32px; font-size: 12px; }
+  .avatar-xs { width: 24px; height: 24px; font-size: 10px; }
+  .avatar-blue { background: var(--primary); }
+  .avatar-purple { background: var(--purple); }
+  .avatar-green { background: var(--green); }
+  .avatar-orange { background: var(--orange); }
+  .avatar-wrapper { position: relative; display: inline-block; }
+  .avatar-status { position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; }
+  .avatar-stack { display: flex; }
+  .avatar-stack .avatar { border: 2px solid white; margin-left: -8px; }
+  .avatar-stack .avatar:first-child { margin-left: 0; }
+
+  /* PROGRESS & STEPS */
+  .progress-wrap { margin-bottom: 1rem; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 500; color: var(--dark); margin-bottom: 6px; }
+  .progress-bar { height: 8px; background: var(--bg); border-radius: var(--radius-pill); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: var(--radius-pill); }
+  .progress-primary { background: var(--primary); }
+  .progress-green { background: var(--green); }
+  .progress-purple { background: var(--purple); }
+  .progress-orange { background: var(--orange); }
+  .steps { display: flex; align-items: center; gap: 0; margin-bottom: 12px; }
+  .step { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; border: 2px solid var(--border); background: white; color: var(--text-muted); }
+  .step-circle.done { background: var(--primary); border-color: var(--primary); color: white; }
+  .step-circle.active { background: white; border-color: var(--primary); color: var(--primary); }
+  .step-label { font-size: 10px; color: var(--text-muted); text-align: center; }
+  .step-label.active { color: var(--primary); font-weight: 600; }
+  .step-line { height: 2px; background: var(--border); flex: 1; margin: 0 4px; margin-bottom: 20px; }
+  .step-line.done { background: var(--primary); }
+
+  /* TOGGLE / CHECKBOX / RADIO */
+  .form-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  .toggle { width: 44px; height: 24px; background: var(--border); border-radius: var(--radius-pill); position: relative; cursor: pointer; }
+  .toggle.on { background: var(--primary); }
+  .toggle-thumb { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: left 0.2s; }
+  .toggle.on .toggle-thumb { left: 23px; }
+  .checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .checkbox.checked { background: var(--primary); border-color: var(--primary); color: white; font-size: 11px; }
+  .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .radio.checked { border-color: var(--primary); }
+  .radio.checked::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+  .form-label { font-size: 13px; color: var(--dark); }
+  .form-sub { font-size: 11px; color: var(--text-muted); }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+  .divider-text { display: flex; align-items: center; gap: 12px; margin: 1.5rem 0; }
+  .divider-text::before, .divider-text::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+  .divider-text span { font-size: 12px; color: var(--text-muted); }
+
+  /* CHIP / TAG */
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 6px 12px; font-size: 13px; color: var(--dark); cursor: pointer; }
+  .chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+  .chip-close { font-size: 14px; color: var(--text-muted); line-height: 1; }
+
+  /* SEARCH */
+  .search-wrap { position: relative; }
+  .search-input { width: 100%; background: white; border: 1.5px solid var(--border); border-radius: var(--radius-pill); padding: 12px 16px 12px 44px; font-size: 14px; font-family: inherit; color: var(--dark); outline: none; }
+  .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; }
+
+  /* DATE PICKER PREVIEW */
+  .date-strip { display: flex; gap: 8px; overflow-x: auto; }
+  .date-item { min-width: 48px; padding: 10px 8px; border-radius: var(--radius-md); border: 1.5px solid var(--border); text-align: center; background: white; cursor: pointer; }
+  .date-item.active { background: var(--primary); border-color: var(--primary); }
+  .date-day { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+  .date-item.active .date-day { color: rgba(255,255,255,0.8); }
+  .date-num { font-size: 16px; font-weight: 700; color: var(--dark); }
+  .date-item.active .date-num { color: white; }
+
+  /* NOTIFICATION */
+  .notif { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 12px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+  .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 4px; flex-shrink: 0; }
+  .notif-title { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 2px; }
+  .notif-body { font-size: 12px; color: var(--text-muted); }
+  .notif-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* MEDICINE CARD */
+  .med-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .med-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .med-check.done { background: var(--primary); border-color: var(--primary); color: white; font-size: 12px; }
+  .med-name { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 2px; }
+  .med-dose { font-size: 11px; color: var(--text-muted); }
+  .med-pill { margin-left: auto; font-size: 18px; }
+
+  /* STAT CARDS */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .stat-card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1rem; }
+  .stat-icon { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 10px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--dark); margin-bottom: 2px; }
+  .stat-label { font-size: 11px; color: var(--text-muted); }
+  .stat-change { font-size: 11px; font-weight: 600; margin-top: 4px; }
+  .stat-up { color: var(--green); }
+  .stat-down { color: #DC2626; }
+
+  /* LIST ITEMS */
+  .list-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: none; }
+  .list-icon { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .list-content { flex: 1; min-width: 0; }
+  .list-title { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 2px; }
+  .list-sub { font-size: 12px; color: var(--text-muted); }
+  .list-right { font-size: 12px; color: var(--text-muted); text-align: right; }
+
+  /* MODAL PREVIEW */
+  .modal-overlay { background: rgba(16,19,38,0.45); border-radius: var(--radius-lg); padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 240px; }
+  .modal { background: white; border-radius: var(--radius-xl); padding: 1.5rem; width: 100%; max-width: 320px; }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 6px; text-align: center; }
+  .modal-body { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 1.5rem; line-height: 1.6; }
+  .modal-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 1rem; }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+
+  /* SHADOW SCALE */
+  .shadow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 16px; }
+  .shadow-demo { background: white; border-radius: var(--radius-lg); padding: 1rem; text-align: center; }
+  .shadow-1 { box-shadow: 0 1px 3px rgba(16,19,38,0.08); }
+  .shadow-2 { box-shadow: 0 4px 12px rgba(16,19,38,0.1); }
+  .shadow-3 { box-shadow: 0 8px 24px rgba(16,19,38,0.12); }
+  .shadow-4 { box-shadow: 0 16px 40px rgba(16,19,38,0.16); }
+  .shadow-name { font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 8px; }
+
+  /* PAYMENT CARD */
+  .payment-opt { background: white; border: 1.5px solid var(--border); border-radius: var(--radius-md); padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; cursor: pointer; }
+  .payment-opt.selected { border-color: var(--primary); background: var(--primary-light); }
+  .payment-brand { font-size: 14px; font-weight: 600; color: var(--dark); }
+  .payment-num { font-size: 12px; color: var(--text-muted); }
+  .payment-radio { margin-left: auto; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  h2.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+
+<h2 class="sr-only">MediChain SL complete design system — colors, typography, components, and UI patterns for a medical mobile app</h2>
+
+<div class="ds">
+
+  <div class="cover">
+    <div class="cover-tag">Design System v1.0</div>
+    <div class="cover-title">MediChain SL</div>
+    <div class="cover-sub">Brand & Component Guidelines — Medical App</div>
+    <div class="cover-meta">
+      <span class="cover-pill">Neue Haas Grotesk Text</span>
+      <span class="cover-pill">Mobile First</span>
+      <span class="cover-pill">DPG Aligned</span>
+      <span class="cover-pill">iOS + Android + Web</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">01 — Color System</div>
+    <div class="section-title">Color palette</div>
+    <div class="section-sub">All colors extracted directly from the uploaded UI references.</div>
+    <div class="color-grid">
+      <div class="color-swatch">
+        <div class="color-block" style="background:#2952FF;"></div>
+        <div class="color-info"><div class="color-name">Primary Blue</div><div class="color-hex">#2952FF</div><div class="color-role">Primary / CTA</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#EEF2FF;"></div>
+        <div class="color-info"><div class="color-name">Primary Light</div><div class="color-hex">#EEF2FF</div><div class="color-role">Backgrounds / Fills</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#8F76FF;"></div>
+        <div class="color-info"><div class="color-name">Purple</div><div class="color-hex">#8F76FF</div><div class="color-role">Secondary / Accent</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#EDE9FF;"></div>
+        <div class="color-info"><div class="color-name">Purple Light</div><div class="color-hex">#EDE9FF</div><div class="color-role">Purple fills</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#11C137;"></div>
+        <div class="color-info"><div class="color-name">Success Green</div><div class="color-hex">#11C137</div><div class="color-role">Success / Active</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#FA6E3C;"></div>
+        <div class="color-info"><div class="color-name">Alert Orange</div><div class="color-hex">#FA6E3C</div><div class="color-role">Warning / Urgent</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#101326;"></div>
+        <div class="color-info"><div class="color-name">Dark Navy</div><div class="color-hex">#101326</div><div class="color-role">Primary Text</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#5D6582;"></div>
+        <div class="color-info"><div class="color-name">Mid Gray</div><div class="color-hex">#5D6582</div><div class="color-role">Secondary Text</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#8C91A8;"></div>
+        <div class="color-info"><div class="color-name">Muted</div><div class="color-hex">#8C91A8</div><div class="color-role">Placeholder / Hint</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#EAEEF2;"></div>
+        <div class="color-info"><div class="color-name">Surface Gray</div><div class="color-hex">#EAEEF2</div><div class="color-role">Backgrounds</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#D8DCE8;"></div>
+        <div class="color-info"><div class="color-name">Border</div><div class="color-hex">#D8DCE8</div><div class="color-role">Strokes / Dividers</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#FFFFFF; border-bottom:1px solid #EAEEF2;"></div>
+        <div class="color-info"><div class="color-name">White</div><div class="color-hex">#FFFFFF</div><div class="color-role">Card / Panel BG</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">Primary scale</div>
+      <div class="palette-row">
+        <div class="palette-stop" style="background:#EEF2FF;" title="#EEF2FF 50"></div>
+        <div class="palette-stop" style="background:#B8C9FF;" title="#B8C9FF 200"></div>
+        <div class="palette-stop" style="background:#7B9CFF;" title="#7B9CFF 300"></div>
+        <div class="palette-stop" style="background:#2952FF;" title="#2952FF 500"></div>
+        <div class="palette-stop" style="background:#1A35CC;" title="#1A35CC 600"></div>
+        <div class="palette-stop" style="background:#0F1E7A;" title="#0F1E7A 800"></div>
+        <div class="palette-stop" style="background:#060D3D;" title="#060D3D 900"></div>
+      </div>
+      <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; margin-top:12px;">Neutral scale</div>
+      <div class="palette-row">
+        <div class="palette-stop" style="background:#F5F7FB;"></div>
+        <div class="palette-stop" style="background:#EAEEF2;"></div>
+        <div class="palette-stop" style="background:#D8DCE8;"></div>
+        <div class="palette-stop" style="background:#8C91A8;"></div>
+        <div class="palette-stop" style="background:#5D6582;"></div>
+        <div class="palette-stop" style="background:#3D4259;"></div>
+        <div class="palette-stop" style="background:#101326;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">02 — Typography</div>
+    <div class="section-title">Type scale</div>
+    <div class="section-sub">Font: Neue Haas Grotesk Text — fallback: Inter, Helvetica Neue</div>
+    <div class="type-row">
+      <div class="type-meta">H1<br>32px / 700<br>leading 1.2</div>
+      <div class="type-sample t-h1">Blockchain Health Records</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">H2<br>24px / 700<br>leading 1.3</div>
+      <div class="type-sample t-h2">Patient Dashboard</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">H3<br>20px / 600<br>leading 1.3</div>
+      <div class="type-sample t-h3">Appointment Details</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">H4<br>16px / 600<br>leading 1.4</div>
+      <div class="type-sample t-h4">Dr. Alexandra Boje — Orthopedic</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">Body Large<br>16px / 400<br>leading 1.6</div>
+      <div class="type-sample t-body-lg">Hello there! Welcome to your medical app. How can we assist you today?</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">Body<br>14px / 400<br>leading 1.6</div>
+      <div class="type-sample t-body">Your complete medical history follows you — not the hospital. You decide who sees it, when, and for how long.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">Body Small<br>13px / 400<br>leading 1.5</div>
+      <div class="type-sample t-body-sm">5 years experience · 9,845 total patients · 6.09K reviews</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">Caption<br>12px / 400<br>leading 1.5</div>
+      <div class="type-sample t-caption">June 12, 2023 · 9:00 – 10:00 AM · Telehealth</div>
+    </div>
+    <div class="type-row" style="border-bottom:none;">
+      <div class="type-meta">Label<br>11px / 600<br>uppercase</div>
+      <div class="type-sample t-label">Upcoming Schedule · Recommended Doctors</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">03 — Spacing & Radius</div>
+    <div class="section-title">Spacing scale</div>
+    <div class="section-sub">Base unit: 4px</div>
+    <div class="spacing-row"><div class="spacing-label">4px (xs)</div><div class="spacing-block" style="width:4px;"></div><div class="spacing-name">Inner icon gap</div></div>
+    <div class="spacing-row"><div class="spacing-label">8px (sm)</div><div class="spacing-block" style="width:8px;"></div><div class="spacing-name">Tight component gaps</div></div>
+    <div class="spacing-row"><div class="spacing-label">12px (md)</div><div class="spacing-block" style="width:12px;"></div><div class="spacing-name">Card internal spacing</div></div>
+    <div class="spacing-row"><div class="spacing-label">16px (lg)</div><div class="spacing-block" style="width:16px;"></div><div class="spacing-name">Section padding</div></div>
+    <div class="spacing-row"><div class="spacing-label">24px (xl)</div><div class="spacing-block" style="width:24px;"></div><div class="spacing-name">Card padding</div></div>
+    <div class="spacing-row"><div class="spacing-label">32px (2xl)</div><div class="spacing-block" style="width:32px;"></div><div class="spacing-name">Section gaps</div></div>
+    <div class="spacing-row" style="border-bottom:none;"><div class="spacing-label">48px (3xl)</div><div class="spacing-block" style="width:48px;"></div><div class="spacing-name">Page sections</div></div>
+
+    <div style="margin-top:1.5rem; margin-bottom:8px; font-size:14px; font-weight:600; color:var(--dark);">Border radius</div>
+    <div class="radius-grid">
+      <div><div class="radius-demo" style="border-radius:4px;"></div><div class="radius-label">4px</div><div class="radius-name">XS</div></div>
+      <div><div class="radius-demo" style="border-radius:8px;"></div><div class="radius-label">8px</div><div class="radius-name">SM</div></div>
+      <div><div class="radius-demo" style="border-radius:12px;"></div><div class="radius-label">12px</div><div class="radius-name">MD</div></div>
+      <div><div class="radius-demo" style="border-radius:16px;"></div><div class="radius-label">16px</div><div class="radius-name">LG</div></div>
+      <div><div class="radius-demo" style="border-radius:24px;"></div><div class="radius-label">24px</div><div class="radius-name">XL</div></div>
+      <div><div class="radius-demo" style="border-radius:100px;"></div><div class="radius-label">100px</div><div class="radius-name">Pill</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">04 — Buttons</div>
+    <div class="section-title">Button variants</div>
+    <div class="section-sub">All buttons use pill radius (100px) — consistent with app UI reference.</div>
+    <div class="btn-row">
+      <div><div class="btn btn-primary">Book appointment</div><div class="btn-label">Primary</div></div>
+      <div><div class="btn btn-secondary">View profile</div><div class="btn-label">Secondary</div></div>
+      <div><div class="btn btn-outline">Learn more</div><div class="btn-label">Outline</div></div>
+      <div><div class="btn btn-ghost">Cancel</div><div class="btn-label">Ghost</div></div>
+    </div>
+    <div class="btn-row">
+      <div><div class="btn btn-success">Confirmed</div><div class="btn-label">Success</div></div>
+      <div><div class="btn btn-danger">Cancel visit</div><div class="btn-label">Danger</div></div>
+      <div><div class="btn btn-primary btn-disabled">Unavailable</div><div class="btn-label">Disabled</div></div>
+    </div>
+    <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin:1rem 0 8px;">Sizes</div>
+    <div class="btn-row">
+      <div><div class="btn btn-primary btn-sm">Small</div><div class="btn-label">SM — 12px</div></div>
+      <div><div class="btn btn-primary">Default</div><div class="btn-label">MD — 14px</div></div>
+      <div><div class="btn btn-primary btn-lg">Large</div><div class="btn-label">LG — 16px</div></div>
+    </div>
+    <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin:1rem 0 8px;">Icon buttons</div>
+    <div class="btn-row" style="align-items:flex-start;">
+      <div><div class="btn btn-icon">+</div><div class="btn-label">Icon MD</div></div>
+      <div><div class="btn btn-icon-sm">✕</div><div class="btn-label">Icon SM</div></div>
+      <div><div class="btn btn-fab">+</div><div class="btn-label">FAB</div></div>
+      <div><div class="btn btn-icon" style="background:var(--purple-light); color:var(--purple);">♥</div><div class="btn-label">Favourite</div></div>
+      <div><div class="btn btn-icon" style="background:var(--green-light); color:var(--green);">✓</div><div class="btn-label">Done</div></div>
+      <div><div class="btn btn-icon" style="background:var(--orange-light); color:var(--orange);">!</div><div class="btn-label">Alert</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">05 — Form Elements</div>
+    <div class="section-title">Inputs & forms</div>
+    <div class="section-sub">All inputs: 12px radius, 1.5px border, 12px 14px padding.</div>
+    <div class="input-grid">
+      <div class="input-group">
+        <label class="input-label">Full name</label>
+        <input class="input" placeholder="Alhassan OJOE Koroma" style="border-radius:12px; border:1.5px solid #D8DCE8; padding:12px 14px; font-size:14px; font-family:inherit; width:100%; color:#101326; outline:none;">
+        <div class="input-hint">Enter your full legal name</div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Email address</label>
+        <input class="input input-focus" placeholder="ojoe@medichain.sl" style="border-radius:12px; border:1.5px solid #2952FF; padding:12px 14px; font-size:14px; font-family:inherit; width:100%; color:#101326; outline:none;">
+        <div class="input-hint" style="color:#2952FF;">Active / focused state</div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Date of birth</label>
+        <input class="input" placeholder="Oct 11, 2003" style="border-radius:12px; border:1.5px solid #11C137; padding:12px 14px; font-size:14px; font-family:inherit; width:100%; color:#101326; outline:none;">
+        <div class="input-hint" style="color:#0D9226;">Validated successfully</div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Phone number</label>
+        <input class="input" placeholder="+232 76 000 000" style="border-radius:12px; border:1.5px solid #DC2626; background:#FFF8F8; padding:12px 14px; font-size:14px; font-family:inherit; width:100%; color:#101326; outline:none;">
+        <div class="input-error-text">Invalid phone number format</div>
+      </div>
+    </div>
+
+    <div class="input-group" style="margin-top:1rem;">
+      <label class="input-label">Search doctors</label>
+      <div class="search-wrap">
+        <span class="search-icon">&#128269;</span>
+        <input class="search-input" placeholder="Search by name, specialty…" style="font-family:inherit; outline:none; color:#101326;">
+      </div>
+    </div>
+
+    <div class="input-group" style="margin-top:1rem;">
+      <label class="input-label">Specialty</label>
+      <div class="select-wrap">
+        <input class="input" value="Orthopedic" style="border-radius:12px; border:1.5px solid #D8DCE8; padding:12px 40px 12px 14px; font-size:14px; font-family:inherit; width:100%; color:#101326; outline:none; appearance:none; cursor:pointer;">
+        <span class="select-arrow">▼</span>
+      </div>
+    </div>
+
+    <div class="input-group" style="margin-top:1rem;">
+      <label class="input-label">Medical notes</label>
+      <textarea class="input textarea" placeholder="Describe symptoms, concerns, or questions for the doctor…" style="border-radius:12px; border:1.5px solid #D8DCE8; padding:12px 14px; font-size:14px; font-family:inherit; width:100%; color:#101326; outline:none; min-height:80px; resize:vertical;"></textarea>
+    </div>
+
+    <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin:1rem 0 8px;">Toggles, checkboxes & radios</div>
+    <div class="form-row">
+      <div class="toggle on"><div class="toggle-thumb"></div></div>
+      <div><div class="form-label">Notifications enabled</div><div class="form-sub">Receive appointment reminders</div></div>
+    </div>
+    <div class="form-row">
+      <div class="toggle"><div class="toggle-thumb"></div></div>
+      <div><div class="form-label">Offline mode</div><div class="form-sub">Store records locally without internet</div></div>
+    </div>
+    <div class="form-row">
+      <div class="checkbox checked">✓</div>
+      <div class="form-label">I agree to share my records with Dr. Niall Horan</div>
+    </div>
+    <div class="form-row">
+      <div class="checkbox"></div>
+      <div class="form-label">Unchecked state</div>
+    </div>
+    <div class="form-row">
+      <div class="radio checked"></div>
+      <div class="form-label">Mastercard ****3184</div>
+    </div>
+    <div class="form-row">
+      <div class="radio"></div>
+      <div class="form-label">Visa ****3184</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">06 — Cards & Components</div>
+    <div class="section-title">Doctor cards</div>
+    <div class="doc-card" style="margin-bottom:8px;">
+      <div class="doc-avatar">&#128104;&#8205;&#9877;&#65039;</div>
+      <div>
+        <div class="doc-name">Prof. Dr. Niall Horan</div>
+        <div class="doc-spec">Orthopedic Specialist</div>
+        <div class="doc-price">$36 / hr</div>
+        <div class="doc-stats">
+          <div class="doc-stat"><b>5 yrs</b> exp.</div>
+          <div class="doc-stat"><b>9,845</b> patients</div>
+          <div class="doc-stat"><b>4.9</b> ★</div>
+        </div>
+      </div>
+    </div>
+    <div class="doc-card">
+      <div class="doc-avatar" style="background:var(--purple-light);">&#128105;&#8205;&#9877;&#65039;</div>
+      <div>
+        <div class="doc-name">Dr. Alexandra Boje</div>
+        <div class="doc-spec">Cardiologist</div>
+        <div class="doc-price">$65 / hr</div>
+        <div class="doc-stats">
+          <div class="doc-stat"><b>8 yrs</b> exp.</div>
+          <div class="doc-stat"><b>12,200</b> patients</div>
+          <div class="doc-stat"><b>4.8</b> ★</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem; font-size:14px; font-weight:600; color:var(--dark); margin-bottom:8px;">Specialty chips</div>
+    <div class="spec-grid">
+      <div class="spec-chip active"><span class="spec-chip-icon">&#129461;</span><span class="spec-chip-label">Ortho</span></div>
+      <div class="spec-chip"><span class="spec-chip-icon">&#9829;&#65039;</span><span class="spec-chip-label">Cardio</span></div>
+      <div class="spec-chip"><span class="spec-chip-icon">&#129504;</span><span class="spec-chip-label">Neuro</span></div>
+      <div class="spec-chip"><span class="spec-chip-icon">&#129508;</span><span class="spec-chip-label">Dental</span></div>
+      <div class="spec-chip"><span class="spec-chip-icon">&#129516;</span><span class="spec-chip-label">Onco</span></div>
+      <div class="spec-chip"><span class="spec-chip-icon">&#128138;</span><span class="spec-chip-label">Therapy</span></div>
+    </div>
+
+    <div style="margin-top:1.5rem; font-size:14px; font-weight:600; color:var(--dark); margin-bottom:8px;">Medicine tracker cards</div>
+    <div class="med-card"><div class="med-check done">✓</div><div><div class="med-name">Omega-3 Fish Oil</div><div class="med-dose">1 capsule, with meal — Morning</div></div><span class="med-pill">&#128138;</span></div>
+    <div class="med-card"><div class="med-check done">✓</div><div><div class="med-name">Magnesium Citrate 200mg</div><div class="med-dose">1 tablet, with water — Morning</div></div><span class="med-pill">&#128138;</span></div>
+    <div class="med-card"><div class="med-check"></div><div><div class="med-name">Vitamin D3 5000 IU</div><div class="med-dose">1 capsule, with meal — Afternoon</div></div><span class="med-pill">&#128138;</span></div>
+
+    <div style="margin-top:1.5rem; font-size:14px; font-weight:600; color:var(--dark); margin-bottom:8px;">Payment options</div>
+    <div class="payment-opt selected">
+      <div style="font-size:20px;">&#128179;</div>
+      <div><div class="payment-brand">Mastercard</div><div class="payment-num">**** **** **** 3184</div></div>
+      <div class="payment-radio"><div class="radio checked"></div></div>
+    </div>
+    <div class="payment-opt">
+      <div style="font-size:20px;">&#128179;</div>
+      <div><div class="payment-brand">Visa</div><div class="payment-num">**** **** **** 3184</div></div>
+      <div class="payment-radio"><div class="radio"></div></div>
+    </div>
+    <div class="payment-opt">
+      <div style="font-size:20px;">&#128179;</div>
+      <div><div class="payment-brand">American Express</div><div class="payment-num">**** **** **** 3184</div></div>
+      <div class="payment-radio"><div class="radio"></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">07 — Badges & Status</div>
+    <div class="section-title">Badges, tags & chips</div>
+    <div class="badge-row" style="margin-bottom:12px;">
+      <span class="badge badge-primary"><span class="dot dot-primary"></span>Available</span>
+      <span class="badge badge-success"><span class="dot dot-green"></span>Confirmed</span>
+      <span class="badge badge-warning"><span class="dot dot-orange"></span>Pending</span>
+      <span class="badge badge-danger"><span class="dot dot-red"></span>Cancelled</span>
+      <span class="badge badge-purple">New</span>
+      <span class="badge badge-gray">Offline</span>
+      <span class="badge badge-dark">DPG Aligned</span>
+    </div>
+    <div class="badge-row">
+      <span class="chip active">All</span>
+      <span class="chip">Orthopedic</span>
+      <span class="chip">Cardiologist</span>
+      <span class="chip">Nearest</span>
+      <span class="chip">Top Rated</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">08 — Avatars</div>
+    <div class="section-title">Avatar system</div>
+    <div class="avatar-row" style="margin-bottom:1rem;">
+      <div class="avatar-wrapper"><div class="avatar avatar-xl avatar-blue">AO</div><div class="avatar-status" style="background:#11C137;"></div></div>
+      <div class="avatar-wrapper"><div class="avatar avatar-lg avatar-purple">JN</div><div class="avatar-status" style="background:#11C137;"></div></div>
+      <div class="avatar avatar-md avatar-green">SP</div>
+      <div class="avatar avatar-sm avatar-orange">ES</div>
+      <div class="avatar avatar-xs avatar-blue">DN</div>
+    </div>
+    <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Avatar stack</div>
+    <div class="avatar-stack">
+      <div class="avatar avatar-md avatar-blue">AO</div>
+      <div class="avatar avatar-md avatar-purple">JN</div>
+      <div class="avatar avatar-md avatar-green">SP</div>
+      <div class="avatar avatar-md avatar-orange" style="font-size:11px;">+3</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">09 — Progress & Steps</div>
+    <div class="section-title">Progress indicators</div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Today's Progress</span><span>2 / 4</span></div>
+      <div class="progress-bar"><div class="progress-fill progress-primary" style="width:50%;"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Records uploaded</span><span>78%</span></div>
+      <div class="progress-bar"><div class="progress-fill progress-green" style="width:78%;"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Appointment booked</span><span>3 / 5</span></div>
+      <div class="progress-bar"><div class="progress-fill progress-purple" style="width:60%;"></div></div>
+    </div>
+
+    <div style="margin-top:1.5rem; font-size:14px; font-weight:600; color:var(--dark); margin-bottom:12px;">Booking stepper</div>
+    <div class="steps">
+      <div class="step"><div class="step-circle done">✓</div><div class="step-label">Details</div></div>
+      <div class="step-line done"></div>
+      <div class="step"><div class="step-circle done">✓</div><div class="step-label">Schedule</div></div>
+      <div class="step-line done"></div>
+      <div class="step"><div class="step-circle active">3</div><div class="step-label active">Payment</div></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-circle">4</div><div class="step-label">Confirm</div></div>
+    </div>
+
+    <div style="margin-top:1.5rem; font-size:14px; font-weight:600; color:var(--dark); margin-bottom:12px;">Date strip</div>
+    <div class="date-strip">
+      <div class="date-item"><div class="date-day">Mon</div><div class="date-num">21</div></div>
+      <div class="date-item"><div class="date-day">Tue</div><div class="date-num">22</div></div>
+      <div class="date-item active"><div class="date-day">Wed</div><div class="date-num">23</div></div>
+      <div class="date-item"><div class="date-day">Thu</div><div class="date-num">24</div></div>
+      <div class="date-item"><div class="date-day">Fri</div><div class="date-num">25</div></div>
+      <div class="date-item"><div class="date-day">Sat</div><div class="date-num">26</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">10 — Navigation</div>
+    <div class="section-title">Nav patterns</div>
+    <div class="nav-bar">
+      <div class="nav-brand">MediChain</div>
+      <div class="nav-tabs">
+        <div class="nav-tab active">Home</div>
+        <div class="nav-tab">Records</div>
+        <div class="nav-tab">Doctors</div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="bottom-nav-item active">
+        <div class="bottom-nav-icon">&#127968;</div>
+        <div class="bottom-nav-dot"></div>
+        <div class="bottom-nav-label">Home</div>
+      </div>
+      <div class="bottom-nav-item">
+        <div class="bottom-nav-icon">&#128203;</div>
+        <div class="bottom-nav-label">Records</div>
+      </div>
+      <div class="bottom-nav-item">
+        <div class="bottom-nav-icon">&#128100;</div>
+        <div class="bottom-nav-label">Doctors</div>
+      </div>
+      <div class="bottom-nav-item">
+        <div class="bottom-nav-icon">&#128197;</div>
+        <div class="bottom-nav-label">Schedule</div>
+      </div>
+      <div class="bottom-nav-item">
+        <div class="bottom-nav-icon">&#9881;&#65039;</div>
+        <div class="bottom-nav-label">Settings</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">11 — Alerts & Notifications</div>
+    <div class="section-title">Alerts</div>
+    <div class="alert alert-info"><div class="alert-icon">&#8505;&#65039;</div><div><div class="alert-title">Appointment reminder</div><div class="alert-body">Dr. Alexandra Boje — June 12, 2023 at 9:00 AM. Please join 5 minutes early.</div></div></div>
+    <div class="alert alert-success"><div class="alert-icon">&#10003;</div><div><div class="alert-title">Appointment booked!</div><div class="alert-body">Your appointment with Prof. Dr. Niall Horan has been confirmed for Oct 11.</div></div></div>
+    <div class="alert alert-warning"><div class="alert-icon">&#9888;&#65039;</div><div><div class="alert-title">Drug interaction detected</div><div class="alert-body">Magnesium Citrate may interact with Vitamin D3. Please consult your doctor before taking together.</div></div></div>
+    <div class="alert alert-danger"><div class="alert-icon">&#10005;</div><div><div class="alert-title">Access revoked</div><div class="alert-body">Dr. Horan's access to your records has been revoked successfully.</div></div></div>
+
+    <div style="margin-top:1.5rem; font-size:14px; font-weight:600; color:var(--dark); margin-bottom:8px;">Notifications</div>
+    <div class="notif"><div class="notif-dot"></div><div><div class="notif-title">New record uploaded</div><div class="notif-body">Dr. Niall Horan uploaded your orthopedic report from Oct 11.</div><div class="notif-time">2 mins ago</div></div></div>
+    <div class="notif" style="background:var(--bg); border-color:transparent;"><div class="notif-dot" style="background:var(--border);"></div><div><div class="notif-title" style="color:var(--text-muted); font-weight:400;">QR code scanned</div><div class="notif-body">Dr. Alexandra accessed your records on June 12 at 9:03 AM.</div><div class="notif-time">1 hour ago</div></div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">12 — Stats & Lists</div>
+    <div class="section-title">Stat cards & list items</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon icon-box-primary">&#128203;</div><div class="stat-value">24</div><div class="stat-label">Total records</div><div class="stat-change stat-up">+3 this month</div></div>
+      <div class="stat-card"><div class="stat-icon icon-box-green">&#9989;</div><div class="stat-value">6</div><div class="stat-label">Doctors accessed</div><div class="stat-change stat-up">All verified</div></div>
+      <div class="stat-card"><div class="stat-icon icon-box-purple">&#128197;</div><div class="stat-value">3</div><div class="stat-label">Upcoming visits</div><div class="stat-change stat-up">Next: June 12</div></div>
+      <div class="stat-card"><div class="stat-icon icon-box-orange">&#9888;&#65039;</div><div class="stat-value">1</div><div class="stat-label">Drug alerts</div><div class="stat-change stat-down">Review needed</div></div>
+    </div>
+
+    <div style="margin-top:1.5rem;" class="card">
+      <div class="list-item">
+        <div class="list-icon icon-box-primary">&#128203;</div>
+        <div class="list-content"><div class="list-title">Orthopedic Report</div><div class="list-sub">Uploaded by Dr. Niall Horan</div></div>
+        <div class="list-right">Oct 11<br><span style="color:#11C137; font-weight:600;">Verified</span></div>
+      </div>
+      <div class="list-item">
+        <div class="list-icon icon-box-green">&#128138;</div>
+        <div class="list-content"><div class="list-title">Prescription — Omega-3</div><div class="list-sub">Dr. Alexandra Boje</div></div>
+        <div class="list-right">Jun 12<br><span style="color:#2952FF; font-weight:600;">Active</span></div>
+      </div>
+      <div class="list-item" style="border-bottom:none;">
+        <div class="list-icon icon-box-orange">&#128203;</div>
+        <div class="list-content"><div class="list-title">Blood Test Results</div><div class="list-sub">Lab — Freetown Medical</div></div>
+        <div class="list-right">May 3<br><span style="color:#FA6E3C; font-weight:600;">Pending</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">13 — Modal</div>
+    <div class="section-title">Modal — success state</div>
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="modal-icon">&#10003;</div>
+        <div class="modal-title">Appointment booked!</div>
+        <div class="modal-body">Congratulations! Your appointment with Prof. Dr. Niall Horan has been successfully confirmed for October 11, 2023.</div>
+        <div class="modal-actions">
+          <div class="btn btn-outline">View details</div>
+          <div class="btn btn-primary">Back to home</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">14 — Shadow Scale</div>
+    <div class="section-title">Elevation & shadows</div>
+    <div class="shadow-grid">
+      <div><div class="shadow-demo shadow-1"><div style="font-size:12px; color:var(--text-muted);">Level 1</div></div><div class="shadow-name">sm — subtle</div></div>
+      <div><div class="shadow-demo shadow-2"><div style="font-size:12px; color:var(--text-muted);">Level 2</div></div><div class="shadow-name">md — cards</div></div>
+      <div><div class="shadow-demo shadow-3"><div style="font-size:12px; color:var(--text-muted);">Level 3</div></div><div class="shadow-name">lg — modals</div></div>
+      <div><div class="shadow-demo shadow-4"><div style="font-size:12px; color:var(--text-muted);">Level 4</div></div><div class="shadow-name">xl — overlays</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">15 — Icon System</div>
+    <div class="section-title">Icon library</div>
+    <div class="section-sub">Use outlined style at 24px. Filled only for active/selected states.</div>
+    <div class="icon-grid">
+      <div class="icon-item"><div class="icon-box icon-box-primary">&#127968;</div><div class="icon-name">home</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-primary">&#128203;</div><div class="icon-name">records</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-primary">&#128100;</div><div class="icon-name">profile</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-purple">&#128197;</div><div class="icon-name">calendar</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-purple">&#9875;</div><div class="icon-name">hospital</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-green">&#9989;</div><div class="icon-name">check</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-green">&#128138;</div><div class="icon-name">medicine</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-orange">&#9888;&#65039;</div><div class="icon-name">alert</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-gray">&#128269;</div><div class="icon-name">search</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-gray">&#128274;</div><div class="icon-name">lock</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-gray">&#128247;</div><div class="icon-name">qr-scan</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-primary">&#128222;</div><div class="icon-name">video</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-primary">&#128276;</div><div class="icon-name">notify</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-gray">&#9881;&#65039;</div><div class="icon-name">settings</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-orange">&#128521;</div><div class="icon-name">review</div></div>
+      <div class="icon-item"><div class="icon-box icon-box-purple">&#127775;</div><div class="icon-name">rating</div></div>
+    </div>
+  </div>
+
+</div>
