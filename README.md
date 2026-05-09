@@ -1,10 +1,10 @@
-# MediChain SL 🏥⛓️
+# MediChain SL
 
 > **Patient-owned medical records on blockchain. Built for Sierra Leone. Open source. Production-ready.**
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 1. [Quick Start](#quick-start)
 2. [What is MediChain SL?](#what-is-medichain-sl)
@@ -24,7 +24,7 @@
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -47,7 +47,7 @@ npm run dev
 
 ---
 
-## 🏥 What is MediChain SL?
+## What is MediChain SL?
 
 MediChain SL is a **blockchain-based personal health record (PHR) system** designed for Sierra Leone and other resource-constrained healthcare environments.
 
@@ -64,29 +64,29 @@ MediChain SL is a **blockchain-based personal health record (PHR) system** desig
 ### Use Cases
 
 **For Patients**:
-- 📱 Carry medical history on their phone
-- 🔐 Control who accesses their records
-- 🏥 Share records with any doctor instantly
-- 💾 Offline access (no internet needed)
-- 🔄 Account recovery if phone is lost
+- Carry medical history on their phone
+- Control who accesses their records
+- Share records with any doctor instantly
+- Offline access (no internet needed)
+- Account recovery if phone is lost
 
 **For Doctors**:
-- 👀 Request patient records asynchronously
-- ✍️ Write observations, prescriptions, referrals
-- 🔍 Full audit trail of all access
-- 🏥 Works across hospital boundaries
-- 📊 HL7 FHIR-standard data (interoperable)
+- Request patient records asynchronously
+- Write observations, prescriptions, referrals
+- Full audit trail of all access
+- Works across hospital boundaries
+- HL7 FHIR-standard data (interoperable)
 
 **For Ministry of Health**:
-- 📈 National health analytics
-- 🔐 Endorsement of doctor credentials
-- 📋 Audit trail for compliance (GDPR, HIPAA)
-- 🌐 Integration with national health information systems
-- 💉 Vaccination, disease, and outbreak tracking
+- National health analytics
+- Endorsement of doctor credentials
+- Audit trail for compliance (GDPR, HIPAA)
+- Integration with national health information systems
+- Vaccination, disease, and outbreak tracking
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### High-Level System Design
 
@@ -167,7 +167,7 @@ MediChain SL is a **blockchain-based personal health record (PHR) system** desig
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 ### 1. Patient Private Key Ownership (GAP 1)
 - ✅ Each patient receives Ed25519 keypair on first login
@@ -249,7 +249,7 @@ MediChain SL is a **blockchain-based personal health record (PHR) system** desig
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React Native** — Cross-platform mobile app
@@ -281,7 +281,7 @@ MediChain SL is a **blockchain-based personal health record (PHR) system** desig
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 ```bash
@@ -322,7 +322,7 @@ export PATH=$PATH:/usr/local/go/bin
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### 1. Environment Variables
 
@@ -397,7 +397,7 @@ ipfs daemon
 
 ---
 
-## 🏃 Running the Application
+## Running the Application
 
 ### Start Mobile App (Development)
 
@@ -450,7 +450,7 @@ curl -X POST http://localhost:3000/api/extract \
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### Authentication
 ```
@@ -533,7 +533,7 @@ DELETE /api/patient/data
 
 ---
 
-## 📊 Database Schema
+## Database Schema
 
 ### Core Tables
 
@@ -595,7 +595,7 @@ created_at TEXT
 
 ---
 
-## ⛓️ Blockchain Architecture
+## Blockchain Architecture
 
 ### Smart Contracts (Hyperledger Fabric)
 
@@ -636,7 +636,7 @@ AND(Ministry of Health MSP, Hospital MSP)
 
 ---
 
-## 🔐 Security & Compliance
+## Security & Compliance
 
 ### Data Security
 
@@ -736,7 +736,7 @@ curl -X PUT http://localhost:5984/_users -H "Content-Type: application/json"
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please:
 
@@ -760,7 +760,7 @@ We welcome contributions! Please:
 
 ---
 
-## 📜 License
+## License
 
 MediChain SL is released under the **Apache 2.0 License**. See [LICENSE](LICENSE) for details.
 
@@ -779,7 +779,7 @@ You are free to:
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 **Research & Standards**:
 - JMIR 2021: "Blockchain Personal Health Records: Systematic Review"
@@ -800,7 +800,7 @@ You are free to:
 
 ---
 
-## 📞 Support
+## Support
 
 - **Documentation**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Issues**: [GitHub Issues](https://github.com/medichain-sl/medichain-app/issues)
@@ -809,18 +809,18 @@ You are free to:
 
 ---
 
-## 🌍 Join the Mission
+## Join the Mission
 
 MediChain SL is part of the **Digital Public Goods** initiative to build technology that serves the public interest globally.
 
 Help us expand healthcare IT access in Sierra Leone and beyond:
-- 🏥 **Doctors**: Validate and contribute medical data standards
-- 🏛️ **Government**: Deploy MoH node; integrate national health systems
-- 👨‍💻 **Developers**: Contribute code, report bugs, improve documentation
-- 💰 **Investors**: Fund deployment and sustainability
+- **Doctors**: Validate and contribute medical data standards
+- **Government**: Deploy MoH node; integrate national health systems
+- **Developers**: Contribute code, report bugs, improve documentation
+- **Investors**: Fund deployment and sustainability
 
 ---
 
-**Built with ❤️ for healthcare accessibility in Sierra Leone**
+**Built with  for healthcare accessibility in Sierra Leone**
 
 *Version 1.0 | April 2026 | Production Ready*
