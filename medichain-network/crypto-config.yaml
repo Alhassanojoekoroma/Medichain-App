@@ -1,0 +1,14 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: medichain.local
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: Org1
+    Domain: org1.medichain.local
+    EnableNodeOUs: true
+    Template:
+      Count: 2  # 2 peers for redundancy
+    Users:
+      Count: 1  # 1 admin user
