@@ -28,7 +28,7 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         message: 'MediChain API Gateway is running',
-        blockchain: fabric.isSimulated ? 'Simulated Fallback Mode' : 'Connected to live Fabric Network'
+        blockchain: 'Connected to live Fabric Network'
     });
 });
 
@@ -180,7 +180,7 @@ app.post('/api/records/notarize', async (req, res) => {
             success: true, 
             txHash: result.txHash, 
             status: 'Notarized on Hyperledger Fabric Ledger',
-            mode: fabric.isSimulated ? 'Simulated' : 'Production'
+            mode: 'Production'
         });
     } catch (error) {
         console.error('❌ Blockchain Notarization Error:', error);

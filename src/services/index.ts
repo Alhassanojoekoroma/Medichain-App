@@ -16,90 +16,59 @@ export const BlockchainService = {
    * Grants access to a doctor on the ledger
    */
   grantAccess: async (doctorId: string, expiryMinutes: number): Promise<string> => {
-    if (GATEWAY_URL) {
-      try {
-        const response = await fetch(`${GATEWAY_URL}/access/grant`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            patientId: 'patient_john', 
-            doctorId, 
-            expiryMinutes 
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          return data.txHash;
-        }
-      } catch (e) {
-        console.warn('Blockchain Gateway unreachable, falling back to local simulation.', e);
-      }
-    }
-    // Fallback simulation using real hash generation for authenticity
-    return new Promise(async (resolve) => {
-      const mockTxData = `grant_${doctorId}_${Date.now()}_${Math.random()}`;
-      const hash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, mockTxData);
-      setTimeout(() => resolve(`0x${hash}`), 1500);
+    if (!GATEWAY_URL) throw new Error('GATEWAY_URL is not defined');
+    const response = await fetch(`${GATEWAY_URL}/access/grant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        patientId: 'patient_john', 
+        doctorId, 
+        expiryMinutes 
+      })
     });
+    if (!response.ok) throw new Error('Failed to grant access on blockchain');
+    const data = await response.json();
+    return data.txHash;
   },
 
   /**
    * Revokes access on the ledger
    */
   revokeAccess: async (accessId: string): Promise<boolean> => {
-    if (GATEWAY_URL) {
-      try {
-        const response = await fetch(`${GATEWAY_URL}/access/revoke`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            patientId: 'patient_john', 
-            doctorId: accessId 
-          })
-        });
-        return response.ok;
-      } catch (e) {
-        console.warn('Blockchain Gateway unreachable, falling back to local simulation.', e);
-      }
-    }
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(true), 1000);
+    if (!GATEWAY_URL) throw new Error('GATEWAY_URL is not defined');
+    const response = await fetch(`${GATEWAY_URL}/access/revoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        patientId: 'patient_john', 
+        doctorId: accessId 
+      })
     });
+    if (!response.ok) throw new Error('Failed to revoke access on blockchain');
+    return true;
   },
 
   /**
    * Records a hash of a medical record on the blockchain
    */
   notarizeRecord: async (recordId: string, contentHash: string): Promise<string> => {
-    if (GATEWAY_URL) {
-      try {
-        const response = await fetch(`${GATEWAY_URL}/records/notarize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            patientId: 'patient_john', 
-            recordId, 
-            documentHash: contentHash,
-            ipfsHash: 'Qm' + contentHash.slice(2, 32),
-            recordType: 'General',
-            doctorId: 'Self',
-            patientSignature: 'SignedByPatient'
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          return data.txHash;
-        }
-      } catch (e) {
-        console.warn('Blockchain Gateway unreachable, falling back to local simulation.', e);
-      }
-    }
-    // Fallback simulation using real hash generation for authenticity
-    return new Promise(async (resolve) => {
-      const mockTxData = `notarize_${recordId}_${contentHash}_${Date.now()}_${Math.random()}`;
-      const txHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, mockTxData);
-      setTimeout(() => resolve(`0x${txHash}`), 2000);
+    if (!GATEWAY_URL) throw new Error('GATEWAY_URL is not defined');
+    const response = await fetch(`${GATEWAY_URL}/records/notarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        patientId: 'patient_john', 
+        recordId, 
+        documentHash: contentHash,
+        ipfsHash: 'Qm' + contentHash.slice(2, 32),
+        recordType: 'General',
+        doctorId: 'Self',
+        patientSignature: 'SignedByPatient'
+      })
     });
+    if (!response.ok) throw new Error('Failed to notarize record on blockchain');
+    const data = await response.json();
+    return data.txHash;
   }
 };
 
