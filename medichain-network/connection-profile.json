@@ -1,0 +1,90 @@
+{
+    "name": "medichain-network",
+    "version": "1.0.0",
+    "client": {
+        "organization": "Org1",
+        "connection": {
+            "timeout": {
+                "peer": {
+                    "endorser": "300"
+                }
+            }
+        }
+    },
+    "channels": {
+        "medichainchannel": {
+            "orderers": [
+                "orderer.medichain.local"
+            ],
+            "peers": {
+                "peer0.org1.medichain.local": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                },
+                "peer1.org1.medichain.local": {
+                    "endorsingPeer": false,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": false
+                }
+            }
+        }
+    },
+    "organizations": {
+        "Org1": {
+            "mspid": "Org1MSP",
+            "peers": [
+                "peer0.org1.medichain.local",
+                "peer1.org1.medichain.local"
+            ],
+            "certificateAuthorities": [
+                "ca.org1.medichain.local"
+            ]
+        }
+    },
+    "orderers": {
+        "orderer.medichain.local": {
+            "url": "grpc://localhost:7050",
+            "grpcOptions": {
+                "ssl-target-name-override": "orderer.medichain.local",
+                "hostnameOverride": "orderer.medichain.local"
+            }
+        }
+    },
+    "peers": {
+        "peer0.org1.medichain.local": {
+            "url": "grpc://localhost:7051",
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.org1.medichain.local",
+                "hostnameOverride": "peer0.org1.medichain.local"
+            }
+        },
+        "peer1.org1.medichain.local": {
+            "url": "grpc://localhost:7061",
+            "grpcOptions": {
+                "ssl-target-name-override": "peer1.org1.medichain.local",
+                "hostnameOverride": "peer1.org1.medichain.local"
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "ca.org1.medichain.local": {
+            "url": "http://localhost:7054",
+            "caName": "ca.org1.medichain.local",
+            "tlsCACerts": {
+                "pem": "-----BEGIN CERTIFICATE-----\nMIICYTCCAgigAwIBAgIRANnLr/ZaDY/lhf6rP43vkQ0wCgYIKoZIzj0EAwIwezEL\nMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBG\ncmFuY2lzY28xHTAbBgNVBAoTFG9yZzEubWVkaWNoYWluLmxvY2FsMSAwHgYDVQQD\nExdjYS5vcmcxLm1lZGljaGFpbi5sb2NhbDAeFw0yNjA1MjkwMDI3MDBaFw0zNjA1\nMjYwMDI3MDBaMHsxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYw\nFAYDVQQHEw1TYW4gRnJhbmNpc2NvMR0wGwYDVQQKExRvcmcxLm1lZGljaGFpbi5s\nb2NhbDEgMB4GA1UEAxMXY2Eub3JnMS5tZWRpY2hhaW4ubG9jYWwwWTATBgcqhkjO\nPQIBBggqhkjOPQMBBwNCAATn3+/LFG1GB9AbBnrFjFRgbGwPIkxFKN5jOFNjowMP\n6IJdSfkPLXcMpeFA5elG5K/sp8jQHATji99bxwhYg3JOo20wazAOBgNVHQ8BAf8E\nBAMCAaYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMA8GA1UdEwEB/wQF\nMAMBAf8wKQYDVR0OBCIEIHeCRoLzbJwJ+/zE2yuFUfsbbRRZ/MFxP9yRXFyFbAZJ\nMAoGCCqGSM49BAMCA0cAMEQCIC3qkbQNqrO6i/+Q+yGc0+ckXMCrvuSeMLnJ+h3Q\nMaHxAiBFsxZ3E78Y6Dn+ugKnmMgxABEATM0qtbVMl+JkolO/wA==\n-----END CERTIFICATE-----\n"
+            },
+            "httpOptions": {
+                "verify": false
+            },
+            "registrar": [
+                {
+                    "enrollId": "admin",
+                    "enrollSecret": "adminpw"
+                }
+            ]
+        }
+    }
+}

@@ -1,6 +1,7 @@
 const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
 
 class FabricGateway {
   constructor() {
@@ -32,6 +33,11 @@ class FabricGateway {
       throw new Error('Wallet identity "admin" not found. Please register users first.');
     }
 
+    const channelName = process.env.HLF_CHANNEL_NAME || 'medichainchannel';
+    const patientCC  = process.env.HLF_PATIENT_CC  || 'patient';
+    const doctorCC   = process.env.HLF_DOCTOR_CC   || 'doctor';
+    const auditCC    = process.env.HLF_AUDIT_CC    || 'audit';
+
     this.gateway = new Gateway();
     await this.gateway.connect(ccp, {
       wallet: this.wallet,
@@ -39,12 +45,12 @@ class FabricGateway {
       discovery: { enabled: true, asLocalhost: true },
     });
 
-    this.network = await this.gateway.getNetwork('medichain');
+    this.network = await this.gateway.getNetwork(channelName);
     
-    // Cache contracts
-    this.contracts['patient'] = this.network.getContract('medichain_patient');
-    this.contracts['doctor'] = this.network.getContract('medichain_doctor');
-    this.contracts['audit'] = this.network.getContract('medichain_audit');
+    // Cache contracts (names must match the committed chaincode IDs)
+    this.contracts['patient'] = this.network.getContract(patientCC);
+    this.contracts['doctor']  = this.network.getContract(doctorCC);
+    this.contracts['audit']   = this.network.getContract(auditCC);
 
     console.log('🟢 SUCCESS: Connected to live Hyperledger Fabric Network! All data is now real.');
   }
