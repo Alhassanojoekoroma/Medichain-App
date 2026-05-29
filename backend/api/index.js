@@ -24,6 +24,13 @@ fabric.connect().catch(err => {
     console.error('Failed to initialize Fabric gateway:', err);
 });
 
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Welcome to MediChain API Gateway',
+        docs: 'Visit /api/health to check server status'
+    });
+});
+
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 

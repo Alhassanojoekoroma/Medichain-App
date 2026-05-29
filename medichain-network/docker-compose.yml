@@ -20,7 +20,7 @@ services:
 
   # Orderer
   orderer.medichain.local:
-    image: hyperledger/fabric-orderer:2.5.4
+    image: hyperledger/fabric-orderer:2.5.15
     environment:
       - ORDERER_GENERAL_LOGLEVEL=INFO
       - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
@@ -32,7 +32,7 @@ services:
     ports:
       - "7050:7050"
     volumes:
-      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./system-genesis-block/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
       - ./crypto-config/ordererOrganizations/medichain.local/orderers/orderer.medichain.local/msp:/var/hyperledger/orderer/msp
     container_name: orderer.medichain.local
     networks:
@@ -40,7 +40,7 @@ services:
 
   # Peer0 - Org1
   peer0.org1.medichain.local:
-    image: hyperledger/fabric-peer:2.5.4
+    image: hyperledger/fabric-peer:2.5.15
     environment:
       - CORE_PEER_ID=peer0.org1.medichain.local
       - CORE_PEER_ADDRESS=peer0.org1.medichain.local:7051
@@ -48,13 +48,16 @@ services:
       - CORE_PEER_LOCALMSPID=Org1MSP
       - CORE_PEER_LOCALMSPDIR=/etc/hyperledger/msp/peer
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer
-      - CORE_CHAINCODE_BUILDER=hyperledger/fabric-ccenv:2.5.4
+      - CORE_CHAINCODE_BUILDER=hyperledger/fabric-ccenv:2.5.15
+      - CORE_CHAINCODE_STARTUPTIMEOUT=600s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=600s
+      - DOCKER_HOST=unix:///var/run/docker.sock
     ports:
       - "7051:7051"
       - "7053:7053"
     volumes:
       - ./crypto-config/peerOrganizations/org1.medichain.local/peers/peer0.org1.medichain.local/msp:/etc/hyperledger/msp/peer
-      - /var/run/docker.sock:/var/run/docker.sock
+      - //var/run/docker.sock:/var/run/docker.sock
     container_name: peer0.org1.medichain.local
     depends_on:
       - orderer.medichain.local
@@ -63,7 +66,7 @@ services:
 
   # Peer1 - Org1 (for redundancy)
   peer1.org1.medichain.local:
-    image: hyperledger/fabric-peer:2.5.4
+    image: hyperledger/fabric-peer:2.5.15
     environment:
       - CORE_PEER_ID=peer1.org1.medichain.local
       - CORE_PEER_ADDRESS=peer1.org1.medichain.local:7051
@@ -71,12 +74,16 @@ services:
       - CORE_PEER_LOCALMSPID=Org1MSP
       - CORE_PEER_LOCALMSPDIR=/etc/hyperledger/msp/peer
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer
+      - CORE_CHAINCODE_BUILDER=hyperledger/fabric-ccenv:2.5.15
+      - CORE_CHAINCODE_STARTUPTIMEOUT=600s
+      - CORE_CHAINCODE_EXECUTETIMEOUT=600s
+      - DOCKER_HOST=unix:///var/run/docker.sock
     ports:
       - "7061:7051"
       - "7063:7053"
     volumes:
       - ./crypto-config/peerOrganizations/org1.medichain.local/peers/peer1.org1.medichain.local/msp:/etc/hyperledger/msp/peer
-      - /var/run/docker.sock:/var/run/docker.sock
+      - //var/run/docker.sock:/var/run/docker.sock
     container_name: peer1.org1.medichain.local
     depends_on:
       - orderer.medichain.local
