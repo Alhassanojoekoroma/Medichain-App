@@ -97,18 +97,42 @@ app.post('/api/extract', upload.single('document'), async (req, res) => {
     }
 });
 
-// Real IPFS upload using Pinata (with robust mock fallback if credentials aren't set)
+// IPFS upload — tries local IPFS node (port 5001) first, then Pinata cloud, then simulation
 app.post('/api/ipfs/upload', upload.single('document'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No document uploaded' });
         }
 
-        const pinataJwt = process.env.PINATA_JWT;
-        
-        if (pinataJwt && pinataJwt !== 'YOUR_PINATA_JWT') {
-            console.log('📡 [IPFS] Uploading to live Pinata IPFS Service...');
-            
+        const localIpfsUrl = process.env.IPFS_API_URL || 'http://127.0.0.1:5001';
+        const pinataJwt    = process.env.PINATA_JWT;
+
+        // ── 1. Try local IPFS daemon (IPFS Desktop / Kubo) ──────────────────
+        try {
+            console.log('📡 [IPFS] Uploading to local IPFS daemon at', localIpfsUrl);
+            const formData = new FormData();
+            formData.append('file', req.file.buffer, {
+                filename: req.file.originalname || 'medical_record.pdf',
+                contentType: req.file.mimetype
+            });
+
+            const response = await axios.post(
+                `${localIpfsUrl}/api/v0/add?pin=true`,
+                formData,
+                { headers: formData.getHeaders(), timeout: 10000 }
+            );
+
+            const hash = response.data.Hash;
+            console.log('🟢 [IPFS Local] Upload success! Hash:', hash);
+            return res.json({ hash, gateway: `${process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs/'}${hash}`, source: 'local' });
+
+        } catch (localErr) {
+            console.warn('⚠️ [IPFS Local] Daemon not reachable, trying Pinata...', localErr.message);
+        }
+
+        // ── 2. Try Pinata cloud ──────────────────────────────────────────────
+        if (pinataJwt && pinataJwt !== 'YOUR_PINATA_JWT_HERE') {
+            console.log('📡 [IPFS] Uploading to Pinata cloud...');
             const formData = new FormData();
             formData.append('file', req.file.buffer, {
                 filename: req.file.originalname || 'medical_record.pdf',
@@ -116,26 +140,23 @@ app.post('/api/ipfs/upload', upload.single('document'), async (req, res) => {
             });
 
             const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
-                headers: {
-                    ...formData.getHeaders(),
-                    'Authorization': `Bearer ${pinataJwt}`
-                },
+                headers: { ...formData.getHeaders(), 'Authorization': `Bearer ${pinataJwt}` },
                 maxBodyLength: Infinity
             });
 
-            console.log('🟢 [IPFS] Upload success! Hash:', response.data.IpfsHash);
-            return res.json({ hash: response.data.IpfsHash });
-        } else {
-            console.warn('⚠️ PINATA_JWT not configured. Simulating IPFS upload...');
-            // Artificial delay
-            await new Promise(resolve => setTimeout(resolve, 600));
-            // Generate standard IPFS multihash lookalike
-            const randomBytes = crypto ? crypto.randomBytes(21) : Buffer.from(Math.random().toString());
-            const simulatedHash = 'Qm' + randomBytes.toString('hex').slice(0, 44);
-            
-            console.log('🟢 [IPFS Simulated] Hash:', simulatedHash);
-            return res.json({ hash: simulatedHash });
+            const hash = response.data.IpfsHash;
+            console.log('🟢 [IPFS Pinata] Upload success! Hash:', hash);
+            return res.json({ hash, gateway: `https://gateway.pinata.cloud/ipfs/${hash}`, source: 'pinata' });
         }
+
+        // ── 3. Simulation fallback ───────────────────────────────────────────
+        console.warn('⚠️ No IPFS provider available. Simulating upload...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const buf = require('crypto').randomBytes(21);
+        const simulatedHash = 'Qm' + buf.toString('hex').slice(0, 44);
+        console.log('🟡 [IPFS Simulated] Hash:', simulatedHash);
+        return res.json({ hash: simulatedHash, source: 'simulated' });
+
     } catch (error) {
         console.error('❌ IPFS upload error:', error.message);
         res.status(500).json({ error: 'Failed to upload to IPFS: ' + error.message });
