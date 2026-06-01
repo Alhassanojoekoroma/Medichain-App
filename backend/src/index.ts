@@ -16,7 +16,14 @@ import { db } from './config/db';
 const app = express();
 const port = process.env.PORT || 3000; // running on 3000 for frontend compatibility
 
-app.use(cors());
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3001', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Legacy endpoints could be imported here from older index.js if needed

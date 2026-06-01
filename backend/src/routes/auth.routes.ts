@@ -15,12 +15,20 @@ const router = Router();
  * POST /api/auth/doctor/login
  */
 router.post('/doctor/login', async (req: Request, res: Response) => {
-  const { email, password } = req.body;
   try {
+    const { email, username, password } = req.body;
+    
+    // Accept either email or username field
+    const loginEmail = email || username;
+    
+    if (!loginEmail || !password) {
+      return res.status(400).json({ error: 'Email/username and password required' });
+    }
+
     // Demo implementation: Find doctor by email
     const result = await db.query(
       `SELECT id, password_hash, clinic_id FROM doctors WHERE email = $1 AND is_active = TRUE`,
-      [email]
+      [loginEmail]
     );
 
     if (result.rowCount === 0) {
@@ -38,6 +46,7 @@ router.post('/doctor/login', async (req: Request, res: Response) => {
     res.json({ success: true, token, doctorId: doc.id });
 
   } catch (err: any) {
+    console.error('[Auth] Doctor login error:', err);
     res.status(500).json({ error: 'Login failed', details: err.message });
   }
 });
@@ -46,15 +55,36 @@ router.post('/doctor/login', async (req: Request, res: Response) => {
  * POST /api/auth/patient/login
  */
 router.post('/patient/login', async (req: Request, res: Response) => {
-  const { phone } = req.body; // Using phone for patient login in demo
+  const { phone, email, password } = req.body;
   try {
-    const result = await db.query(
-      `SELECT id FROM patients WHERE phone = $1`,
-      [phone]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(401).json({ error: 'Patient not found' });
+    let result;
+    if (email) {
+      // Login by email
+      result = await db.query(
+        `SELECT id FROM patients WHERE email = $1`,
+        [email]
+      );
+      
+      if (result.rowCount === 0) {
+        return res.status(401).json({ error: 'Patient not found' });
+      }
+      
+      // Seed validation for password
+      if (password && password !== 'password123') {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+    } else if (phone) {
+      // Login by phone
+      result = await db.query(
+        `SELECT id FROM patients WHERE phone = $1`,
+        [phone]
+      );
+      
+      if (result.rowCount === 0) {
+        return res.status(401).json({ error: 'Patient not found' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Missing phone or email' });
     }
 
     const pat = result.rows[0];
