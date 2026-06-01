@@ -1,0 +1,119 @@
+{
+  "clinics": [
+    {
+      "id": "c0010000-0000-0000-0000-000000000001",
+      "name": "Connaught Hospital, Freetown",
+      "address": "Lightfoot Boston Street, Freetown",
+      "phone": "+232 22 222222",
+      "is_active": true
+    }
+  ],
+  "doctors": [
+    {
+      "id": "d0010000-0000-0000-0000-000000000001",
+      "full_name": "Dr. Amara Kofi",
+      "email": "doctor@medichain.sl",
+      "password_hash": "password123",
+      "license_no": "SL-MED-2019-0047",
+      "specialty": "General Medicine",
+      "clinic_id": "c0010000-0000-0000-0000-000000000001",
+      "is_active": true
+    },
+    {
+      "id": "d0010000-0000-0000-0000-000000000002",
+      "full_name": "Dr. John Kamara",
+      "email": "doctor@medichain.local",
+      "password_hash": "Test@123456",
+      "license_no": "SL-MED-2022-0089",
+      "specialty": "Cardiology",
+      "clinic_id": "c0010000-0000-0000-0000-000000000001",
+      "is_active": true
+    }
+  ],
+  "patients": [
+    {
+      "id": "p0010000-0000-0000-0000-000000000001",
+      "full_name": "Alex Johnson",
+      "date_of_birth": "1990-05-15",
+      "blood_type": "O+",
+      "phone": "+232 76 000 001",
+      "email": "patient@medichain.sl",
+      "wallet_address": "0x35ef000000000000000000000000000000000001"
+    }
+  ],
+  "emergency_profiles": [
+    {
+      "id": "e0010000-0000-0000-0000-000000000001",
+      "patient_id": "p0010000-0000-0000-0000-000000000001",
+      "allergies": [
+        {
+          "name": "Penicillin",
+          "severity": "High"
+        },
+        {
+          "name": "Peanuts",
+          "severity": "Moderate"
+        }
+      ],
+      "blood_type": "O+",
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dosage": "500mg"
+        },
+        {
+          "name": "Lisinopril",
+          "dosage": "10mg"
+        }
+      ],
+      "chronic_conditions": [
+        {
+          "name": "Hypertension"
+        }
+      ],
+      "emergency_contacts": [
+        {
+          "name": "Fatmata Conteh",
+          "phone": "+232 77 654321",
+          "relation": "Spouse"
+        }
+      ],
+      "emergency_notes": "Patient suffers from seasonal allergies. Epipen in personal bag.",
+      "hidden_fields": []
+    }
+  ],
+  "health_records": [
+    {
+      "id": "h0010000-0000-0000-0000-000000000001",
+      "patient_id": "p0010000-0000-0000-0000-000000000001",
+      "record_type": "lab",
+      "title": "Full Blood Count (FBC)",
+      "encrypted_cid": "QmXoypizjW3WknFixtLH48q6zoGwE3vT13fCQ99F755355",
+      "integrity_hash": "0x123abc789def0123456789abcdef0123456789abcdef0123456789abcdef0123",
+      "data_categories": [
+        "labs"
+      ],
+      "uploaded_by": "doctor-amara-kofi@medichain.sl",
+      "created_at": "2026-05-29T06:13:11.286Z"
+    },
+    {
+      "id": "h0010000-0000-0000-0000-000000000002",
+      "patient_id": "p0010000-0000-0000-0000-000000000001",
+      "record_type": "prescription",
+      "title": "Anti-hypertension Regimen",
+      "encrypted_cid": "QmYwAPJ882QF8FSLMLgwstJeaJ6gUpUr1c1A005232",
+      "integrity_hash": "0x456def789def0123456789abcdef0123456789abcdef0123456789abcdef0123",
+      "data_categories": [
+        "prescriptions"
+      ],
+      "uploaded_by": "doctor-amara-kofi@medichain.sl",
+      "created_at": "2026-05-31T06:13:11.286Z"
+    }
+  ],
+  "consent_policies": [],
+  "access_tokens": [],
+  "access_logs": [],
+  "revocation_events": [],
+  "sync_queue": [],
+  "doctor_access_requests": []
+}
