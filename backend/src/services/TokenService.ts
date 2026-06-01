@@ -10,8 +10,8 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
-const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET!;
-const JWT_SECRET = process.env.JWT_SECRET!;
+const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || 'dev-qr-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '8h';
 
 export type QRType = 'NORMAL' | 'EMERGENCY' | 'SESSION';
