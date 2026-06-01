@@ -61,7 +61,11 @@ func (s *DoctorContract) RegisterDoctor(
 		return fmt.Errorf("doctor %s already exists", id)
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
 	doctor := Doctor{
 		ID:            id,
 		LicenseNumber: license,
@@ -92,10 +96,16 @@ func (s *DoctorContract) VerifyDoctor(
 		return err
 	}
 
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
+
 	doctor.IsVerified = true
-	doctor.VerifiedAt = time.Now().UTC().Format(time.RFC3339)
+	doctor.VerifiedAt = now
 	doctor.VerifiedBy = verifiedBy
-	doctor.UpdatedAt = doctor.VerifiedAt
+	doctor.UpdatedAt = now
 
 	doctorJSON, err := json.Marshal(doctor)
 	if err != nil {
@@ -145,10 +155,15 @@ func (s *DoctorContract) RequestPatientAccess(
 		return fmt.Errorf("doctor %s is not verified", doctorID)
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
-	expiresAt := time.Now().AddDate(0, 0, 7).UTC().Format(time.RFC3339) // 7-day expiry
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC()
+	nowString := now.Format(time.RFC3339)
+	expiresAt := now.AddDate(0, 0, 7).Format(time.RFC3339) // 7-day expiry
 
-	requestID := fmt.Sprintf("access_req_%s_%s_%d", doctorID, patientID, time.Now().Unix())
+	requestID := fmt.Sprintf("access_req_%s_%s_%d", doctorID, patientID, txTime.Seconds)
 
 	request := DoctorAccessRequest{
 		ID:          requestID,
@@ -187,9 +202,15 @@ func (s *DoctorContract) ApproveAccessRequest(
 		return err
 	}
 
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC()
+
 	// Check if request is expired
 	expires, err := time.Parse(time.RFC3339, request.ExpiresAt)
-	if err == nil && time.Now().After(expires) {
+	if err == nil && now.After(expires) {
 		return fmt.Errorf("access request has expired")
 	}
 

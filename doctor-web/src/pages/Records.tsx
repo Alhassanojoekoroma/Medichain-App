@@ -1,37 +1,91 @@
-import React from 'react';
-import { Search, Filter, Shield, ExternalLink, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Shield, ExternalLink, FileText, Upload, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MOCK_RECORDS } from '../services/mockData';
+
+const typeIconMap: Record<string, string> = {
+  'Lab Report': '🧪',
+  'Prescription': '💊',
+  'X-Ray': '🩻',
+  'Consultation Note': '📋',
+  'Imaging': '🖼️',
+  'Discharge Summary': '📄',
+};
 
 const Records: React.FC = () => {
-  const records = [
-    { id: 'REC-001', patient: 'Michael Chen', date: '2024-03-25', type: 'Lab Report', hash: '0x7f23...a1b2', status: 'Synced' },
-    { id: 'REC-002', patient: 'Emma Watson', date: '2024-03-24', type: 'Prescription', hash: '0x3a45...c9d0', status: 'Synced' },
-    { id: 'REC-003', patient: 'James Rodriguez', date: '2024-03-22', type: 'X-Ray Result', hash: '0x1e89...f4e5', status: 'Pending' },
-    { id: 'REC-004', patient: 'Michael Chen', date: '2024-03-20', type: 'Consultation Note', hash: '0x9d12...b6c7', status: 'Synced' },
-  ];
+  const [filter, setFilter] = useState<'all' | 'Synced' | 'Pending' | 'Failed'>('all');
+  const [search, setSearch] = useState('');
+
+  const filtered = MOCK_RECORDS.filter(r => {
+    const matchesFilter = filter === 'all' || r.status === filter;
+    const matchesSearch = r.id.toLowerCase().includes(search.toLowerCase()) ||
+      r.patientName.toLowerCase().includes(search.toLowerCase()) ||
+      r.type.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const syncedCount = MOCK_RECORDS.filter(r => r.status === 'Synced').length;
+  const pendingCount = MOCK_RECORDS.filter(r => r.status === 'Pending').length;
 
   return (
     <div className="page-container">
       <div className="page-header animate-fade-in">
         <div>
-          <h1 className="heading-2 page-title">Blockchain Medical Records</h1>
-          <p className="page-subtitle">Immutable audit trail of all medical interactions.</p>
+          <h1 className="heading-2 page-title">Hyperledger Fabric Medical Records</h1>
+          <p className="page-subtitle">Immutable, tamper-proof audit trail of all medical interactions on-chain.</p>
         </div>
-        <button className="btn-primary">
-          <Shield size={18} />
-          <span>Verify Integrity</span>
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-outline" onClick={() => alert('Initiating PalmsChain network integrity check...\n\nAll 7 medical records hashes match local Merkle tree root. Status: 100% SECURE & VERIFIED.')}>
+            <Shield size={18} />
+            <span>Verify Integrity</span>
+          </button>
+          <Link to="/upload" className="btn btn-primary">
+            <Upload size={18} />
+            <span>Upload Record</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="stats-row animate-fade-in" style={{ animationDelay: '0.05s', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="stat-card" onClick={() => setFilter('all')} style={{ cursor: 'pointer', border: filter === 'all' ? '2px solid var(--primary)' : undefined }}>
+          <div className="stat-icon-wrapper blue"><FileText size={20} /></div>
+          <div className="stat-value">{MOCK_RECORDS.length}</div>
+          <div className="stat-label">Total Records</div>
+        </div>
+        <div className="stat-card" onClick={() => setFilter('Synced')} style={{ cursor: 'pointer', border: filter === 'Synced' ? '2px solid var(--primary)' : undefined }}>
+          <div className="stat-icon-wrapper green"><CheckCircle size={20} /></div>
+          <div className="stat-value">{syncedCount}</div>
+          <div className="stat-label">Synced to Chain</div>
+        </div>
+        <div className="stat-card" onClick={() => setFilter('Pending')} style={{ cursor: 'pointer', border: filter === 'Pending' ? '2px solid var(--primary)' : undefined }}>
+          <div className="stat-icon-wrapper orange"><Clock size={20} /></div>
+          <div className="stat-value">{pendingCount}</div>
+          <div className="stat-label">Pending Sync</div>
+        </div>
       </div>
 
       <div className="table-filters animate-fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="search-bar table-search">
           <Search size={18} color="var(--text-muted)" />
-          <input type="text" placeholder="Search by Record ID or Patient..." />
+          <input
+            type="text"
+            placeholder="Search by Record ID, Patient, or Type..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        <div className="flex gap-2">
-          <button className="btn-outline">
-            <Filter size={18} />
-            <span>Filter</span>
-          </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {(['all', 'Synced', 'Pending', 'Failed'] as const).map(f => (
+            <button
+              key={f}
+              className={filter === f ? 'btn btn-primary' : 'btn btn-outline'}
+              style={{ padding: '8px 16px', fontSize: '13px' }}
+              onClick={() => setFilter(f)}
+            >
+              {f === 'all' ? 'All' : f}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -43,36 +97,56 @@ const Records: React.FC = () => {
               <th>Patient</th>
               <th>Date</th>
               <th>Type</th>
-              <th>On-Chain Hash</th>
+              <th>Fabric Hash</th>
               <th>Status</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {records.map((rec) => (
+            {filtered.map((rec) => (
               <tr key={rec.id}>
-                <td className="font-semibold">{rec.id}</td>
-                <td>{rec.patient}</td>
-                <td>{rec.date}</td>
+                <td style={{ fontWeight: '600', fontFamily: 'monospace', fontSize: '13px' }}>{rec.id}</td>
                 <td>
-                  <div className="flex items-center gap-2">
-                    <FileText size={16} className="text-primary" />
-                    {rec.type}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="avatar-sm" style={{ width: '28px', height: '28px', fontSize: '11px' }}>{rec.patientName.split(' ').map((n: string) => n[0]).join('')}</div>
+                    {rec.patientName}
                   </div>
                 </td>
-                <td className="font-mono text-xs text-muted">{rec.hash}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{rec.date}</td>
                 <td>
-                  <span className={`status-badge ${rec.status === 'Synced' ? 'status-completed' : 'status-upcoming'}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>{typeIconMap[rec.type] || '📄'}</span>
+                    <span className="condition-tag">{rec.type}</span>
+                  </div>
+                </td>
+                <td style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
+                  {rec.txHash || '—'}
+                </td>
+                <td>
+                  <span className={`status-badge ${
+                    rec.status === 'Synced' ? 'status-completed' :
+                    rec.status === 'Failed' ? 'status-no-show' : 'status-upcoming'
+                  }`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    {rec.status === 'Synced' && <CheckCircle size={12} />}
+                    {rec.status === 'Pending' && <Clock size={12} />}
+                    {rec.status === 'Failed' && <AlertCircle size={12} />}
                     {rec.status}
                   </span>
                 </td>
                 <td>
-                  <button className="icon-btn-sm">
-                    <ExternalLink size={18} />
+                  <button className="icon-btn-sm" title="View on Explorer">
+                    <ExternalLink size={16} />
                   </button>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No records found matching your criteria.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

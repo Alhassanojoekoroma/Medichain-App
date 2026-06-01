@@ -1,0 +1,297 @@
+MediChain SL
+Doctor Web Application
+Product Requirements Document (PRD) — Update Guide
+Version 2.0  |  MediChain SL Team  |  May 2026
+
+
+
+
+1. Purpose of This Document
+The AI-generated v1.0 of the Doctor Web Portal was built without full alignment to the official MediChain SL design system, PRD requirements, or brand guidelines. This document specifies every update required to bring the existing codebase into full alignment.
+
+This PRD is structured as an UPDATE GUIDE, not a rebuild. It tells the AI developer exactly what to change, what to keep, and what to add — screen by screen, component by component.
+
+1.1 What Currently Exists
+The following components have been partially built and need updating:
+App.tsx — routing shell (keep, minor update)
+Sidebar.tsx — navigation (update colors and active states)
+TopHeader.tsx — top bar with wallet connect (update design)
+Dashboard.tsx — overview stats (update to match design system)
+Patients.tsx — patient list table (update)
+Appointments.tsx — schedule view (significant update needed)
+Records.tsx — blockchain records table (update)
+Settings.tsx — doctor profile (update)
+App.css — global styles (major update required)
+services/blockchain.ts — blockchain logic (keep as-is)
+hooks/useBlockchain.ts — hook (keep as-is)
+data/mockData.ts — mock data (expand)
+
+1.2 What Needs to Be Added (New Screens)
+ScanQR.tsx — scan patient QR code to request access
+PatientDetail.tsx — full patient record view after QR access granted
+UploadRecord.tsx — upload medical document to blockchain
+AccessLog.tsx — audit trail of all patient data access
+Notifications.tsx — notification center
+Analytics.tsx — charts and performance dashboard
+
+
+2. Design System Alignment
+The single biggest issue with v1.0 is inconsistent use of colors, spacing, and component styles. Every update must reference the MediChain SL design system.
+
+2.1 Color Token Updates
+Replace ALL hardcoded colors in App.css and component files with these CSS variables:
+
+
+2.2 Typography Updates
+Update the global font stack in index.css or App.css:
+
+
+2.3 Spacing & Radius Tokens
+Add to :root in App.css:
+
+
+
+3. Component Updates — Existing Files
+
+3.1 Sidebar.tsx — Required Changes
+
+
+Add QR Scan item to nav items array:
+
+
+3.2 TopHeader.tsx — Required Changes
+
+
+3.3 Dashboard.tsx — Required Changes
+
+Update the four stat cards with real data from MOCK data files and add new sections:
+
+
+Add these two new sections below the existing stats + appointments layout:
+Drug Interaction Alerts Panel — show 2-3 mock alerts with patient name, conflicting drugs, severity badge (High/Medium). Must be visible on dashboard. Use warning orange color.
+Blockchain Health Widget — show last sync time, total records on chain, pending sync count, and a 'Force Sync' button with green styling.
+
+3.4 Patients.tsx — Required Changes
+
+Replace the 5 hardcoded patients with MOCK_PATIENTS from data/mockData.ts (8 patients)
+Add 'Critical' status support — Linda Park has status: 'Critical' — show in red with pulsing dot animation
+Add allergies preview — show first allergy as a red chip in the table row
+Add 'View Records' action button per row (eye icon) that navigates to /patients/:id
+Add pagination or show/hide toggle for inactive patients
+Add 'Total: X patients | X active | X inactive' count above the table
+
+3.5 Appointments.tsx — Significant Update Required
+
+Current state: Only shows 4 hardcoded appointments in a simple list. No calendar view. No real data. Major update needed.
+
+Replace hardcoded data with MOCK_APPOINTMENTS from mockData.ts (9 appointments)
+Show today's appointments automatically using new Date().toISOString().split('T')[0] to filter
+Add appointment type chips — 'In-Person' (blue chip) vs 'Virtual' (purple chip)
+Add status chips — 'Upcoming' (green), 'In Progress' (orange pulsing), 'Completed' (grey), 'No-Show' (red)
+Add 'Start Video Call' button for Virtual appointments that are 'In Progress'
+Show patient initials avatar next to each appointment
+Add a weekly calendar strip at the top showing Mon-Sun with appointment count dots per day
+Month name in calendar header must update dynamically — remove hardcoded 'March 2024'
+
+3.6 Records.tsx — Required Changes
+
+Replace 4 hardcoded records with MOCK_RECORDS (7 records) from mockData.ts
+Add 'Verifying' status state (orange spinner animation) in addition to Synced/Pending
+Show IPFS CID in table for synced records — truncated with tooltip showing full CID
+Add 'Upload New Record' button that navigates to /upload
+Add record type icons — different icons for Lab Report, Prescription, X-Ray, Surgery Report, Consultation Note
+Add block number column for synced records — show as monospace text with blockchain icon
+
+3.7 Settings.tsx — Minor Updates
+
+Update 'Save Changes' button to use correct green primary color (#0D9426), not whatever blue the AI used
+Add 'Medical License Number' input field to Personal Information section
+Add 'Hospital Affiliation' field
+Add 'Consultation Fee' field with SLL currency label (Sierra Leone Leone)
+Add 'Available for Virtual Consultations' toggle switch in the Security section
+Update the Verified Credentials section — wire the 'Manage Wallet' button to the useBlockchain hook's connect() function
+
+
+4. New Screens to Build
+
+4.1 ScanQR.tsx — Scan Patient QR Code
+Route: /scan
+Purpose: Doctor uses this to scan a patient's QR code and request access to their records.
+
+Screen Layout (top to bottom):
+Page header — 'Scan Patient QR Code' title + subtitle 'Scan the patient QR code or enter their access key manually'
+QR Scanner Box — large centered card with a camera viewfinder area (640x480 style box with corner brackets in green). Note: in web app this uses getUserMedia() camera API, not native scanner. Add fallback message if camera permission denied.
+OR divider — horizontal rule with 'OR' text centered
+Manual Access Key Entry — input field labeled 'Enter One-Time Access Key' with a 6-digit code format hint (e.g. MCH-4829-XK). Submit button 'Request Access' in green.
+Recent Scans section — list of last 5 patients scanned this session (from local state only, not persisted). Show patient name, time scanned, access status (Approved/Expired).
+
+On successful scan/key entry: navigate to /patients/:id with the patient data loaded.
+On failed/expired key: show red error banner 'Access key expired or invalid. Ask the patient to generate a new one.'
+
+4.2 PatientDetail.tsx — Patient Full Record View
+Route: /patients/:id
+Purpose: Full view of a patient's record after the doctor has been granted access.
+
+Screen Layout:
+Patient Identity Card — top banner with patient name, initials avatar, blood type badge (red), age/gender, patient wallet address (truncated). Green 'Access Granted' badge on the right with expiry time.
+Tab navigation — four tabs: Overview | Medical History | Prescriptions | Documents
+Overview Tab — show: allergies (red chips, prominently displayed at top), current medications list, last 3 visits summary, next appointment if any
+Medical History Tab — timeline of all records from MOCK_RECORDS for this patient. Each record shows date, type icon, description, blockchain hash, verification badge.
+Prescriptions Tab — list of all medications with dosage, frequency, prescribing doctor, and date. Add 'Check Interactions' button that shows a mock drug interaction alert if 3+ medications exist.
+Documents Tab — show uploaded files (PDFs, X-rays, lab reports) as cards with download icon. Each shows IPFS CID and blockchain verification status.
+Sticky bottom bar — 'Upload New Record' (green) + 'Revoke My Access' (outlined red) buttons
+
+Critical: ALWAYS show the allergy section first and in red. This is a patient safety requirement.
+
+4.3 UploadRecord.tsx — Upload Medical Document
+Route: /upload or accessible from /patients/:id
+Purpose: Doctor uploads a medical document for a patient.
+
+Screen Layout:
+Patient selector — searchable dropdown. If arriving from /patients/:id, pre-fill the patient.
+Record type selector — dropdown: Lab Report | Prescription | Consultation Note | X-Ray | Surgery Report | Referral Letter | Other
+Description field — textarea for the record summary / title
+File upload zone — drag-and-drop area using React Dropzone. Accept: PDF, JPG, PNG, DOCX. Max file size: 10MB. Show preview thumbnail for images.
+AI Parse toggle — checkbox labeled 'Extract data with AI (recommended)'. When checked, after upload show a parsed summary card with extracted: diagnosis, medications, allergies, key dates.
+Upload button — green 'Upload & Store on Blockchain' button. Shows upload progress bar → 'Encrypting' → 'Storing on IPFS' → 'Writing to Blockchain' → 'Complete' steps.
+Success confirmation — green success card with record ID, IPFS CID, and blockchain transaction hash (use mock data). Show 'View Record' and 'Upload Another' buttons.
+
+4.4 AccessLog.tsx — Audit Trail
+Route: /access-log
+Purpose: Full audit log of all patient data access requests and grants the doctor has made.
+
+Screen Layout:
+Page header with export button — 'Export as PDF' (secondary button)
+Filter bar — filter by patient name, date range (date pickers), status (All / Approved / Pending / Expired / Revoked)
+Access log table — columns: Patient | Requested At | Expires At | Record Types | Status | Actions
+Status badges — Approved (green), Pending (orange), Expired (grey), Revoked (red)
+Action buttons per row — 'Renew' for Expired, 'View Records' for Approved, nothing for Pending
+Use MOCK_ACCESS_REQUESTS from mockData.ts as the data source
+
+4.5 Notifications.tsx
+Route: /notifications
+Screen Layout:
+Page header — 'Notifications' + 'Mark All as Read' button
+Filter tabs — All | Unread | Records | Appointments | Alerts
+Notification list — use MOCK_NOTIFICATIONS from mockData.ts. Each item shows: icon (colored by type), title, message, timestamp, read/unread state (unread has left green border + light green background)
+Notification types and their colors: success (green icon), info (blue icon), warning (orange icon), danger (red icon)
+
+4.6 Analytics.tsx
+Route: /analytics
+Screen Layout:
+Summary row — 4 mini stat cards: Total Patients This Month, Records Uploaded This Month, Avg Appointments Per Day, Sync Success Rate
+Patient Growth Chart — line chart using Recharts. Data from MOCK_ANALYTICS. X-axis: months (Nov-Apr), Y-axis: patient count. Color: #0D9426
+Appointments Chart — bar chart. Same data. Color: #1D9E75
+Department Breakdown — horizontal bar list using MOCK_DEPT_STATS. Show department name, percentage bar, and value. Each department has its own color from the mock data.
+Records Uploaded Chart — area chart. Data from MOCK_ANALYTICS.records field. Color: #0C2340
+
+
+5. App.css — Global Styles Update
+
+The AI-generated App.css is missing several style classes that the new screens require. Add the following:
+
+5.1 Classes to ADD
+
+.status-critical { background: #FEE2E2; color: #E53E3E; } — for Linda Park and critical patients
+.status-in-progress { background: #FFF3E6; color: #FA6E3C; animation: pulse 2s infinite; }
+.pulse { animation: pulse 2s infinite; } — @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.btn-danger { background: transparent; border: 1.5px solid #E53E3E; color: #E53E3E; padding: 0.6rem 1.2rem; border-radius: var(--radius-md); font-weight: 600; }
+.btn-danger:hover { background: #FEE2E2; }
+.upload-zone { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 3rem; text-align: center; cursor: pointer; transition: all var(--transition-fast); }
+.upload-zone:hover, .upload-zone.active { border-color: var(--primary); background: var(--primary-light); }
+.tab-nav { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; }
+.tab-item { padding: 0.75rem 1.5rem; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tab-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.allergy-chip { background: #FEE2E2; color: #E53E3E; padding: 0.2rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; }
+.blockchain-hash { font-family: 'Courier New', monospace; font-size: 0.8rem; color: var(--text-muted); }
+.access-granted-banner { background: var(--primary-light); border: 1px solid var(--primary); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-weight: 600; }
+.step-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); } .step-indicator.active { color: var(--primary); } .step-indicator.done { color: var(--success); }
+
+5.2 Classes to UPDATE
+
+.btn-primary — change background to #0D9426. Currently may be pointing to a blue variable.
+.btn-primary:hover — change to #0A7A1E
+.nav-item.active — ensure background is #E8F5EC and color is #0D9426. Add left border: border-left: 3px solid #0D9426
+.logo-text — ensure color is #0D9426 not blue
+.condition-tag — change from primary blue to teal: background #E0F4EF, color #0D9426
+.time-badge — change from primary blue to green: background #E8F5EC, color #0D9426
+
+
+6. Updated App.tsx Routing
+
+Replace the current Routes section in App.tsx with the full route list:
+
+
+6.1 Update Imports
+Add these imports to App.tsx:
+import PatientDetail from './pages/PatientDetail';
+import ScanQR from './pages/ScanQR';
+import UploadRecord from './pages/UploadRecord';
+import AccessLog from './pages/AccessLog';
+import Notifications from './pages/Notifications';
+import Analytics from './pages/Analytics';
+
+
+7. Data Layer Updates
+
+7.1 Expand mockData.ts
+Add the following exports that are referenced by the new screens but not yet in the mock data file:
+
+MOCK_ACCESS_REQUESTS — already shown in conversation. Ensure this is exported.
+MOCK_NOTIFICATIONS — already shown in conversation. Ensure this is exported.
+MOCK_ANALYTICS — already shown in conversation. Ensure this is exported.
+MOCK_DEPT_STATS — already shown in conversation. Ensure this is exported.
+
+All four of these are defined in the data/mockData.ts file shown in the existing code. Confirm they are exported and available.
+
+7.2 Add Types to types/index.ts
+Ensure these TypeScript types exist (add if missing):
+
+Patient — id, name, initials, age, gender, dob, phone, email, address, bloodType, condition, lastVisit, nextVisit?, status, walletAddress?, allergies, medications, notes
+Appointment — id, patientId, patientName, patientInitials, patientAge, patientGender, date, startTime, endTime, type, category, status, experience?, rating?
+MedicalRecord — id, patientId, patientName, date, type, description, hash, txHash?, blockNumber?, status, verified, ipfsCid?
+AccessRequest — id, patientId, patientName, patientInitials, requestedAt, expiresAt, status, recordTypes
+Notification — id, type, title, message, timestamp, read
+AnalyticsData — month, patients, appointments, records
+DepartmentStat — name, percentage, color
+BlockchainStatus — connected, walletAddress?, network?, balance?, lastSync?, pendingTx
+
+
+8. Non-Negotiable Rules
+
+These rules must NEVER be violated in any update:
+
+
+
+9. Build Order for the AI Developer
+
+Follow this exact sequence to avoid broken imports and missing dependencies:
+
+Step 1 — Update types/index.ts first. Add all missing TypeScript types.
+Step 2 — Update data/mockData.ts. Add and export all missing mock data objects.
+Step 3 — Update App.css. Apply all color token updates and add all new CSS classes.
+Step 4 — Update Sidebar.tsx. New nav items, green theme, logout button.
+Step 5 — Update TopHeader.tsx. Notification count, wallet button styling.
+Step 6 — Update Dashboard.tsx. Real data from mocks, drug alert panel, blockchain health widget.
+Step 7 — Update Patients.tsx. Full MOCK_PATIENTS, critical status, allergies.
+Step 8 — Update Appointments.tsx. Full MOCK_APPOINTMENTS, weekly strip, virtual call button.
+Step 9 — Update Records.tsx. Full MOCK_RECORDS, IPFS CID, upload button.
+Step 10 — Update Settings.tsx. Green buttons, new fields, wallet hook.
+Step 11 — Build ScanQR.tsx. Camera API, manual key entry, recent scans.
+Step 12 — Build PatientDetail.tsx. Tabs, allergy panel, timeline, sticky bar.
+Step 13 — Build UploadRecord.tsx. Dropzone, AI parse toggle, upload steps.
+Step 14 — Build AccessLog.tsx. Table, filters, status badges.
+Step 15 — Build Notifications.tsx. Filter tabs, notification list.
+Step 16 — Build Analytics.tsx. All four charts with Recharts.
+Step 17 — Update App.tsx. Add all new routes and imports.
+Step 18 — Final review. Check every screen uses --primary = #0D9426. Remove any remaining blue primary colors.
+
+
+10. Team Reference
+
+
+This doctor web app PRD is owned by OJOE and the MediChain SL team. All updates must be approved before the next demo presentation.
+
+
+MediChain SL — Your Records. Your Control.
+Built for Sierra Leone. Designed for the World.

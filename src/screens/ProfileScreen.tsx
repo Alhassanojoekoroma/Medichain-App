@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, CardBody, Toast } from '../components';
-import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
+import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow } from '../theme';
 import { useStore } from '../store/useStore';
 import { AuthService } from '../services/authService';
 
@@ -184,83 +184,85 @@ export default function ProfileScreen({ navigation }: any) {
         {/* ═══ MEDICAL INFORMATION ═══ */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Medical Information</Text>
+          <View style={styles.menuItemsContainer}>
+            <TouchableOpacity
+              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
+              onPress={() => navigation.navigate('Allergies')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <MaterialCommunityIcons name="alert-decagram-outline" size={22} color={Colors.danger} />
+              </View>
+              <Text style={styles.flatMenuText}>Allergies</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.flatMenuItem}
-            onPress={() => navigation.navigate('Allergies')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-              <MaterialCommunityIcons name="alert-decagram-outline" size={22} color={Colors.danger} />
-            </View>
-            <Text style={styles.flatMenuText}>Allergies</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.flatMenuItem}
-            onPress={() => navigation.navigate('Medications')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-              <MaterialCommunityIcons name="pill" size={22} color={Colors.success} />
-            </View>
-            <Text style={styles.flatMenuText}>Active Medications</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.flatMenuItem}
+              onPress={() => navigation.navigate('Medications')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                <MaterialCommunityIcons name="pill" size={22} color={Colors.success} />
+              </View>
+              <Text style={styles.flatMenuText}>Active Medications</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ═══ APP SETTINGS ═══ */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
+          <View style={styles.menuItemsContainer}>
+            <TouchableOpacity
+              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
+              onPress={() => navigation.navigate('Notifications')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
+              </View>
+              <Text style={styles.flatMenuText}>Notifications</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.flatMenuItem}
-            onPress={() => navigation.navigate('Notifications')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-              <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
-            </View>
-            <Text style={styles.flatMenuText}>Notifications</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
+              onPress={() => navigation.navigate('Security')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                <Ionicons name="shield-checkmark-outline" size={22} color="#8B5CF6" />
+              </View>
+              <Text style={styles.flatMenuText}>Privacy & Security</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.flatMenuItem}
-            onPress={() => navigation.navigate('Security')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-              <Ionicons name="shield-checkmark-outline" size={22} color="#8B5CF6" />
-            </View>
-            <Text style={styles.flatMenuText}>Privacy & Security</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
+              onPress={() => navigation.navigate('HelpCenter')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.neutral200 }]}>
+                <Ionicons name="help-circle-outline" size={22} color={Colors.neutral600} />
+              </View>
+              <Text style={styles.flatMenuText}>Help Center</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.flatMenuItem}
-            onPress={() => navigation.navigate('HelpCenter')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: Colors.neutral200 }]}>
-              <Ionicons name="help-circle-outline" size={22} color={Colors.neutral600} />
-            </View>
-            <Text style={styles.flatMenuText}>Help Center</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.flatMenuItem}
-            onPress={showForm}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-              <Ionicons name="create-outline" size={22} color={Colors.primary} />
-            </View>
-            <Text style={styles.flatMenuText}>Edit Profile</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.flatMenuItem}
+              onPress={showForm}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <Ionicons name="create-outline" size={22} color={Colors.primary} />
+              </View>
+              <Text style={styles.flatMenuText}>Edit Profile</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ═══ LOGOUT BUTTON ═══ */}
@@ -453,14 +455,17 @@ const styles = StyleSheet.create({
   // ═══ SECTIONS ═══
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-    marginTop: Spacing.md,
+    marginBottom: Spacing.xxl,
+    marginTop: Spacing.lg,
   },
   sectionTitle: {
     fontSize: FontSize.h3,
     fontWeight: FontWeight.bold,
     color: Colors.neutral900,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral200,
   },
 
   // ═══ FLAT CARDS ═══
@@ -469,96 +474,116 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.neutral200,
+    ...Shadow.card,
   },
 
   // ═══ PROFILE SECTION ═══
   profileContent: {
     alignItems: 'center',
+    paddingVertical: Spacing.lg,
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   avatar: {
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
     borderRadius: Radius.lg,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: Colors.white,
+    ...Shadow.card,
   },
   onlineBadge: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    bottom: -6,
+    right: -6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: Colors.success,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: Colors.white,
+    ...Shadow.strong,
   },
   profileName: {
-    fontSize: FontSize.h3,
+    fontSize: FontSize.h2,
     fontWeight: FontWeight.bold,
     color: Colors.neutral900,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   profileEmail: {
     fontSize: FontSize.body,
     fontWeight: FontWeight.medium,
     color: Colors.neutral600,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   profilePhone: {
     fontSize: FontSize.bodySmall,
     color: Colors.neutral500,
     textAlign: 'center',
+    paddingHorizontal: Spacing.lg,
   },
 
   // ═══ METRICS ═══
   metricsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
+    gap: Spacing.md,
   },
   metricItem: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.md,
   },
   metricLabel: {
     fontSize: FontSize.bodySmall,
     color: Colors.neutral600,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
     fontWeight: FontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   metricValue: {
-    fontSize: FontSize.h4,
+    fontSize: FontSize.h3,
     fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
+    color: Colors.primary,
   },
   metricDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: Colors.neutral200,
-    marginHorizontal: Spacing.md,
+    width: 0,
+    height: '0%',
+    backgroundColor: 'transparent',
+    marginHorizontal: 0,
   },
 
   // ═══ MENU ITEMS ═══
+  menuItemsContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
+    overflow: 'hidden',
+    ...Shadow.card,
+  },
   flatMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
     padding: Spacing.md,
-    borderRadius: Radius.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
+  },
+  menuItemWithBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral100,
   },
   menuIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.lg,
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -566,7 +591,7 @@ const styles = StyleSheet.create({
   flatMenuText: {
     flex: 1,
     fontSize: FontSize.body,
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.medium,
     color: Colors.neutral900,
   },
 
@@ -617,27 +642,29 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   inputGroup: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   inputLabel: {
-    fontSize: FontSize.body,
+    fontSize: FontSize.bodySmall,
     fontWeight: FontWeight.bold,
     color: Colors.neutral900,
     marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: Colors.neutral50,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.neutral200,
     borderRadius: Radius.md,
     padding: Spacing.md,
     fontSize: FontSize.body,
     color: Colors.neutral900,
-    fontWeight: FontWeight.medium,
+    fontWeight: FontWeight.regular,
   },
   inputRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.lg,
   },
   inputGroupHalf: {
     flex: 1,

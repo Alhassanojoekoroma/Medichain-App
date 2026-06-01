@@ -1,5 +1,6 @@
 // Re-export database service so screens can import from a single location
 export * from './database';
+export { SyncServiceInstance } from './syncService';
 
 import { BlockchainLog, Record } from '../types';
 import Constants from 'expo-constants';

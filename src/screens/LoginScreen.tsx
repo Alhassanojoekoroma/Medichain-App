@@ -103,8 +103,8 @@ export default function LoginScreen() {
               <View style={styles.logoContainer}>
                 <MaterialCommunityIcons name="dna" size={40} color={Colors.primary} />
               </View>
-              <Text style={styles.title}>MediChain <Text style={styles.accent}>SL</Text></Text>
-              <Text style={styles.subtitle}>Secure Blockchain Medical Records</Text>
+              <Text style={styles.title}>PalmsChain <Text style={styles.accent}>SL</Text></Text>
+              <Text style={styles.subtitle}>Secure Ledger Medical Records</Text>
             </View>
 
             {/* ─── Login Form ─── */}

@@ -1,14 +1,25 @@
-import React from 'react';
-import { Search, UserPlus, MoreVertical, Filter } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, UserPlus, Eye, Filter } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MOCK_PATIENTS } from '../services/mockData';
 
 const Patients: React.FC = () => {
-  const patients = [
-    { id: '1', name: 'Michael Chen', age: 42, gender: 'Male', lastVisit: '2024-03-15', condition: 'Hypertension', status: 'Active' },
-    { id: '2', name: 'Emma Watson', age: 28, gender: 'Female', lastVisit: '2024-03-18', condition: 'Checkup', status: 'Active' },
-    { id: '3', name: 'James Rodriguez', age: 35, gender: 'Male', lastVisit: '2024-03-20', condition: 'Post-op', status: 'Active' },
-    { id: '4', name: 'Sophia Miller', age: 54, gender: 'Female', lastVisit: '2024-03-22', condition: 'Diabetes', status: 'Active' },
-    { id: '5', name: 'David Wilson', age: 61, gender: 'Male', lastVisit: '2024-03-25', condition: 'Cardiology', status: 'Inactive' },
-  ];
+  const [patients] = useState(MOCK_PATIENTS);
+  const [showInactive, setShowInactive] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const activeCount = patients.filter(p => p.status === 'Active' || p.status === 'Critical').length;
+  const inactiveCount = patients.filter(p => p.status === 'Inactive').length;
+  
+  const filteredPatients = patients
+    .filter(p => showInactive ? true : p.status !== 'Inactive')
+    .filter(p => {
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      return p.name.toLowerCase().includes(term) ||
+             p.id.toLowerCase().includes(term) ||
+             p.condition.toLowerCase().includes(term);
+    });
 
   return (
     <div className="page-container">
@@ -17,21 +28,43 @@ const Patients: React.FC = () => {
           <h1 className="heading-2 page-title">My Patients</h1>
           <p className="page-subtitle">Manage and view your patient records securely.</p>
         </div>
-        <button className="btn-primary">
+        <Link to="/patients/new" className="btn btn-primary">
           <UserPlus size={18} />
           <span>Add New Patient</span>
-        </button>
+        </Link>
       </div>
 
       <div className="table-filters animate-fade-in" style={{ animationDelay: '0.1s' }}>
-        <div className="search-bar table-search">
-          <Search size={18} color="var(--text-muted)" />
-          <input type="text" placeholder="Filter by name, ID, or condition..." />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+          <div className="search-bar table-search">
+            <Search size={18} color="var(--text-muted)" />
+            <input 
+              type="text" 
+              placeholder="Filter by name, ID, or condition..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+            Total: {filteredPatients.length} patients | {activeCount} active | {inactiveCount} inactive
+          </span>
         </div>
-        <button className="btn-outline">
-          <Filter size={18} />
-          <span>Filters</span>
-        </button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '14px', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={showInactive} 
+              onChange={() => setShowInactive(!showInactive)} 
+              style={{ width: '16px', height: '16px', accentColor: 'var(--primary)' }}
+            />
+            Show Inactive
+          </label>
+          <button className="btn btn-outline" title="Filters coming soon">
+            <Filter size={18} />
+            <span>Filters</span>
+          </button>
+        </div>
       </div>
 
       <div className="table-container animate-fade-in" style={{ animationDelay: '0.2s' }}>
@@ -42,30 +75,38 @@ const Patients: React.FC = () => {
               <th>Age / Gender</th>
               <th>Last Visit</th>
               <th>Condition</th>
+              <th>Allergies</th>
               <th>Status</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {patients.map((patient) => (
-              <tr key={patient.id}>
+            {filteredPatients.map((patient) => (
+              <tr key={patient.id} className={patient.status === 'Critical' ? 'status-critical' : ''}>
                 <td>
                   <div className="table-cell-user">
-                    <div className="avatar-sm">{patient.name.split(' ').map(n => n[0]).join('')}</div>
-                    <span className="font-semibold">{patient.name}</span>
+                    <div className="avatar-sm">{patient.initials}</div>
+                    <span style={{ fontWeight: '600' }}>{patient.name}</span>
                   </div>
                 </td>
                 <td>{patient.age} / {patient.gender}</td>
                 <td>{patient.lastVisit}</td>
                 <td><span className="condition-tag">{patient.condition}</span></td>
                 <td>
-                  <span className={`status-dot ${patient.status.toLowerCase()}`}></span>
+                  {patient.allergies.length > 0 ? (
+                    <span className="allergy-chip">{patient.allergies[0]}</span>
+                  ) : (
+                    <span className="text-muted">-</span>
+                  )}
+                </td>
+                <td>
+                  <span className={`status-dot ${patient.status.toLowerCase()}${patient.status === 'Critical' ? ' pulse' : ''}`} style={{ backgroundColor: patient.status === 'Active' ? '#10B981' : patient.status === 'Critical' ? '#E53E3E' : '#94A3B8' }}></span>
                   {patient.status}
                 </td>
                 <td>
-                  <button className="icon-btn-sm">
-                    <MoreVertical size={18} />
-                  </button>
+                  <Link to={`/patients/${patient.id}`} className="icon-btn-sm" title="View Records">
+                    <Eye size={18} />
+                  </Link>
                 </td>
               </tr>
             ))}

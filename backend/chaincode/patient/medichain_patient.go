@@ -72,7 +72,11 @@ func (s *PatientContract) CreatePatient(
 		return fmt.Errorf("failed to parse guardians: %v", err)
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
 	patient := Patient{
 		ID:             id,
 		PublicKey:      publicKey,
@@ -130,8 +134,12 @@ func (s *PatientContract) AddDocument(
 	}
 
 	// GAP 8: Create medical record with full amendment chain support
-	now := time.Now().UTC().Format(time.RFC3339)
-	recordID := fmt.Sprintf("%s_record_%d", patientID, time.Now().Unix())
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
+	recordID := fmt.Sprintf("%s_record_%d", patientID, txTime.Seconds)
 
 	clientMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
@@ -201,8 +209,12 @@ func (s *PatientContract) AmendRecord(
 	}
 
 	// Create amended record
-	now := time.Now().UTC().Format(time.RFC3339)
-	amendedRecordID := fmt.Sprintf("%s_amended_%d", original.PatientID, time.Now().Unix())
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
+	amendedRecordID := fmt.Sprintf("%s_amended_%d", original.PatientID, txTime.Seconds)
 
 	amended := MedicalRecord{
 		ID:               amendedRecordID,
@@ -268,9 +280,15 @@ func (s *PatientContract) DeleteRecordForGDPR(
 		return err
 	}
 
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
+
 	// Mark as deleted
 	record.Status = "deleted"
-	record.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	record.UpdatedAt = now
 	record.IPFSHash = "" // Clear reference to IPFS data
 
 	recordJSON, err = json.Marshal(record)
@@ -292,8 +310,14 @@ func (s *PatientContract) GrantAccess(
 		return err
 	}
 
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
+
 	patient.ACL[doctorID] = true
-	patient.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	patient.UpdatedAt = now
 	patientJSON, err := json.Marshal(patient)
 	if err != nil {
 		return err
@@ -313,8 +337,14 @@ func (s *PatientContract) RevokeAccess(
 		return err
 	}
 
+	txTime, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return err
+	}
+	now := time.Unix(txTime.Seconds, int64(txTime.Nanos)).UTC().Format(time.RFC3339)
+
 	delete(patient.ACL, doctorID)
-	patient.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	patient.UpdatedAt = now
 	patientJSON, err := json.Marshal(patient)
 	if err != nil {
 		return err

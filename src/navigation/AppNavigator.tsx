@@ -22,6 +22,10 @@ import AllergiesScreen from '../screens/AllergiesScreen';
 import HelpCenterScreen from '../screens/HelpCenterScreen';
 import DataPrivacyScreen from '../screens/DataPrivacyScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import QRGenerateScreen from '../screens/QRGenerateScreen';
+import ConsentManagerScreen from '../screens/ConsentManagerScreen';
+import AccessHistoryScreen from '../screens/AccessHistoryScreen';
+import { AccessRequestsScreen } from '../screens/AccessRequestsScreen';
 import { useStore } from '../store/useStore';
 
 const Stack = createNativeStackNavigator();
@@ -106,6 +110,10 @@ export default function AppNavigator() {
             <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
             <Stack.Screen name="DataPrivacy" component={DataPrivacyScreen} />
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+            <Stack.Screen name="QRGenerate" component={QRGenerateScreen} />
+            <Stack.Screen name="ConsentManager" component={ConsentManagerScreen} />
+            <Stack.Screen name="AccessHistory" component={AccessHistoryScreen} />
+            <Stack.Screen name="AccessRequests" component={AccessRequestsScreen} />
           </>
         )}
       </Stack.Navigator>

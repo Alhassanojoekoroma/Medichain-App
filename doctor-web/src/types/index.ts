@@ -56,6 +56,7 @@ export interface Appointment {
   doctorName?: string;
   experience?: string;
   rating?: number;
+  duration?: string;
 }
 
 export type RecordType = 'Lab Report' | 'Prescription' | 'X-Ray' | 'MRI' | 'Consultation Note' | 'Discharge Summary' | 'Vaccination' | 'Surgery Report';

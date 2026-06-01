@@ -15,8 +15,8 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow, Components } from '../../theme';
+import { View, Text, StyleSheet, ViewStyle, StyleProp, TouchableOpacity } from 'react-native';
+import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow } from '../../theme';
 
 interface CardProps {
   children: React.ReactNode;
@@ -25,7 +25,23 @@ interface CardProps {
   onPress?: () => void;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, elevated = false }) => {
+export const Card: React.FC<CardProps> = ({ children, style, elevated = false, onPress }) => {
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={onPress}
+        style={[
+          styles.card,
+          elevated && styles.elevated,
+          style,
+        ]}
+      >
+        {children}
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <View
       style={[

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
   Image,
@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { Card, CardBody, Badge, Button, Toast } from '../components';
+import { Card, CardBody, Toast } from '../components';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
 
 const NOTIFICATIONS = [
@@ -51,11 +51,41 @@ const NOTIFICATIONS = [
 export default function NotificationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const toastRef = useRef<any>(null);
+  const [notifications, setNotifications] = useState(NOTIFICATIONS);
 
   const handleClearAll = () => {
+    setNotifications([]);
     toastRef.current?.show({
       message: 'All notifications cleared',
       type: 'success',
+    });
+  };
+
+  const handleOpenNotification = (notification: typeof NOTIFICATIONS[0]) => {
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item.id === notification.id ? { ...item, read: true } : item
+      )
+    );
+
+    if (notification.type === 'appointment') {
+      navigation.navigate('Appointments');
+      return;
+    }
+
+    if (notification.type === 'medication') {
+      navigation.navigate('Medications');
+      return;
+    }
+
+    if (notification.type === 'access') {
+      navigation.navigate('AccessRequests');
+      return;
+    }
+
+    toastRef.current?.show({
+      message: 'Notification opened',
+      type: 'info',
     });
   };
 
@@ -86,7 +116,7 @@ export default function NotificationsScreen({ navigation }: any) {
 
         {/* ═══ NOTIFICATIONS LIST ═══ */}
         <View style={styles.section}>
-          {NOTIFICATIONS.length === 0 ? (
+          {notifications.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons
                 name="bell-off-outline"
@@ -99,8 +129,12 @@ export default function NotificationsScreen({ navigation }: any) {
               </Text>
             </View>
           ) : (
-            NOTIFICATIONS.map((notification) => (
-              <Card key={notification.id} style={[styles.flatCard, !notification.read && styles.unreadCard]}>
+            notifications.map((notification) => (
+              <Card
+                key={notification.id}
+                style={[styles.flatCard, !notification.read && styles.unreadCard]}
+                onPress={() => handleOpenNotification(notification)}
+              >
                 <CardBody>
                   <View style={styles.notificationContent}>
                     {/* Avatar or Icon */}
@@ -135,27 +169,9 @@ export default function NotificationsScreen({ navigation }: any) {
 
                     {/* Action */}
                     {notification.type !== 'general' && (
-                      <TouchableOpacity
-                        style={styles.notifActionButton}
-                        onPress={() => {
-                          if (notification.type === 'appointment') {
-                            toastRef.current?.show({
-                              message: 'Navigating to appointments...',
-                              type: 'success',
-                            });
-                            navigation.navigate('Appointments');
-                          } else if (notification.type === 'medication') {
-                            navigation.navigate('Medications');
-                          } else if (notification.type === 'access') {
-                            toastRef.current?.show({
-                              message: 'Opening access request...',
-                              type: 'success',
-                            });
-                          }
-                        }}
-                      >
+                      <View style={styles.notifActionButton}>
                         <Ionicons name="arrow-forward" size={20} color={Colors.primary} />
-                      </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 </CardBody>

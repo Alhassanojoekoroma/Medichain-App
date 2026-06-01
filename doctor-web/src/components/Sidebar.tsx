@@ -5,7 +5,12 @@ import {
   Calendar, 
   FileText, 
   Settings, 
-  ShieldCheck 
+  ShieldCheck,
+  QrCode,
+  BarChart,
+  Bell,
+  ClipboardList,
+  LogOut
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -15,7 +20,11 @@ const Sidebar: React.FC = () => {
     { id: 'patients', label: 'My Patients', icon: Users, path: '/patients' },
     { id: 'appointments', label: 'Appointments', icon: Calendar, path: '/appointments' },
     { id: 'records', label: 'Medical Records', icon: FileText, path: '/records' },
-    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart, path: '/analytics' },
+    { id: 'scan', label: 'Scan QR Code', icon: QrCode, path: '/scan' },
+    { id: 'access-log', label: 'Access Log', icon: ClipboardList, path: '/access-log' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
+    { id: 'settings', label: 'Doctor Profile', icon: Settings, path: '/settings' },
   ];
 
   return (
@@ -24,7 +33,7 @@ const Sidebar: React.FC = () => {
         <div className="logo-icon">
           <ShieldCheck size={24} />
         </div>
-        <span className="logo-text">MediChain Portal</span>
+        <span className="logo-text">PalmsChain Portal</span>
       </div>
 
       <nav className="nav-menu">
@@ -43,12 +52,24 @@ const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      <div className="user-profile">
-        <div className="avatar">DR</div>
-        <div className="user-info">
-          <span className="user-name">Dr. Sarah Jenkins</span>
-          <span className="user-role">Cardiologist</span>
+      <div className="user-profile" style={{ flexDirection: 'column', gap: '1rem', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="avatar">DR</div>
+          <div className="user-info">
+            <span className="user-name">Dr. Sarah Jenkins</span>
+            <span className="user-role">Cardiologist</span>
+          </div>
         </div>
+        <button className="btn btn-ghost" onClick={() => {
+          if (confirm('Are you sure you want to log out from PalmsChain Doctor Portal?')) {
+            localStorage.removeItem('mc_doctor_token');
+            alert('Logged out successfully.');
+            window.location.reload();
+          }
+        }} style={{ justifyContent: 'flex-start', padding: '0.5rem', color: '#DC2626' }}>
+          <LogOut size={18} />
+          <span>Logout</span>
+        </button>
       </div>
     </aside>
   );
