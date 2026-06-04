@@ -2,11 +2,9 @@
  * src/services/qrService.ts
  * Patient Mobile App API client for QR operations.
  */
-import { AuthService } from './authService';
-import { QRPayload } from '../../backend/src/services/TokenService'; // Just for type definition in this MVP structure
+import { AuthService, BACKEND_URL } from './authService';
 
-// In a real app, define the env var, e.g., process.env.API_URL
-const API_BASE_URL = 'http://10.0.2.2:3001/api'; // Android Emulator default
+const API_BASE_URL = `${BACKEND_URL}/api`;
 
 export class QRServiceClient {
   private static async getAuthHeaders() {
@@ -74,6 +72,22 @@ export class QRServiceClient {
 
     if (!response.ok) {
       throw new Error('Failed to revoke token');
+    }
+    return response.json();
+  }
+
+  /**
+   * Update public emergency card visibility settings
+   */
+  static async updatePrivacySettings(hiddenFields: string[]) {
+    const response = await fetch(`${API_BASE_URL}/patients/privacy`, {
+      method: 'PUT',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({ hiddenFields }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update privacy visibility settings');
     }
     return response.json();
   }

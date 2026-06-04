@@ -74,7 +74,7 @@ export default function DoctorProfileScreen({ navigation, route }: any) {
                 <Text style={styles.doctorName}>{doctor.name}</Text>
                 <Text style={styles.specialty}>{doctor.specialty}</Text>
                 <View style={styles.ratingContainer}>
-                  <MaterialCommunityIcons name="star" size={18} color="#FFA500" />
+                  <MaterialCommunityIcons name="star" size={18} color={Colors.warning} />
                   <Text style={styles.rating}>{doctor.rating}</Text>
                   <Text style={styles.reviews}>({doctor.reviews})</Text>
                 </View>
@@ -91,14 +91,14 @@ export default function DoctorProfileScreen({ navigation, route }: any) {
             <CardBody>
               <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                  <View style={[styles.infoIcon, { backgroundColor: Colors.primaryLight }]}>
                     <MaterialCommunityIcons name="clock-outline" size={20} color={Colors.primary} />
                   </View>
                   <Text style={styles.infoLabel}>Availability</Text>
                   <Text style={styles.infoValue}>{doctor.availability}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                  <View style={[styles.infoIcon, { backgroundColor: Colors.successLight }]}>
                     <Ionicons name="cash" size={20} color={Colors.success} />
                   </View>
                   <Text style={styles.infoLabel}>Consultation Fee</Text>

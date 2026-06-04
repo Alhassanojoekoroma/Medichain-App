@@ -13,7 +13,7 @@
  * 10. Never return full patient record to public QR routes regardless of query params
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export interface LoginCredentials {
   username: string;
@@ -71,9 +71,15 @@ export async function enrollDoctor(credentials: LoginCredentials): Promise<Enrol
       licenseNumber: isKamara ? 'SL-MED-2022-0089' : 'SL-MED-2019-0047',
     };
 
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('mc_token', data.token);
-      sessionStorage.setItem('mc_user', JSON.stringify(doctorDetails));
+    // Store token and user in sessionStorage (safe in browser only)
+    if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.setItem('mc_token', data.token);
+        sessionStorage.setItem('mc_user', JSON.stringify(doctorDetails));
+      } catch (e) {
+        // Silently fail if sessionStorage is unavailable
+        console.warn('sessionStorage unavailable:', e);
+      }
     }
 
     return {
@@ -91,25 +97,31 @@ export async function enrollDoctor(credentials: LoginCredentials): Promise<Enrol
 }
 
 export async function logoutDoctor(): Promise<void> {
-  if (typeof window !== 'undefined') {
-    sessionStorage.removeItem('mc_token');
-    sessionStorage.removeItem('mc_user');
+  if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+    try {
+      sessionStorage.removeItem('mc_token');
+      sessionStorage.removeItem('mc_user');
+    } catch (e) {
+      console.warn('sessionStorage unavailable:', e);
+    }
   }
 }
 
 export async function getSession(): Promise<EnrollmentResponse['doctor'] | null> {
-  // Always check sessionStorage first in development / local mode to ensure immediate login sessions
-  if (typeof window !== 'undefined') {
-    const stored = sessionStorage.getItem('mc_user');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        // Continue to API check if corrupted JSON
-      }
-    }
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
+    return null;
   }
 
+  try {
+    const user = sessionStorage.getItem('mc_user');
+    if (user) {
+      return JSON.parse(user);
+    }
+  } catch (e) {
+    console.warn('Failed to parse session:', e);
+  }
+
+  // Fallback to API check
   try {
     const res = await fetch(`${BASE_URL}/api/auth/session`, {
       credentials: 'include',

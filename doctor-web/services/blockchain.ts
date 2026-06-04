@@ -5,7 +5,7 @@
 import { MOCK_RECORDS, MOCK_BLOCKCHAIN_STATUS } from '@/data/mockData';
 import type { MedicalRecord, BlockchainStatus } from '@/types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export async function getBlockchainStatus(): Promise<BlockchainStatus> {
   try {

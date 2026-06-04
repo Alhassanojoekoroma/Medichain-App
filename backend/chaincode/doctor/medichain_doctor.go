@@ -169,7 +169,7 @@ func (s *DoctorContract) RequestPatientAccess(
 		ID:          requestID,
 		DoctorID:    doctorID,
 		PatientID:   patientID,
-		RequestedAt: now,
+		RequestedAt: nowString,
 		Status:      "pending",
 		ExpiresAt:   expiresAt,
 		Reason:      reason,

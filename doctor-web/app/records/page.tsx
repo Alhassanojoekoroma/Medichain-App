@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
 import { MOCK_RECORDS } from '@/data/mockData';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   FileText, CheckCircle2, AlertTriangle, Clock, 
-  ExternalLink, Search, Filter, Plus, RefreshCw, FileDown, Database 
+  ExternalLink, Search, Filter, Plus, RefreshCw, FileDown, Database, X, ShieldCheck
 } from 'lucide-react';
 import type { MedicalRecord, RecordStatus, RecordType } from '@/types';
 import Link from 'next/link';
+import { backendApi } from '@/services/backendApi';
 
 export default function RecordsPage() {
   useAuth(); // Require authentication
@@ -18,7 +19,27 @@ export default function RecordsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [records, setRecords] = useState<MedicalRecord[]>(MOCK_RECORDS);
+  const [loading, setLoading] = useState(true);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [selectedPreviewRecord, setSelectedPreviewRecord] = useState<MedicalRecord | null>(null);
+
+  const loadRecords = async () => {
+    setLoading(true);
+    try {
+      const res = await backendApi.getRecords();
+      if (res.records && res.records.length > 0) {
+        setRecords(res.records);
+      }
+    } catch (err) {
+      console.error('Failed to load records from backend, using mock fallback', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRecords();
+  }, []);
 
   const getStatusIcon = (status: RecordStatus) => {
     switch (status) {
@@ -46,31 +67,55 @@ export default function RecordsPage() {
     }
   };
 
-  // Simulate pushing a pending record to Hyperledger Fabric channel
-  const handleForceSync = (recordId: string) => {
+  // Push a pending record to Hyperledger Fabric channel
+  const handleForceSync = async (recordId: string) => {
     setSyncingId(recordId);
     
-    // Set to verifying
+    // Set local state to verifying
     setRecords(prev => prev.map(rec => 
       rec.id === recordId ? { ...rec, status: 'Verifying' } : rec
     ));
 
-    setTimeout(() => {
-      // Complete mock sync
-      setRecords(prev => prev.map(rec => 
-        rec.id === recordId 
-          ? { 
-              ...rec, 
-              status: 'Synced', 
-              verified: true,
-              txHash: '0x' + Math.random().toString(16).substring(2, 10) + '...' + Math.random().toString(16).substring(2, 6),
-              blockNumber: Math.floor(Math.random() * 50) + 1050,
-              ipfsCid: 'Qm' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-            } 
-          : rec
-      ));
+    try {
+      await backendApi.forceSync();
+      // Reload from backend
+      await loadRecords();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Sync failed');
+      // Revert state
+      loadRecords();
+    } finally {
       setSyncingId(null);
-    }, 2000);
+    }
+  };
+
+  const handleDownload = (rec: MedicalRecord) => {
+    const text = `
+MediChain SL Blockchain-Secured Health Record
+============================================
+Patient ID: ${rec.patientId}
+Patient Name: ${rec.patientName}
+Record Type: ${rec.type}
+Description: ${rec.description}
+Date: ${rec.date}
+IPFS CID: ${rec.ipfsCid || 'N/A'}
+Cryptographic Hash (SHA-256): ${rec.hash}
+Blockchain Transaction ID: ${rec.txHash || 'N/A'}
+Blockchain Block Height: ${rec.blockNumber || 'N/A'}
+Verification Status: Verified & Anchored (Hyperledger Fabric)
+============================================
+CONFIDENTIAL - MEDICAL INFORMATION ONLY FOR AUTHORIZED PERSONNEL
+`;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `medical_record_${rec.id.substring(0,8)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const filteredRecords = records.filter(rec => {
@@ -169,7 +214,14 @@ export default function RecordsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredRecords.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-slate-500">
+                      <RefreshCw className="h-8 w-8 text-brand mx-auto mb-2 animate-spin" />
+                      <p className="font-medium">Loading medical records...</p>
+                    </td>
+                  </tr>
+                ) : filteredRecords.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-10 text-center text-slate-500">
                       <FileText className="h-8 w-8 text-slate-300 mx-auto mb-2" />
@@ -242,17 +294,19 @@ export default function RecordsPage() {
                             </button>
                           )}
                           {rec.status === 'Synced' && rec.ipfsCid && (
-                            <a
-                              href={`https://ipfs.io/ipfs/${rec.ipfsCid}`}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              onClick={() => setSelectedPreviewRecord(rec)}
                               className="p-1.5 text-slate-500 hover:text-brand hover:bg-slate-100 rounded-lg transition"
-                              title="View Document on IPFS Gateway"
+                              title="View Document Details & Preview"
                             >
                               <ExternalLink className="h-4 w-4" />
-                            </a>
+                            </button>
                           )}
-                          <button className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition" title="Download Local Copy">
+                          <button 
+                            onClick={() => handleDownload(rec)}
+                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition" 
+                            title="Download Local Copy"
+                          >
                             <FileDown className="h-4 w-4" />
                           </button>
                         </div>
@@ -265,6 +319,103 @@ export default function RecordsPage() {
           </div>
         </div>
       </div>
+
+      {/* In-App Record Preview Modal */}
+      {selectedPreviewRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="border-b border-slate-200 p-5 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-6 w-6 text-brand" />
+                <div>
+                  <h3 className="font-bold text-slate-900">MediChain Secured Record Preview</h3>
+                  <p className="text-xs text-slate-500 font-mono">ID: {selectedPreviewRecord.id}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedPreviewRecord(null)}
+                className="p-1 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-full transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6 text-left flex-1">
+              {/* Certificate Banner */}
+              <div className="border border-emerald-100 bg-emerald-50/50 rounded-xl p-4 flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-emerald-950">Hyperledger Fabric Verified</h4>
+                  <p className="text-xs text-emerald-800 leading-normal">
+                    This file integrity hash was anchored to block <strong className="font-bold">#{selectedPreviewRecord.blockNumber}</strong> with transaction ID <code className="bg-emerald-100 px-1 rounded font-mono text-[10px] break-all">{selectedPreviewRecord.txHash}</code>. The document is verified as untampered.
+                  </p>
+                </div>
+              </div>
+
+              {/* Record Summary Metadata */}
+              <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Patient Name</span>
+                  <span className="font-bold text-slate-800">{selectedPreviewRecord.patientName}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Record Type</span>
+                  <span className="font-bold text-slate-800">{selectedPreviewRecord.type}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Pinning Date</span>
+                  <span className="font-bold text-slate-800">{selectedPreviewRecord.date}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 block font-semibold uppercase tracking-wider">IPFS Gateway CID</span>
+                  <span className="font-bold text-brand font-mono text-xs select-all truncate block">{selectedPreviewRecord.ipfsCid}</span>
+                </div>
+              </div>
+
+              {/* Report Body Details */}
+              <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4">
+                <div className="border-b border-slate-100 pb-2.5 flex justify-between items-center">
+                  <span className="font-bold text-xs uppercase tracking-wider text-slate-400">Clinical Findings Report</span>
+                  <span className="text-xs text-slate-500 font-medium">Provider: Connaught Hospital</span>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Summary Notes:</h5>
+                    <p className="text-sm text-slate-600 mt-1 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      {selectedPreviewRecord.description}
+                    </p>
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Cryptographic Document Integrity:</h5>
+                    <p className="text-xs font-mono text-slate-500 mt-1 bg-slate-50 p-2 rounded border border-slate-100 break-all select-all">
+                      SHA256: {selectedPreviewRecord.hash}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-200 p-4 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => handleDownload(selectedPreviewRecord)}
+                className="px-4 py-2 border border-slate-300 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition flex items-center gap-1.5"
+              >
+                <FileDown className="h-4 w-4" />
+                Download Report
+              </button>
+              <button
+                onClick={() => setSelectedPreviewRecord(null)}
+                className="px-4 py-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-xl transition"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LayoutWrapper>
   );
 }

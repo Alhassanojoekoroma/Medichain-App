@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Database } from 'lucide-react';
+import { AlertTriangle, Database, RefreshCw } from 'lucide-react';
 import { MOCK_DRUG_ALERTS, MOCK_BLOCKCHAIN_STATUS } from '@/data/mockData';
 import { useRouter } from 'next/navigation';
+import { backendApi } from '@/services/backendApi';
 
 export function OverviewCards() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -16,6 +19,26 @@ export function OverviewCards() {
   const lastSyncTime = mounted && MOCK_BLOCKCHAIN_STATUS.lastSync
     ? new Date(MOCK_BLOCKCHAIN_STATUS.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '...';
+
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    setSyncMessage('Broadcasting offline queue to peer consensus nodes...');
+    try {
+      await backendApi.forceSync();
+      setSyncMessage('Consensus reached! Fabric ledger synchronized.');
+      setTimeout(() => {
+        setSyncMessage('');
+      }, 3500);
+    } catch (err: any) {
+      console.error(err);
+      setSyncMessage(err.message || 'Sync failed: Peer channel timeout.');
+      setTimeout(() => {
+        setSyncMessage('');
+      }, 4000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -91,9 +114,25 @@ export function OverviewCards() {
           </div>
         </div>
 
-        <button className="w-full bg-brand hover:bg-brand-dark text-white rounded-full py-2 text-sm font-medium transition-colors">
-          Force Sync Now
+        <button 
+          onClick={handleForceSync}
+          disabled={isSyncing}
+          className="w-full bg-brand hover:bg-brand-dark disabled:bg-[#d8eddcf2] disabled:text-brand disabled:cursor-not-allowed text-white rounded-full py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm"
+        >
+          {isSyncing ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin text-brand" />
+              Syncing Ledger...
+            </>
+          ) : (
+            'Force Sync Now'
+          )}
         </button>
+        {syncMessage && (
+          <p className="text-[10px] text-center font-bold text-slate-500 mt-2 uppercase tracking-wider animate-pulse">
+            {syncMessage}
+          </p>
+        )}
       </div>
     </div>
   );

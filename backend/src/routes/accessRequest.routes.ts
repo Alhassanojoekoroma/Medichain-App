@@ -4,8 +4,10 @@
  * Doctors request access → Patients approve/deny asynchronously
  */
 import { Router, Request, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { AccessRequestService } from '../services/AccessRequestService';
 import { requireDoctor, requirePatient, AuthRequest } from '../middleware/auth.middleware';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -14,32 +16,43 @@ const router = Router();
  * Doctor submits an access request for a patient
  * Requires Doctor JWT
  */
-router.post('/', requireDoctor, async (req: AuthRequest, res: Response) => {
-  const doctor = req.doctor!;
-  const { patientId, reason, dataCategories } = req.body;
+router.post(
+  '/', 
+  requireDoctor, 
+  [
+    body('patientId').notEmpty().withMessage('patientId is required'),
+    body('reason').notEmpty().withMessage('reason is required'),
+    body('dataCategories').optional().isArray()
+  ],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: 'Validation failed', details: errors.array() });
+      return;
+    }
 
-  if (!patientId || !reason) {
-    return res.status(400).json({ error: 'Missing patientId or reason' });
+    const doctor = req.doctor!;
+    const { patientId, reason, dataCategories } = req.body;
+
+    try {
+      const requestId = await AccessRequestService.createRequest({
+        doctorId: doctor.id,
+        patientId,
+        reason,
+        dataCategories: dataCategories || ['all'],
+      });
+
+      res.json({
+        success: true,
+        requestId,
+        message: 'Access request sent to patient',
+      });
+    } catch (err: any) {
+      logger.error(`Create access request error: ${err.message}`);
+      res.status(500).json({ error: 'Failed to create request', details: err.message });
+    }
   }
-
-  try {
-    const requestId = await AccessRequestService.createRequest({
-      doctorId: doctor.id,
-      patientId,
-      reason,
-      dataCategories: dataCategories || ['all'],
-    });
-
-    res.json({
-      success: true,
-      requestId,
-      message: 'Access request sent to patient',
-    });
-  } catch (err: any) {
-    console.error('Create access request error:', err);
-    res.status(500).json({ error: 'Failed to create request', details: err.message });
-  }
-});
+);
 
 /**
  * GET /api/access-requests/doctor/my-requests
@@ -98,53 +111,79 @@ router.get('/patient/history', requirePatient, async (req: AuthRequest, res: Res
  * Patient approves a doctor's access request
  * Requires Patient JWT
  */
-router.patch('/:id/approve', requirePatient, async (req: AuthRequest, res: Response) => {
-  const patient = req.patient!;
-  const { id } = req.params;
-  const { dataCategories } = req.body;
+router.patch(
+  '/:id/approve', 
+  requirePatient, 
+  [
+    body('dataCategories').optional().isArray()
+  ],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: 'Validation failed', details: errors.array() });
+      return;
+    }
 
-  try {
-    await AccessRequestService.approveRequest({
-      requestId: id,
-      patientId: patient.id,
-      dataCategories: dataCategories || ['all'],
-    });
+    const patient = req.patient!;
+    const { id } = req.params;
+    const { dataCategories } = req.body;
 
-    res.json({
-      success: true,
-      message: 'Access request approved. Doctor can now view your records.',
-    });
-  } catch (err: any) {
-    console.error('Approve request error:', err);
-    res.status(500).json({ error: 'Failed to approve request', details: err.message });
+    try {
+      await AccessRequestService.approveRequest({
+        requestId: id,
+        patientId: patient.id,
+        dataCategories: dataCategories || ['all'],
+      });
+
+      res.json({
+        success: true,
+        message: 'Access request approved. Doctor can now view your records.',
+      });
+    } catch (err: any) {
+      logger.error(`Approve request error: ${err.message}`);
+      res.status(500).json({ error: 'Failed to approve request', details: err.message });
+    }
   }
-});
+);
 
 /**
  * PATCH /api/access-requests/:id/deny
  * Patient denies a doctor's access request
  * Requires Patient JWT
  */
-router.patch('/:id/deny', requirePatient, async (req: AuthRequest, res: Response) => {
-  const patient = req.patient!;
-  const { id } = req.params;
-  const { denialReason } = req.body;
+router.patch(
+  '/:id/deny', 
+  requirePatient, 
+  [
+    body('denialReason').optional().isString()
+  ],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: 'Validation failed', details: errors.array() });
+      return;
+    }
 
-  try {
-    await AccessRequestService.denyRequest({
-      requestId: id,
-      patientId: patient.id,
-      denialReason,
-    });
+    const patient = req.patient!;
+    const { id } = req.params;
+    const { denialReason } = req.body;
 
-    res.json({
-      success: true,
-      message: 'Access request denied.',
-    });
-  } catch (err: any) {
-    console.error('Deny request error:', err);
-    res.status(500).json({ error: 'Failed to deny request', details: err.message });
+    try {
+      await AccessRequestService.denyRequest({
+        requestId: id,
+        patientId: patient.id,
+        denialReason,
+      });
+
+      res.json({
+        success: true,
+        message: 'Access request denied.',
+      });
+    } catch (err: any) {
+      logger.error(`Deny request error: ${err.message}`);
+      res.status(500).json({ error: 'Failed to deny request', details: err.message });
+    }
   }
-});
+);
 
 export default router;

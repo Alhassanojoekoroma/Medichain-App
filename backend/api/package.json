@@ -13,10 +13,10 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "multer": "^1.4.5-lts.1",
-    "fabric-network": "^2.5.0",
-    "fabric-ca-client": "^2.5.0",
+    "fabric-network": "^2.2.19",
+    "fabric-ca-client": "^2.2.19",
+    "uuid": "^9.0.0",
     "web3.storage": "^4.5.8",
-    "pg": "^8.11.3",
-    "uuid": "^9.0.0"
+    "pg": "^8.11.3"
   }
 }

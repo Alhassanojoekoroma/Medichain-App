@@ -1,22 +1,316 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Phone, Mail, MapPin, AlertCircle, Pill, QrCode, Calendar, FileText, Edit } from 'lucide-react';
+import {
+  ArrowLeft, Phone, Mail, MapPin, AlertCircle, Pill, QrCode,
+  Calendar, FileText, Edit, Loader2, Lock, Send, CheckCircle2, X,
+} from 'lucide-react';
 import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
 import { MOCK_PATIENTS, MOCK_RECORDS, MOCK_APPOINTMENTS } from '@/data/mockData';
+import { backendApi, BackendPatientDetail } from '@/services/backendApi';
+import type { Patient } from '@/types';
+
+// ─── Access Request Modal ──────────────────────────────────────────────────────
+
+function AccessRequestModal({
+  patientId,
+  patientName,
+  onClose,
+  onSuccess,
+}: {
+  patientId: string;
+  patientName: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await backendApi.requestPatientAccess({
+        patientId,
+        reason: reason.trim(),
+        categories: ['all'],
+      });
+      setSubmitted(true);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 2000);
+    } catch (error: any) {
+      setErr(error.message || 'Failed to send access request. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1 rounded-lg hover:bg-[#EAEEF2] transition-colors"
+        >
+          <X className="w-4 h-4 text-[#8C91A8]" />
+        </button>
+
+        {submitted ? (
+          <div className="text-center py-6 space-y-3">
+            <CheckCircle2 className="w-12 h-12 text-brand mx-auto" />
+            <h3 className="text-lg font-bold text-[#101326]">Request Sent!</h3>
+            <p className="text-sm text-[#8C91A8]">
+              Your access request for <strong>{patientName}</strong> has been sent. The patient
+              will be notified on their MediChain app.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-[#EDE9FF] rounded-xl flex items-center justify-center">
+                <Lock className="w-5 h-5 text-[#8F76FF]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#101326]">Request Record Access</h3>
+                <p className="text-xs text-[#8C91A8]">Patient: {patientName}</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-xs text-amber-800">
+              You do not currently have consent to view this patient's full medical record. Submit a
+              request and the patient will approve or deny it via the MediChain patient app.
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#5D6582] mb-1">
+                  Reason for Access Request <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="e.g. Patient is presenting with chest pain and requires immediate medical history review..."
+                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
+                />
+              </div>
+
+              {err && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {err}
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !reason.trim()}
+                  className="flex-1 bg-brand hover:bg-brand-dark disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Request
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PatientDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const patient = MOCK_PATIENTS.find(p => p.id === id);
+
+  const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [backendData, setBackendData] = useState<BackendPatientDetail | null>(null);
+
+  // Fallback to mock data
+  const mockPatient = MOCK_PATIENTS.find((p) => p.id === id) as Patient | undefined;
+  const patientRecords = MOCK_RECORDS.filter((r) => r.patientId === id);
+  const patientAppointments = MOCK_APPOINTMENTS.filter((a) => a.patientId === id);
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      setLoading(true);
+      try {
+        const data = await backendApi.getPatientDetail(id);
+        setBackendData(data);
+        setAccessDenied(false);
+      } catch (err: any) {
+        if (err.status === 403) {
+          setAccessDenied(true);
+        }
+        // On other errors (backend not running), we fall through to mockPatient
+        setBackendData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [id]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 text-[#8C91A8]">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <p className="text-sm">Loading patient record from blockchain...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
+  // Access denied — show overlay with request button
+  if (accessDenied) {
+    const patientName = mockPatient?.name || `Patient ${id}`;
+    const initials = patientName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+
+    return (
+      <LayoutWrapper>
+        {showAccessModal && (
+          <AccessRequestModal
+            patientId={id}
+            patientName={patientName}
+            onClose={() => setShowAccessModal(false)}
+            onSuccess={() => {
+              setShowAccessModal(false);
+              router.push('/patients');
+            }}
+          />
+        )}
+
+        <div className="space-y-4 sm:space-y-6">
+          {/* Back + Header */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => router.push('/patients')}
+              className="p-2 hover:bg-brand-light rounded-xl transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-[#5D6582]" />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#101326]">{patientName}</h1>
+              <p className="text-sm text-[#8C91A8]">Patient ID: {id}</p>
+            </div>
+          </div>
+
+          {/* Access Denied card */}
+          <div className="max-w-lg mx-auto">
+            <div className="bg-white rounded-2xl border border-[#D8DCE8] p-8 text-center space-y-6">
+              <div className="relative inline-flex">
+                <div className="w-20 h-20 rounded-full bg-[#EAEEF2] flex items-center justify-center font-bold text-2xl text-[#8C91A8]">
+                  {initials}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+                  <Lock className="w-4 h-4 text-white" />
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold text-[#101326]">Access Restricted</h2>
+                <p className="text-sm text-[#8C91A8] mt-2 max-w-xs mx-auto">
+                  You don't have consent to view <strong>{patientName}</strong>'s medical records.
+                  Request access and the patient will be notified.
+                </p>
+              </div>
+
+              <div className="bg-[#EAEEF2] rounded-xl p-4 text-sm text-[#5D6582] text-left space-y-2">
+                <p className="font-semibold text-[#101326] text-xs uppercase tracking-wider">
+                  How it works
+                </p>
+                <ol className="space-y-1 text-xs list-decimal list-inside">
+                  <li>Submit an access request with your clinical reason</li>
+                  <li>The patient receives a push notification on MediChain</li>
+                  <li>Once approved, you will have access to their records</li>
+                  <li>All access is logged on the Hyperledger Fabric blockchain</li>
+                </ol>
+              </div>
+
+              <button
+                id="request-access-btn"
+                onClick={() => setShowAccessModal(true)}
+                className="w-full bg-brand hover:bg-brand-dark text-white py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+                Request Access to Records
+              </button>
+            </div>
+          </div>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
+  // Use backend data or fall back to mock
+  const patient = backendData
+    ? {
+        id: backendData.patient.id,
+        name: backendData.patient.fullName,
+        initials: backendData.patient.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase(),
+        phone: backendData.patient.phone,
+        email: backendData.patient.email,
+        bloodType: backendData.patient.bloodType,
+        address: '',
+        status: 'Active',
+        allergies: backendData.patient.allergies.map((a) =>
+          typeof a === 'string' ? a : a.name
+        ),
+        medications: backendData.patient.medications.map((m) =>
+          typeof m === 'string' ? m : `${m.name}${m.dosage ? ` ${m.dosage}` : ''}`
+        ),
+        condition: (backendData.patient.chronicConditions || []).map((c: any) =>
+          typeof c === 'string' ? c : c.name
+        ).join(', ') || 'See records',
+        notes: '',
+        emergencyContactName: '',
+        emergencyContactPhone: '',
+        age: backendData.patient.dob
+          ? new Date().getFullYear() - new Date(backendData.patient.dob).getFullYear()
+          : 0,
+        gender: 'Unknown',
+      }
+    : mockPatient;
 
   if (!patient) {
     return (
       <LayoutWrapper>
         <div className="text-center py-20">
           <p className="text-xl font-bold text-[#101326]">Patient not found</p>
-          <button onClick={() => router.push('/patients')} className="mt-4 text-brand hover:underline text-sm">
+          <button
+            onClick={() => router.push('/patients')}
+            className="mt-4 text-brand hover:underline text-sm"
+          >
             ← Back to Patients
           </button>
         </div>
@@ -24,8 +318,19 @@ export default function PatientDetailPage() {
     );
   }
 
-  const patientRecords = MOCK_RECORDS.filter(r => r.patientId === id);
-  const patientAppointments = MOCK_APPOINTMENTS.filter(a => a.patientId === id);
+  // Use backend records or mock records
+  const records = backendData
+    ? backendData.records.map((r) => ({
+        id: r.id,
+        patientId: r.patient_id,
+        type: r.record_type,
+        description: r.title,
+        date: new Date(r.created_at).toLocaleDateString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric',
+        }),
+        status: 'Synced',
+      }))
+    : patientRecords;
 
   return (
     <LayoutWrapper>
@@ -63,20 +368,24 @@ export default function PatientDetailPage() {
             {/* Profile card */}
             <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
               <div className="flex items-center gap-4 mb-4">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl ${
-                  patient.status === 'Critical' ? 'bg-[#FEE2E2] text-[#E53E3E]' : 'bg-brand-light text-brand'
-                }`}>
+                <div
+                  className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl ${
+                    (patient as any).status === 'Critical'
+                      ? 'bg-[#FEE2E2] text-[#E53E3E]'
+                      : 'bg-brand-light text-brand'
+                  }`}
+                >
                   {patient.initials}
                 </div>
                 <div>
                   <div className="font-bold text-[#101326] text-lg">{patient.name}</div>
-                  <div className="text-sm text-[#8C91A8]">{patient.gender} • {patient.age} years</div>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    patient.status === 'Critical' ? 'bg-[#FEE2E2] text-[#E53E3E]' :
-                    patient.status === 'Active' ? 'bg-brand-light text-brand' :
-                    'bg-[#EAEEF2] text-[#8C91A8]'
-                  }`}>
-                    {patient.status}
+                  {(patient as any).age > 0 && (
+                    <div className="text-sm text-[#8C91A8]">
+                      {(patient as any).gender} • {(patient as any).age} years
+                    </div>
+                  )}
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-light text-brand">
+                    {(patient as any).status || 'Active'}
                   </span>
                 </div>
               </div>
@@ -92,10 +401,12 @@ export default function PatientDetailPage() {
                     <span className="text-[#5D6582]">{patient.email}</span>
                   </div>
                 )}
-                <div className="flex items-start gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-[#8C91A8] mt-0.5" />
-                  <span className="text-[#5D6582]">{patient.address}</span>
-                </div>
+                {(patient as any).address && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-[#8C91A8] mt-0.5" />
+                    <span className="text-[#5D6582]">{(patient as any).address}</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-[#D8DCE8] grid grid-cols-2 gap-3">
@@ -103,29 +414,33 @@ export default function PatientDetailPage() {
                   <div className="text-lg font-bold text-[#8F76FF]">{patient.bloodType}</div>
                   <div className="text-xs text-[#8C91A8]">Blood Type</div>
                 </div>
-                <div className="bg-brand-light rounded-xl p-3 text-center">
-                  <div className="text-lg font-bold text-brand">{patient.age}</div>
-                  <div className="text-xs text-[#8C91A8]">Age</div>
-                </div>
+                {(patient as any).age > 0 && (
+                  <div className="bg-brand-light rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-brand">{(patient as any).age}</div>
+                    <div className="text-xs text-[#8C91A8]">Age</div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Emergency Contact */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <h3 className="font-semibold text-[#101326] mb-3 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-[#E53E3E]" />
-                Emergency Contact
-              </h3>
-              <p className="font-medium text-[#101326] text-sm">{patient.emergencyContactName}</p>
-              <p className="text-sm text-[#5D6582]">{patient.emergencyContactPhone}</p>
-            </div>
+            {(patient as any).emergencyContactName && (
+              <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
+                <h3 className="font-semibold text-[#101326] mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-[#E53E3E]" />
+                  Emergency Contact
+                </h3>
+                <p className="font-medium text-[#101326] text-sm">{(patient as any).emergencyContactName}</p>
+                <p className="text-sm text-[#5D6582]">{(patient as any).emergencyContactPhone}</p>
+              </div>
+            )}
 
             {/* Insurance */}
-            {patient.insuranceProvider && (
+            {(patient as any).insuranceProvider && (
               <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
                 <h3 className="font-semibold text-[#101326] mb-2">Insurance</h3>
-                <p className="text-sm font-medium text-[#5D6582]">{patient.insuranceProvider}</p>
-                <p className="text-xs text-[#8C91A8]">ID: {patient.insuranceId}</p>
+                <p className="text-sm font-medium text-[#5D6582]">{(patient as any).insuranceProvider}</p>
+                <p className="text-xs text-[#8C91A8]">ID: {(patient as any).insuranceId}</p>
               </div>
             )}
           </div>
@@ -135,11 +450,11 @@ export default function PatientDetailPage() {
             {/* Primary condition */}
             <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
               <h3 className="font-semibold text-[#101326] mb-3">Primary Condition</h3>
-              <p className="text-[#5D6582]">{patient.condition}</p>
-              {patient.notes && (
+              <p className="text-[#5D6582]">{(patient as any).condition}</p>
+              {(patient as any).notes && (
                 <div className="mt-3 p-3 bg-[#FFF3E6] border border-[#FDE8DC] rounded-xl">
                   <p className="text-xs text-[#FA6E3C] font-medium mb-1">Clinical Note</p>
-                  <p className="text-sm text-[#5D6582]">{patient.notes}</p>
+                  <p className="text-sm text-[#5D6582]">{(patient as any).notes}</p>
                 </div>
               )}
             </div>
@@ -150,10 +465,12 @@ export default function PatientDetailPage() {
                 <AlertCircle className="w-4 h-4 text-[#FA6E3C]" />
                 Allergies
               </h3>
-              {patient.allergies.length > 0 ? (
+              {patient.allergies && patient.allergies.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {patient.allergies.map(a => (
-                    <span key={a} className="allergy-chip">{a}</span>
+                  {(patient.allergies as string[]).map((a) => (
+                    <span key={a} className="allergy-chip">
+                      {a}
+                    </span>
                   ))}
                 </div>
               ) : (
@@ -168,12 +485,16 @@ export default function PatientDetailPage() {
                 Current Medications
               </h3>
               <div className="space-y-2">
-                {patient.medications.map((med, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 bg-[#EDE9FF] rounded-xl">
-                    <div className="w-2 h-2 bg-[#8F76FF] rounded-full" />
-                    <span className="text-sm text-[#5D6582]">{med}</span>
-                  </div>
-                ))}
+                {(patient.medications as string[]).length > 0 ? (
+                  (patient.medications as string[]).map((med, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-[#EDE9FF] rounded-xl">
+                      <div className="w-2 h-2 bg-[#8F76FF] rounded-full" />
+                      <span className="text-sm text-[#5D6582]">{med}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#8C91A8]">No current medications</p>
+                )}
               </div>
             </div>
 
@@ -182,7 +503,7 @@ export default function PatientDetailPage() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-[#101326] flex items-center gap-2">
                   <FileText className="w-4 h-4 text-brand" />
-                  Medical Records ({patientRecords.length})
+                  Medical Records ({records.length})
                 </h3>
                 <button
                   onClick={() => router.push('/records/upload')}
@@ -192,26 +513,30 @@ export default function PatientDetailPage() {
                 </button>
               </div>
               <div className="space-y-2">
-                {patientRecords.map(record => (
+                {records.map((record: any) => (
                   <div key={record.id} className="flex items-center gap-3 p-3 bg-[#EAEEF2] rounded-xl">
-                    <div className={`w-2 h-2 rounded-full ${
-                      record.status === 'Synced' ? 'bg-brand' :
-                      record.status === 'Pending' ? 'bg-[#FA6E3C]' :
-                      record.status === 'Verifying' ? 'bg-[#8F76FF]' : 'bg-[#E53E3E]'
-                    }`} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        record.status === 'Synced'
+                          ? 'bg-brand'
+                          : record.status === 'Pending'
+                          ? 'bg-[#FA6E3C]'
+                          : 'bg-[#8F76FF]'
+                      }`}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#101326]">{record.type}</p>
-                      <p className="text-xs text-[#8C91A8] truncate">{record.description}</p>
+                      <p className="text-sm font-medium text-[#101326]">{record.type || record.record_type}</p>
+                      <p className="text-xs text-[#8C91A8] truncate">{record.description || record.title}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-[#8C91A8]">{record.date}</p>
-                      <span className={`text-xs font-semibold ${
-                        record.status === 'Synced' ? 'text-brand' : 'text-[#FA6E3C]'
-                      }`}>{record.status}</span>
+                      <span className={`text-xs font-semibold ${record.status === 'Synced' ? 'text-brand' : 'text-[#FA6E3C]'}`}>
+                        {record.status}
+                      </span>
                     </div>
                   </div>
                 ))}
-                {patientRecords.length === 0 && (
+                {records.length === 0 && (
                   <p className="text-sm text-[#8C91A8] text-center py-4">No records yet</p>
                 )}
               </div>
@@ -232,20 +557,34 @@ export default function PatientDetailPage() {
                 </button>
               </div>
               <div className="space-y-2">
-                {patientAppointments.slice(0, 3).map(appt => (
+                {patientAppointments.slice(0, 3).map((appt: any) => (
                   <div key={appt.id} className="flex items-center gap-3 p-3 bg-[#EAEEF2] rounded-xl">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-[#101326]">{appt.category} • {appt.type}</p>
-                      <p className="text-xs text-[#8C91A8]">{appt.date} {appt.startTime}–{appt.endTime}</p>
+                      <p className="text-sm font-medium text-[#101326]">
+                        {appt.category} • {appt.type}
+                      </p>
+                      <p className="text-xs text-[#8C91A8]">
+                        {appt.date} {appt.startTime}–{appt.endTime}
+                      </p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      appt.status === 'Completed' ? 'bg-brand-light text-brand' :
-                      appt.status === 'In Progress' ? 'bg-[#FFF3E6] text-[#FA6E3C]' :
-                      appt.status === 'No-Show' ? 'bg-[#FEE2E2] text-[#E53E3E]' :
-                      'bg-[#EDE9FF] text-[#8F76FF]'
-                    }`}>{appt.status}</span>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        appt.status === 'Completed'
+                          ? 'bg-brand-light text-brand'
+                          : appt.status === 'In Progress'
+                          ? 'bg-[#FFF3E6] text-[#FA6E3C]'
+                          : appt.status === 'No-Show'
+                          ? 'bg-[#FEE2E2] text-[#E53E3E]'
+                          : 'bg-[#EDE9FF] text-[#8F76FF]'
+                      }`}
+                    >
+                      {appt.status}
+                    </span>
                   </div>
                 ))}
+                {patientAppointments.length === 0 && (
+                  <p className="text-sm text-[#8C91A8] text-center py-4">No appointments</p>
+                )}
               </div>
             </div>
           </div>

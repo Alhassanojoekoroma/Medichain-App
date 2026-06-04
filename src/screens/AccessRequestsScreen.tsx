@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Colors } from '../theme';
 import { useStore } from '../store/useStore';
-import { AuthService } from '../services/authService';
+import { AuthService, BACKEND_URL } from '../services/authService';
 
 interface AccessRequest {
   id: string;
@@ -50,7 +50,7 @@ export const AccessRequestsScreen: React.FC = () => {
       }
 
       // Call backend API to fetch pending requests
-      const response = await fetch('http://localhost:3001/api/access-requests/patient/pending', {
+      const response = await fetch(`${BACKEND_URL}/api/access-requests/patient/pending`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ export const AccessRequestsScreen: React.FC = () => {
     try {
       const token = await AuthService.getToken();
       const response = await fetch(
-        `http://localhost:3001/api/access-requests/${requestId}/approve`,
+        `${BACKEND_URL}/api/access-requests/${requestId}/approve`,
         {
           method: 'PATCH',
           headers: {
@@ -117,7 +117,7 @@ export const AccessRequestsScreen: React.FC = () => {
             try {
               const token = await AuthService.getToken();
               const response = await fetch(
-                `http://localhost:3001/api/access-requests/${requestId}/deny`,
+                `${BACKEND_URL}/api/access-requests/${requestId}/deny`,
                 {
                   method: 'PATCH',
                   headers: {

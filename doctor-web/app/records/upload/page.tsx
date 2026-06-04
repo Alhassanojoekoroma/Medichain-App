@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
 import { MOCK_PATIENTS } from '@/data/mockData';
+import { backendApi } from '@/services/backendApi';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   ArrowLeft, FileText, Upload, CheckCircle2, 
@@ -17,6 +18,8 @@ export default function UploadRecordPage() {
   useAuth(); // Require authentication
   const router = useRouter();
 
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [recordType, setRecordType] = useState<RecordType>('Lab Report');
   const [description, setDescription] = useState('');
@@ -33,6 +36,28 @@ export default function UploadRecordPage() {
     txHash: string;
     blockNumber: number;
   } | null>(null);
+
+  // Load patients and check for query param
+  useEffect(() => {
+    backendApi.getAccessiblePatients()
+      .then(res => {
+        setPatients(res.patients || []);
+      })
+      .catch(err => {
+        console.error('Failed to load accessible patients', err);
+      })
+      .finally(() => {
+        setLoadingPatients(false);
+      });
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const pid = params.get('patientId');
+      if (pid) {
+        setSelectedPatientId(pid);
+      }
+    }
+  }, []);
 
   // Generate simple mock SHA-256 hash for demonstration
   const generateMockHash = (fileName: string, fileSize: number) => {
@@ -94,40 +119,48 @@ export default function UploadRecordPage() {
     setStatusMessage('Uploading encrypted payload to IPFS...');
     setSyncProgress(15);
 
-    // IPFS Progress
-    setTimeout(() => {
+    try {
+      // IPFS Progress simulation
+      await new Promise(resolve => setTimeout(resolve, 800));
       setSyncProgress(40);
       setStatusMessage('Payload staged on IPFS (CID: QmXf8...h6ySv)');
-    }, 1000);
 
-    // Fabric Anchoring Progress
-    setTimeout(() => {
+      // Fabric Anchoring Progress simulation
+      await new Promise(resolve => setTimeout(resolve, 800));
       setSyncStatus('fabric');
       setSyncProgress(65);
       setStatusMessage('Invoking MediChain Hyperledger Fabric Smart Contract (cc_medical_records)...');
-    }, 2200);
 
-    setTimeout(() => {
+      await new Promise(resolve => setTimeout(resolve, 800));
       setSyncProgress(85);
       setStatusMessage('Replicating transactions across channel peers (Connaught Hospital, COMAHS, MoHS)...');
-    }, 3500);
 
-    // Complete Synced
-    setTimeout(() => {
-      const mockTx = '0x' + Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10) + '...';
-      const blockNum = Math.floor(Math.random() * 50) + 1060;
-      const cid = 'Qm' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
-      setSyncProgress(100);
-      setSyncStatus('success');
-      setStatusMessage('Medical Record successfully verified and anchored to Hyperledger Fabric channel!');
-      setCreatedRecordInfo({
-        hash: fileHash,
-        ipfsCid: cid,
-        txHash: mockTx,
-        blockNumber: blockNum
+      // Actual backend anchoring
+      const response = await backendApi.uploadRecord({
+        patientId: selectedPatientId,
+        recordType: recordType,
+        title: uploadedFile.name,
+        description: description
       });
-    }, 5000);
+
+      if (response.success) {
+        setSyncProgress(100);
+        setSyncStatus('success');
+        setStatusMessage('Medical Record successfully verified and anchored to Hyperledger Fabric channel!');
+        setCreatedRecordInfo({
+          hash: response.record.hash,
+          ipfsCid: response.record.ipfsCid,
+          txHash: response.record.txHash,
+          blockNumber: response.record.blockNumber
+        });
+      } else {
+        throw new Error('Verification or anchoring returned negative result');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatus('error');
+      setStatusMessage(err.message || 'Failed to upload and anchor record.');
+    }
   };
 
   return (
@@ -256,11 +289,17 @@ export default function UploadRecordPage() {
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700"
                 >
                   <option value="">-- Choose patient --</option>
-                  {MOCK_PATIENTS.map((pat) => (
-                    <option key={pat.id} value={pat.id}>
-                      {pat.name} ({pat.id}) — {pat.condition}
-                    </option>
-                  ))}
+                  {loadingPatients ? (
+                    <option disabled>Loading patients...</option>
+                  ) : patients.length === 0 ? (
+                    <option disabled>No accessible patients found</option>
+                  ) : (
+                    patients.map((pat) => (
+                      <option key={pat.id} value={pat.id}>
+                        {pat.name} ({pat.id})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

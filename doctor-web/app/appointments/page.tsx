@@ -1,20 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
 import { MOCK_APPOINTMENTS } from '@/data/mockData';
 import { useAuth } from '@/hooks/useAuth';
-import { Calendar as CalendarIcon, Video, MapPin, Clock, Search, Filter, CheckCircle2, XCircle, AlertCircle, HelpCircle } from 'lucide-react';
+import { 
+  Calendar as CalendarIcon, Video, MapPin, Clock, Search, Filter, 
+  CheckCircle2, XCircle, AlertCircle, HelpCircle, X, Plus, Calendar 
+} from 'lucide-react';
 import type { Appointment, AppointmentStatus } from '@/types';
+import { backendApi } from '@/services/backendApi';
 
 export default function AppointmentsPage() {
   useAuth(); // Require authentication
+  const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'today' | 'upcoming' | 'past'>('today');
+  const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS);
+  const [patients, setPatients] = useState<any[]>([]);
+
+  // Schedule Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('10:00');
+  const [endTime, setEndTime] = useState('10:30');
+  const [type, setType] = useState<'Virtual' | 'In-Person'>('In-Person');
+  const [notes, setNotes] = useState('');
 
   const TODAY = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    backendApi.getAccessiblePatients()
+      .then(res => {
+        setPatients(res.patients || []);
+      })
+      .catch(err => {
+        console.error('Failed to load patients for schedule selector', err);
+      });
+  }, []);
 
   // Helper to categorize appointment date relative to today
   const getAppointmentTabCategory = (appDate: string) => {
@@ -52,7 +79,49 @@ export default function AppointmentsPage() {
     }
   };
 
-  const filteredAppointments = MOCK_APPOINTMENTS.filter((app) => {
+  const handleScheduleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatientId || !date || !startTime || !endTime) return;
+
+    const patient = patients.find(p => p.id === selectedPatientId);
+    const patientName = patient ? patient.name : 'Unknown Patient';
+    const patientInitials = patientName
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase() || 'PT';
+
+    const newApp: Appointment = {
+      id: `APT-${Math.floor(100000 + Math.random() * 900000)}`,
+      patientId: selectedPatientId,
+      patientName,
+      patientInitials,
+      patientGender: 'Female', // default for mockup details
+      patientAge: 28, // default for mockup details
+      date,
+      startTime,
+      endTime,
+      status: 'Upcoming',
+      type,
+      category: 'Consultation',
+      videoCallRoomId: type === 'Virtual' ? `room-${Math.random().toString(36).substring(2, 8)}` : undefined,
+      notes: notes || undefined
+    };
+
+    setAppointments(prev => [newApp, ...prev]);
+    
+    // Reset form
+    setSelectedPatientId('');
+    setDate('');
+    setStartTime('10:00');
+    setEndTime('10:30');
+    setType('In-Person');
+    setNotes('');
+    setIsModalOpen(false);
+  };
+
+  const filteredAppointments = appointments.filter((app) => {
     const tabMatch = getAppointmentTabCategory(app.date) === activeTab;
     const nameMatch = app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                       app.id.toLowerCase().includes(searchTerm.toLowerCase());
@@ -70,7 +139,10 @@ export default function AppointmentsPage() {
             <p className="text-sm text-slate-500">View and manage virtual and in-person patient consultations</p>
           </div>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
+            >
               <CalendarIcon className="h-4 w-4" />
               Schedule Appointment
             </button>
@@ -214,7 +286,10 @@ export default function AppointmentsPage() {
                 </div>
 
                 <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-                  <button className="px-3.5 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-medium text-slate-700 transition">
+                  <button 
+                    onClick={() => router.push(`/patients/${app.patientId}`)}
+                    className="px-3.5 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-medium text-slate-700 transition"
+                  >
                     View Profile
                   </button>
                   {app.type === 'Virtual' && app.status !== 'Completed' && app.status !== 'Cancelled' && (
@@ -226,17 +301,148 @@ export default function AppointmentsPage() {
                       Join Call
                     </a>
                   )}
-                  {app.status === 'In Progress' && (
-                    <button className="px-3.5 py-1.5 bg-brand-light text-brand hover:bg-[#d8eddcf2] rounded-lg text-xs font-medium transition">
-                      Record Diagnosis
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => router.push(`/records/upload?patientId=${app.patientId}`)}
+                    className="px-3.5 py-1.5 bg-brand-light text-brand hover:bg-[#d8eddcf2] rounded-lg text-xs font-medium transition"
+                  >
+                    Record Diagnosis
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Schedule Appointment Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <h2 className="text-xl font-bold text-slate-900 font-display flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-brand" /> Schedule Appointment
+              </h2>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-950 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleSubmit} className="space-y-4">
+              {/* Select Patient */}
+              <div>
+                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Select Patient *</label>
+                <select
+                  required
+                  value={selectedPatientId}
+                  onChange={e => setSelectedPatientId(e.target.value)}
+                  className="w-full border border-[#D8DCE8] bg-slate-50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700"
+                >
+                  <option value="">-- Choose Patient --</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.id.substring(0,8)}...)</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Date *</label>
+                <input
+                  required
+                  type="date"
+                  min={TODAY}
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
+                />
+              </div>
+
+              {/* Time Slots */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#5D6582] mb-1">Start Time *</label>
+                  <input
+                    required
+                    type="time"
+                    value={startTime}
+                    onChange={e => setStartTime(e.target.value)}
+                    className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5D6582] mb-1">End Time *</label>
+                  <input
+                    required
+                    type="time"
+                    value={endTime}
+                    onChange={e => setEndTime(e.target.value)}
+                    className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
+                  />
+                </div>
+              </div>
+
+              {/* Consultation Type */}
+              <div>
+                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Consultation Type *</label>
+                <div className="flex gap-4 mt-1">
+                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                    <input
+                      type="radio"
+                      name="type"
+                      checked={type === 'In-Person'}
+                      onChange={() => setType('In-Person')}
+                      className="accent-brand h-4 w-4"
+                    />
+                    In-Person
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                    <input
+                      type="radio"
+                      name="type"
+                      checked={type === 'Virtual'}
+                      onChange={() => setType('Virtual')}
+                      className="accent-brand h-4 w-4"
+                    />
+                    Virtual (Telehealth)
+                  </label>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Clinical Notes / Reason</label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Reason for consultation..."
+                  className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-brand hover:bg-brand-dark text-white py-2.5 rounded-xl text-sm font-semibold transition shadow-sm"
+                >
+                  Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </LayoutWrapper>
   );
 }

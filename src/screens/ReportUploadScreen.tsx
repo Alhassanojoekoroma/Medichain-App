@@ -129,7 +129,7 @@ export default function ReportUploadScreen({ navigation }: any) {
               <Card style={styles.flatCard}>
                 <CardBody>
                   <View style={styles.optionContent}>
-                    <View style={[styles.optionIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                    <View style={[styles.optionIcon, { backgroundColor: Colors.primaryLight }]}>
                       <MaterialCommunityIcons name="camera" size={32} color={Colors.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -150,7 +150,7 @@ export default function ReportUploadScreen({ navigation }: any) {
               <Card style={styles.flatCard}>
                 <CardBody>
                   <View style={styles.optionContent}>
-                    <View style={[styles.optionIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                    <View style={[styles.optionIcon, { backgroundColor: Colors.successLight }]}>
                       <MaterialCommunityIcons name="file-pdf-box" size={32} color={Colors.success} />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -217,8 +217,8 @@ export default function ReportUploadScreen({ navigation }: any) {
             <Card style={styles.flatCard}>
               <CardBody>
                 <View style={styles.refinementContent}>
-                  <View style={[styles.refinementIcon, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
-                    <MaterialCommunityIcons name="robot-outline" size={32} color="#A855F7" />
+                  <View style={[styles.refinementIcon, { backgroundColor: Colors.lavender }]}>
+                    <MaterialCommunityIcons name="robot-outline" size={32} color={Colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.refinementTitle}>AI-Powered Enhancement</Text>

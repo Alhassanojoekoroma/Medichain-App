@@ -55,18 +55,15 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      const session = await AuthService.login(trimmedEmail, password);
-      setUser(
-        user ?? {
-          id: session.userId,
-          name: 'Alex Johnson',
-          email: session.email,
-          phone: '+232 76 000 001',
-          bloodType: 'O+',
-          weight: '75 kg',
-          height: '180 cm',
-        }
-      );
+      setUser({
+        id: session.userId,
+        name: session.fullName || 'New Patient',
+        email: session.email,
+        phone: session.phone || '',
+        bloodType: session.bloodType || 'O+',
+        weight: '—',
+        height: '—',
+      });
       setAuthenticated(true);
     } catch (err: any) {
       toastRef.current?.show({

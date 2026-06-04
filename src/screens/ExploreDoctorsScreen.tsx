@@ -182,7 +182,7 @@ export default function ExploreDoctorsScreen({ navigation }: any) {
                         <Text style={styles.doctorName}>{doctor.name}</Text>
                         <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
                         <View style={styles.ratingRow}>
-                          <MaterialCommunityIcons name="star" size={16} color="#FFA500" />
+                          <MaterialCommunityIcons name="star" size={16} color={Colors.warning} />
                           <Text style={styles.rating}>{doctor.rating}</Text>
                           <Text style={styles.reviews}>({doctor.reviews} reviews)</Text>
                         </View>

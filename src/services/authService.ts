@@ -24,6 +24,9 @@ export interface AuthSession {
   email: string;
   sessionToken: string;
   expiresAt: number; // Unix timestamp ms
+  fullName?: string;
+  phone?: string;
+  bloodType?: string;
 }
 
 // ─── Demo credentials (replace with real backend call) ───────────────────────
@@ -47,39 +50,109 @@ function generateSessionToken(userId: string, email: string): string {
   return `${header}.${payload}.${signature}`;
 }
 
+// ─── Detect backend API URL ───────────────────────────────────────────────────
+// On Android Emulator, localhost resolves to the host machine as 10.0.2.2
+// In Expo Go, EXPO_PUBLIC_API_URL can be set in .env.mobile
+export const BACKEND_URL = (() => {
+  // Check for explicit override first
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  return 'http://localhost:5000'; // Works for iOS simulator & web browser
+})();
+
 export const AuthService = {
   /**
-   * Login — validates credentials and persists session to secure storage.
-   * Replace the credential check here with a real API call in production.
+   * Login — calls the real MediChain backend API with a graceful demo fallback.
+   * On connection failure, falls back to demo credential validation so the app
+   * works even when the backend is not running.
    */
   login: async (email: string, password: string): Promise<AuthSession> => {
-    // TODO: Replace with: const res = await APIClient.post('/auth/login', { email, password });
-    await new Promise((r) => setTimeout(r, 800)); // Simulate network
-
     const normalizedEmail = email.trim().toLowerCase();
-    if (
-      normalizedEmail !== DEMO_CREDENTIALS.email ||
-      password !== DEMO_CREDENTIALS.password
-    ) {
-      throw new Error('Invalid email or password. Please check your credentials.');
+
+    // ── 1. Try real backend ────────────────────────────────────────────────────
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/patient/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail, password }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json(); // { success, token, patientId }
+        const sessionToken = data.token;
+        const userId = data.patientId || normalizedEmail;
+
+        // Persist to hardware-backed keychain
+        await Promise.all([
+          SecureStore.setItemAsync(KEYS.SESSION_TOKEN, sessionToken),
+          SecureStore.setItemAsync(KEYS.USER_ID, String(userId)),
+          SecureStore.setItemAsync(KEYS.USER_EMAIL, normalizedEmail),
+        ]);
+
+        // Parse expiry from JWT payload
+        let expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        try {
+          const parts = sessionToken.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.exp) expiresAt = payload.exp * 1000;
+          }
+        } catch {
+          // ignore parse errors
+        }
+
+        const patientData = data.patient || {};
+        return {
+          userId: String(userId),
+          email: normalizedEmail,
+          sessionToken,
+          expiresAt,
+          fullName: patientData.fullName,
+          phone: patientData.phone,
+          bloodType: patientData.bloodType,
+        };
+      }
+
+      // Backend returned an error (e.g. 401 Invalid credentials)
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Login failed (HTTP ${response.status})`);
+
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      // Network error — fall back to offline demo mode
+      if (err.name === 'AbortError' || err.message?.includes('fetch') || err.message?.includes('Network')) {
+        console.warn('[AuthService] Backend unreachable, using offline demo mode');
+
+        // ── 2. Offline demo fallback ───────────────────────────────────────────
+        if (
+          normalizedEmail !== DEMO_CREDENTIALS.email ||
+          password !== DEMO_CREDENTIALS.password
+        ) {
+          throw new Error('Invalid email or password. Please check your credentials.');
+        }
+
+        await new Promise((r) => setTimeout(r, 500)); // Simulate latency
+
+        const sessionToken = generateSessionToken(DEMO_CREDENTIALS.userId, normalizedEmail);
+        const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+        await Promise.all([
+          SecureStore.setItemAsync(KEYS.SESSION_TOKEN, sessionToken),
+          SecureStore.setItemAsync(KEYS.USER_ID, DEMO_CREDENTIALS.userId),
+          SecureStore.setItemAsync(KEYS.USER_EMAIL, normalizedEmail),
+        ]);
+
+        return { userId: DEMO_CREDENTIALS.userId, email: normalizedEmail, sessionToken, expiresAt };
+      }
+
+      // Re-throw API-level errors (wrong password etc.)
+      throw err;
     }
-
-    const sessionToken = generateSessionToken(DEMO_CREDENTIALS.userId, normalizedEmail);
-    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
-
-    // Persist to hardware-backed keychain
-    await Promise.all([
-      SecureStore.setItemAsync(KEYS.SESSION_TOKEN, sessionToken),
-      SecureStore.setItemAsync(KEYS.USER_ID, DEMO_CREDENTIALS.userId),
-      SecureStore.setItemAsync(KEYS.USER_EMAIL, normalizedEmail),
-    ]);
-
-    return {
-      userId: DEMO_CREDENTIALS.userId,
-      email: normalizedEmail,
-      sessionToken,
-      expiresAt,
-    };
   },
 
   /**

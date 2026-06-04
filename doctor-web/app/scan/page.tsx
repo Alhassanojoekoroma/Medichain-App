@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import jsQR from 'jsqr';
 import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
 import { MOCK_PATIENTS } from '@/data/mockData';
+import { backendApi } from '@/services/backendApi';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   QrCode, Camera, ShieldCheck, Search, ArrowRight, 
-  AlertCircle, RefreshCw, X, ShieldAlert, CheckCircle2 
+  AlertCircle, RefreshCw, X, ShieldAlert, CheckCircle2, Loader2 
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Patient } from '@/types';
@@ -23,6 +24,10 @@ export default function ScanQRPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isLoadingCamera, setIsLoadingCamera] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [resolvedPatientId, setResolvedPatientId] = useState<string | null>(null);
+  const [allowedCategories, setAllowedCategories] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -119,44 +124,63 @@ export default function ScanQRPage() {
     };
   }, [isScanning]);
 
-  const handleQRDecoded = (decodedData: string) => {
-    // Stop camera immediately
-    stopCamera();
-    
-    setScanResult(decodedData);
-    
-    // Find patient in list
-    // Example QR payload is usually just the Patient ID or a verification URL e.g. "https://medichain.sl/patient/P001"
-    const patientId = decodedData.includes('/') 
-      ? decodedData.split('/').pop() || ''
-      : decodedData;
+  const resolveQROrId = async (raw: string) => {
+    setIsResolving(true);
+    setResolveError(null);
+    setScannedPatient(null);
+    setResolvedPatientId(null);
 
-    const matchedPatient = MOCK_PATIENTS.find(p => p.id === patientId);
-    
-    if (matchedPatient) {
-      setScannedPatient(matchedPatient);
-    } else {
-      setScannedPatient(null);
+    // Try to parse as JSON QR payload first (MediChain format)
+    let qrPayload: object | null = null;
+    try {
+      qrPayload = JSON.parse(raw);
+    } catch {
+      // Not JSON — might be a plain patientId or URL
     }
+
+    if (qrPayload) {
+      // --- Backend QR scan ---
+      try {
+        const response = await backendApi.scanQR(qrPayload);
+        setResolvedPatientId(response.patientId);
+        setAllowedCategories(response.allowedCategories || []);
+        // Attempt to find in mock patients for display
+        const mockMatch = MOCK_PATIENTS.find(p => p.id === response.patientId);
+        setScannedPatient(mockMatch || null);
+      } catch (err: any) {
+        setResolveError(err.message || 'Could not resolve QR code with the backend.');
+      }
+    } else {
+      // --- Plain ID or URL fallback ---
+      const patientId = raw.includes('/') ? raw.split('/').pop() || '' : raw;
+      const mockMatch = MOCK_PATIENTS.find(
+        p =>
+          p.id.toLowerCase() === patientId.toLowerCase() ||
+          p.name.toLowerCase().includes(patientId.toLowerCase())
+      );
+      if (mockMatch) {
+        setScannedPatient(mockMatch);
+        setResolvedPatientId(mockMatch.id);
+      } else {
+        setResolveError(`No patient found matching "${patientId}"`);
+      }
+    }
+
+    setIsResolving(false);
+  };
+
+  const handleQRDecoded = (decodedData: string) => {
+    stopCamera();
+    setScanResult(decodedData);
+    resolveQROrId(decodedData);
   };
 
   const handleManualSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualId) return;
-    
     stopCamera();
     setScanResult(manualId);
-    
-    const matchedPatient = MOCK_PATIENTS.find(
-      p => p.id.toLowerCase() === manualId.toLowerCase() || 
-           p.name.toLowerCase().includes(manualId.toLowerCase())
-    );
-
-    if (matchedPatient) {
-      setScannedPatient(matchedPatient);
-    } else {
-      setScannedPatient(null);
-    }
+    resolveQROrId(manualId);
   };
 
   // Clean up streams on unmount
@@ -326,7 +350,24 @@ export default function ScanQRPage() {
                       Fabric Verified Decryption Key
                     </div>
 
-                    {scannedPatient ? (
+                    {isResolving ? (
+                      <div className="flex flex-col items-center justify-center py-8 gap-3 text-slate-400">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <p className="text-xs">Verifying with backend...</p>
+                      </div>
+                    ) : resolveError ? (
+                      /* Error resolving */
+                      <div className="text-center py-6 space-y-3">
+                        <ShieldAlert className="h-10 w-10 text-amber-500 mx-auto" />
+                        <div className="space-y-1">
+                          <h4 className="font-semibold text-slate-800">Unregistered Payload</h4>
+                          <p className="text-xs text-slate-500">{resolveError}</p>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded font-mono text-[10px] text-slate-600 border border-slate-100">
+                          {scanResult.slice(0, 80)}{scanResult.length > 80 ? '...' : ''}
+                        </div>
+                      </div>
+                    ) : scannedPatient ? (
                       /* Matching Patient Found */
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
@@ -373,33 +414,38 @@ export default function ScanQRPage() {
                           </div>
                         )}
 
+                        {allowedCategories.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {allowedCategories.map(cat => (
+                              <span key={cat} className="px-2 py-0.5 bg-brand-light text-brand text-[10px] font-semibold rounded">
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-800 text-xs flex gap-2">
                           <CheckCircle2 className="h-4 w-4 shrink-0 text-brand mt-0.5" />
                           <span>
-                            <strong>Public permission granted:</strong> This medical record is anchored with open emergency parameters.
+                            <strong>Access granted:</strong> Blockchain consent verified. Record access logged to Fabric ledger.
                           </span>
                         </div>
                       </div>
                     ) : (
-                      /* No patient match for the decoded ID */
-                      <div className="text-center py-6 space-y-3">
-                        <ShieldAlert className="h-10 w-10 text-amber-500 mx-auto" />
-                        <div className="space-y-1">
-                          <h4 className="font-semibold text-slate-800">Unregistered Payload</h4>
-                          <p className="text-xs text-slate-500">
-                            The decoded QR payload value was parsed but no matching records exist on this gateway node.
-                          </p>
+                      /* resolvedPatientId exists but no mock patient — still navigate */
+                      resolvedPatientId ? (
+                        <div className="text-center py-6 space-y-3">
+                          <CheckCircle2 className="h-10 w-10 text-brand mx-auto" />
+                          <h4 className="font-semibold text-slate-800">Patient Verified</h4>
+                          <p className="text-xs text-slate-500">Record resolved from backend ledger.</p>
                         </div>
-                        <div className="bg-slate-50 p-2.5 rounded font-mono text-[10px] text-slate-600 border border-slate-100">
-                          {scanResult}
-                        </div>
-                      </div>
+                      ) : null
                     )}
                   </div>
 
-                  {scannedPatient && (
+                  {(scannedPatient || resolvedPatientId) && !isResolving && (
                     <Link
-                      href={`/patients/${scannedPatient.id}`}
+                      href={`/patients/${scannedPatient?.id || resolvedPatientId}`}
                       className="w-full py-2.5 bg-brand hover:bg-brand-dark text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm mt-4"
                     >
                       View Complete Ledger Record

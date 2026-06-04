@@ -10,6 +10,7 @@ import { Card, CardBody, Toast, Button } from '../components';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
 import QRCode from 'react-native-qrcode-svg';
 import { useStore } from '../store/useStore';
+import { QRServiceClient } from '../services/qrService';
 
 export default function SecurityScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -23,12 +24,46 @@ export default function SecurityScreen({ navigation }: any) {
     activityLog: true,
   });
 
+  const [qrVisibility, setQrVisibility] = useState({
+    showName: true,
+    showBloodType: true,
+    showAllergies: true,
+    showMedications: true,
+    showContacts: true,
+  });
+
   const handleToggle = (key: string) => {
     setPrivacySettings({ ...privacySettings, [key]: !privacySettings[key as keyof typeof privacySettings] });
     toastRef.current?.show({
       message: 'Setting updated',
       type: 'success',
     });
+  };
+
+  const handleQrToggle = async (key: keyof typeof qrVisibility) => {
+    const updated = { ...qrVisibility, [key]: !qrVisibility[key] };
+    setQrVisibility(updated);
+
+    const hiddenFields: string[] = [];
+    if (!updated.showName) hiddenFields.push('name');
+    if (!updated.showBloodType) hiddenFields.push('bloodType');
+    if (!updated.showAllergies) hiddenFields.push('allergies');
+    if (!updated.showMedications) hiddenFields.push('medications');
+    if (!updated.showContacts) hiddenFields.push('emergencyContacts');
+
+    try {
+      await QRServiceClient.updatePrivacySettings(hiddenFields);
+      toastRef.current?.show({
+        message: 'Emergency card privacy synced to blockchain',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error(error);
+      toastRef.current?.show({
+        message: 'Sync failed, settings kept locally',
+        type: 'warning',
+      });
+    }
   };
 
   return (
@@ -70,10 +105,7 @@ export default function SecurityScreen({ navigation }: any) {
                   label="Generate New ID"
                   variant="outline"
                   onPress={() => {
-                    toastRef.current?.show({
-                      message: 'New Medical ID generated',
-                      type: 'success',
-                    });
+                    navigation.navigate('QRGenerate');
                   }}
                   style={{ marginTop: Spacing.md, width: '100%' }}
                 />
@@ -172,6 +204,99 @@ export default function SecurityScreen({ navigation }: any) {
           </Card>
         </View>
 
+        {/* ═══ PUBLIC QR VISIBILITY SECTION ═══ */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Public QR Visibility</Text>
+          <Text style={{ fontSize: FontSize.bodySmall, color: Colors.neutral500, marginBottom: Spacing.md }}>
+            Configure which details are visible on your public emergency card (scanned on the street).
+          </Text>
+
+          <Card style={styles.flatCard}>
+            <CardBody>
+              <View style={styles.settingItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.settingLabel}>Show Full Name</Text>
+                  <Text style={styles.settingDesc}>Display your name on the emergency card</Text>
+                </View>
+                <Switch
+                  value={qrVisibility.showName}
+                  onValueChange={() => handleQrToggle('showName')}
+                  trackColor={{ false: Colors.neutral300, true: Colors.success + '50' }}
+                  thumbColor={qrVisibility.showName ? Colors.success : Colors.neutral400}
+                />
+              </View>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.flatCard}>
+            <CardBody>
+              <View style={styles.settingItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.settingLabel}>Show Blood Type</Text>
+                  <Text style={styles.settingDesc}>Critical for transfusions</Text>
+                </View>
+                <Switch
+                  value={qrVisibility.showBloodType}
+                  onValueChange={() => handleQrToggle('showBloodType')}
+                  trackColor={{ false: Colors.neutral300, true: Colors.success + '50' }}
+                  thumbColor={qrVisibility.showBloodType ? Colors.success : Colors.neutral400}
+                />
+              </View>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.flatCard}>
+            <CardBody>
+              <View style={styles.settingItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.settingLabel}>Show Allergies</Text>
+                  <Text style={styles.settingDesc}>List of drug/food allergies</Text>
+                </View>
+                <Switch
+                  value={qrVisibility.showAllergies}
+                  onValueChange={() => handleQrToggle('showAllergies')}
+                  trackColor={{ false: Colors.neutral300, true: Colors.success + '50' }}
+                  thumbColor={qrVisibility.showAllergies ? Colors.success : Colors.neutral400}
+                />
+              </View>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.flatCard}>
+            <CardBody>
+              <View style={styles.settingItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.settingLabel}>Show Medications</Text>
+                  <Text style={styles.settingDesc}>List of active medications</Text>
+                </View>
+                <Switch
+                  value={qrVisibility.showMedications}
+                  onValueChange={() => handleQrToggle('showMedications')}
+                  trackColor={{ false: Colors.neutral300, true: Colors.success + '50' }}
+                  thumbColor={qrVisibility.showMedications ? Colors.success : Colors.neutral400}
+                />
+              </View>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.flatCard}>
+            <CardBody>
+              <View style={styles.settingItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.settingLabel}>Show Emergency Contacts</Text>
+                  <Text style={styles.settingDesc}>Primary contact name & phone</Text>
+                </View>
+                <Switch
+                  value={qrVisibility.showContacts}
+                  onValueChange={() => handleQrToggle('showContacts')}
+                  trackColor={{ false: Colors.neutral300, true: Colors.success + '50' }}
+                  thumbColor={qrVisibility.showContacts ? Colors.success : Colors.neutral400}
+                />
+              </View>
+            </CardBody>
+          </Card>
+        </View>
+
         {/* ═══ DATA SECTION ═══ */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data & Privacy</Text>
@@ -179,7 +304,7 @@ export default function SecurityScreen({ navigation }: any) {
           <Card style={styles.flatCard}>
             <CardBody>
               <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('DataPrivacy')}>
-                <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <View style={[styles.settingIcon, { backgroundColor: Colors.primaryLight }]}>
                   <Ionicons name="document-text" size={20} color={Colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -194,7 +319,7 @@ export default function SecurityScreen({ navigation }: any) {
           <Card style={styles.flatCard}>
             <CardBody>
               <TouchableOpacity style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <View style={[styles.settingIcon, { backgroundColor: Colors.primaryLight }]}>
                   <Ionicons name="shield-checkmark" size={20} color={Colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -209,7 +334,7 @@ export default function SecurityScreen({ navigation }: any) {
           <Card style={styles.flatCard}>
             <CardBody>
               <TouchableOpacity style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <View style={[styles.settingIcon, { backgroundColor: Colors.dangerLight }]}>
                   <Ionicons name="trash" size={20} color={Colors.danger} />
                 </View>
                 <View style={{ flex: 1 }}>

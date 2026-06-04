@@ -359,9 +359,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   phoneButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.lg,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
     backgroundColor: Colors.neutral50,
     justifyContent: 'center',
     alignItems: 'center',

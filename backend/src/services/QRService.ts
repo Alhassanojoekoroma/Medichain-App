@@ -158,8 +158,8 @@ export class QRService {
     const row = result.rows[0];
     const hidden: string[] = row.hidden_fields || [];
 
-    // Least-privilege: strip hidden fields chosen by patient
     const profile: Record<string, unknown> = {
+      patientId: row.patient_id,
       fullName: row.full_name,
       bloodType: hidden.includes('bloodType') ? null : row.blood_type,
       allergies: hidden.includes('allergies') ? [] : row.allergies,

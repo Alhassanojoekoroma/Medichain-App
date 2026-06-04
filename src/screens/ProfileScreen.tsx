@@ -190,7 +190,7 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Allergies')}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.dangerLight }]}>
                 <MaterialCommunityIcons name="alert-decagram-outline" size={22} color={Colors.danger} />
               </View>
               <Text style={styles.flatMenuText}>Allergies</Text>
@@ -202,7 +202,7 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Medications')}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.successLight }]}>
                 <MaterialCommunityIcons name="pill" size={22} color={Colors.success} />
               </View>
               <Text style={styles.flatMenuText}>Active Medications</Text>
@@ -220,7 +220,7 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Notifications')}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.primaryLight }]}>
                 <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
               </View>
               <Text style={styles.flatMenuText}>Notifications</Text>
@@ -232,8 +232,8 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Security')}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-                <Ionicons name="shield-checkmark-outline" size={22} color="#8B5CF6" />
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.lavender }]}>
+                <Ionicons name="shield-checkmark-outline" size={22} color={Colors.primary} />
               </View>
               <Text style={styles.flatMenuText}>Privacy & Security</Text>
               <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
@@ -244,7 +244,7 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={() => navigation.navigate('HelpCenter')}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.neutral200 }]}>
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.neutral100 }]}>
                 <Ionicons name="help-circle-outline" size={22} color={Colors.neutral600} />
               </View>
               <Text style={styles.flatMenuText}>Help Center</Text>
@@ -256,7 +256,7 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={showForm}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+              <View style={[styles.menuIconBox, { backgroundColor: Colors.primaryLight }]}>
                 <Ionicons name="create-outline" size={22} color={Colors.primary} />
               </View>
               <Text style={styles.flatMenuText}>Edit Profile</Text>
@@ -555,10 +555,8 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   metricDivider: {
-    width: 0,
-    height: '0%',
-    backgroundColor: 'transparent',
-    marginHorizontal: 0,
+    width: 1,
+    backgroundColor: Colors.neutral200,
   },
 
   // ═══ MENU ITEMS ═══
