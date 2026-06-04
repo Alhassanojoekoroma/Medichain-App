@@ -301,8 +301,8 @@ export default function HomeScreen({ navigation }: any) {
           <Card style={styles.flatCard}>
             <CardBody>
               <View style={styles.sharingHeader}>
-                <View style={[styles.sharingIconBox, { backgroundColor: isDataSharingEnabled ? 'rgba(34, 197, 94, 0.1)' : '#F1F5F9' }]}>
-                  <Ionicons name="shield-checkmark" size={20} color={isDataSharingEnabled ? Colors.success : '#94A3B8'} />
+                <View style={[styles.sharingIconBox, { backgroundColor: isDataSharingEnabled ? Colors.successLight : Colors.neutral100 }]}>
+                  <Ionicons name="shield-checkmark" size={20} color={isDataSharingEnabled ? Colors.success : Colors.neutral400} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sharingTitle}>Secure Data Sharing</Text>
@@ -331,7 +331,7 @@ export default function HomeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC', 
+    backgroundColor: Colors.neutral50, 
   },
   scrollContent: {
     paddingBottom: Spacing.lg,
@@ -342,7 +342,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, 
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
-    // Consistent bottom radii matching standard card shapes
     borderBottomLeftRadius: Radius.lg,
     borderBottomRightRadius: Radius.lg,
   },
@@ -351,30 +350,27 @@ const styles = StyleSheet.create({
   },
   greetingSection: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
   },
   greeting: {
     fontSize: FontSize.body,
-    fontWeight: FontWeight.regular,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: Spacing.xs,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   userName: {
-    fontSize: 28,
+    fontSize: FontSize.h1,
     fontWeight: FontWeight.bold,
     color: Colors.white,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: FontSize.bodySmall,
-    fontWeight: FontWeight.regular,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: Spacing.xs,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 2,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   actionIcon: {
     position: 'relative',
@@ -382,22 +378,24 @@ const styles = StyleSheet.create({
   iconBg: {
     width: 40,
     height: 40,
-    borderRadius: Radius.lg, // Changed to match standard radii
+    borderRadius: Radius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   iconBgAlert: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   notificationDot: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#EF4444',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.danger,
     borderWidth: 2,
     borderColor: Colors.primary,
     justifyContent: 'center',
@@ -413,7 +411,7 @@ const styles = StyleSheet.create({
   statusBarContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
     padding: Spacing.md,
   },
   statusItem: {
@@ -455,7 +453,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSize.h3,
     fontWeight: FontWeight.bold,
-    color: '#0F172A', 
+    color: Colors.neutral900, 
   },
 
   // ═══ UNIVERSAL FLAT CARDS (No Shadows, Strict Radii) ═══
@@ -463,13 +461,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.neutral200,
   },
   flatCardDark: {
-    backgroundColor: '#0F172A', 
+    backgroundColor: Colors.neutral900, 
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.neutral700,
   },
 
   // ═══ WALLET CARD CONTENT ═══
@@ -481,7 +479,7 @@ const styles = StyleSheet.create({
   },
   walletLabel: {
     fontSize: FontSize.body,
-    color: '#94A3B8',
+    color: Colors.neutral500,
     marginBottom: Spacing.xs,
   },
   walletRow: {
@@ -498,17 +496,17 @@ const styles = StyleSheet.create({
   walletCurrency: {
     fontSize: FontSize.h4,
     fontWeight: FontWeight.bold,
-    color: '#CBD5E1',
+    color: Colors.neutral300,
   },
   walletSubtext: {
     fontSize: FontSize.bodySmall,
-    color: '#64748B',
+    color: Colors.neutral600,
     marginTop: Spacing.xs,
   },
   walletIcon: {
     width: 56,
     height: 56,
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -525,15 +523,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.neutral200,
     alignItems: 'center',
   },
   cleanActionIconBg: {
     width: 48,
     height: 48,
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
@@ -541,7 +539,7 @@ const styles = StyleSheet.create({
   cleanActionLabel: {
     fontSize: FontSize.bodySmall,
     fontWeight: FontWeight.bold,
-    color: '#334155',
+    color: Colors.neutral700,
     textAlign: 'center',
   },
 
@@ -558,7 +556,7 @@ const styles = StyleSheet.create({
   apptAvatarImg: {
     width: 54,
     height: 54,
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
   },
   apptStatus: {
     position: 'absolute',
@@ -574,11 +572,11 @@ const styles = StyleSheet.create({
   apptDocName: {
     fontSize: FontSize.h4,
     fontWeight: FontWeight.bold,
-    color: '#0F172A',
+    color: Colors.neutral900,
   },
   apptDocSpec: {
     fontSize: FontSize.bodySmall,
-    color: '#64748B',
+    color: Colors.neutral600,
     marginTop: 2,
   },
   apptConfirmed: {
@@ -591,8 +589,8 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     width: 40,
     height: 40,
-    borderRadius: Radius.lg, // Consistent radius
-    backgroundColor: '#F1F5F9',
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.neutral100,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -600,7 +598,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.neutral100,
   },
   apptDetailRow: {
     flexDirection: 'row',
@@ -610,7 +608,7 @@ const styles = StyleSheet.create({
   apptDetailValue: {
     fontSize: FontSize.body,
     fontWeight: FontWeight.medium,
-    color: '#334155',
+    color: Colors.neutral700,
   },
   apptBtn: {
     marginTop: Spacing.lg,
@@ -625,25 +623,25 @@ const styles = StyleSheet.create({
   sharingIconBox: {
     width: 44,
     height: 44,
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sharingTitle: {
     fontSize: FontSize.body,
     fontWeight: FontWeight.bold,
-    color: '#0F172A',
+    color: Colors.neutral900,
   },
   sharingDesc: {
     fontSize: FontSize.bodySmall,
-    color: '#64748B',
+    color: Colors.neutral600,
     marginTop: 2,
   },
   toggleSwitch: {
     width: 48,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: Colors.neutral300,
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
@@ -656,7 +654,6 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     backgroundColor: Colors.white,
-    // Removed shadows from toggle dot for strict compliance
   },
   toggleDotActive: {},
 
@@ -669,9 +666,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.white,
     padding: Spacing.md,
-    borderRadius: Radius.lg, // Consistent radius
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.neutral200,
   },
   gridIcon: {
     marginRight: Spacing.md,

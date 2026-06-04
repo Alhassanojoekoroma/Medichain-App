@@ -24,10 +24,13 @@ export interface QRPayload {
   v: number;             // version
 }
 
+export type ClinicalRole = 'doctor' | 'nurse' | 'staff' | 'admin' | 'patient';
+
 export interface DoctorJWT {
-  sub: string;           // doctorId or patientId
-  role: 'doctor' | 'admin' | 'patient';
+  sub: string;           // doctorId, patientId, or staffId
+  role: ClinicalRole;
   clinicId?: string;
+  fullName?: string;     // actor's display name for audit logs
   iat: number;
   exp: number;
 }
@@ -82,8 +85,8 @@ export class TokenService {
 
   // ── Doctor JWT ────────────────────────────────────────────
 
-  static signDoctorJWT(doctorId: string, role: 'doctor' | 'admin' | 'patient', clinicId?: string): string {
-    return jwt.sign({ sub: doctorId, role, clinicId }, JWT_SECRET, { expiresIn: JWT_EXPIRY } as jwt.SignOptions);
+  static signDoctorJWT(doctorId: string, role: ClinicalRole, clinicId?: string, fullName?: string): string {
+    return jwt.sign({ sub: doctorId, role, clinicId, fullName }, JWT_SECRET, { expiresIn: JWT_EXPIRY } as jwt.SignOptions);
   }
 
   static verifyDoctorJWT(token: string): DoctorJWT {

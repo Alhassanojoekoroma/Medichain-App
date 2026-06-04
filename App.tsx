@@ -4,6 +4,7 @@ import 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useDatabaseInit } from './src/hooks/useDatabaseInit';
+import { Colors, FontSize, FontWeight, Radius, Spacing } from './src/theme';
 
 /**
  * App shell — waits for SQLite to open and load data before rendering the
@@ -18,7 +19,7 @@ export default function App() {
       <SafeAreaProvider>
         <View style={styles.splash}>
           <View style={styles.logoRing}>
-            <ActivityIndicator size="large" color="#3B82F6" />
+            <ActivityIndicator size="large" color={Colors.primary} />
           </View>
           <Text style={styles.splashTitle}>MediChain SL</Text>
           <Text style={styles.splashSub}>Initializing secure vault…</Text>
@@ -37,30 +38,30 @@ export default function App() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    backgroundColor: '#000728',
+    backgroundColor: Colors.neutral900,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoRing: {
     width: 100,
     height: 100,
-    borderRadius: 30,
-    backgroundColor: 'rgba(59,130,246,0.15)',
+    borderRadius: Radius.xl,
+    backgroundColor: 'rgba(31, 56, 241, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.4)',
+    borderColor: 'rgba(31, 56, 241, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: Spacing.xl,
   },
   splashTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: FontSize.h1,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
     letterSpacing: 1,
   },
   splashSub: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 8,
+    fontSize: FontSize.body,
+    color: Colors.neutral500,
+    marginTop: Spacing.sm,
   },
 });

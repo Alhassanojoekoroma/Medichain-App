@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Bell, Sparkles, ChevronDown, X, Send, TrendingUp, AlertCircle, FileText, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { LOGGED_IN_DOCTOR, MOCK_NOTIFICATIONS } from '@/data/mockData';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,22 @@ export function Header() {
   const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
 
   // AI Assist Panel States
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = sessionStorage.getItem('mc_user');
+      if (userStr) {
+        try {
+          setCurrentUser(JSON.parse(userStr));
+        } catch (e) {}
+      }
+    }
+  }, []);
+
+  const userDetails = currentUser || LOGGED_IN_DOCTOR;
+  const initials = userDetails.name ? userDetails.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'DR';
+
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'insights' | 'ask'>('insights');
   const [messages, setMessages] = useState<Array<{ sender: 'ai' | 'user'; text: string; time: string }>>([
@@ -93,11 +109,11 @@ export function Header() {
 
         <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-[#D8DCE8]">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">{LOGGED_IN_DOCTOR.initials}</span>
+            <span className="text-white font-bold text-sm">{initials}</span>
           </div>
           <div className="hidden md:block text-left">
-            <div className="text-sm font-semibold text-[#101326]">{LOGGED_IN_DOCTOR.name}</div>
-            <div className="text-xs text-[#8C91A8]">{LOGGED_IN_DOCTOR.email}</div>
+            <div className="text-sm font-semibold text-[#101326]">{userDetails.name}</div>
+            <div className="text-xs text-[#8C91A8]">{userDetails.email}</div>
           </div>
           <ChevronDown className="w-4 h-4 text-[#8C91A8] hidden md:block" />
         </div>

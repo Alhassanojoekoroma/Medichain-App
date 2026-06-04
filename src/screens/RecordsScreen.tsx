@@ -14,17 +14,17 @@ import { Record as MedicalRecord } from '../types';
 
 const { width } = Dimensions.get('window');
 
-const TYPE_META: { [key: string]: { color: string; bg: string; icon: string } } = {
-  Laboratory:  { color: '#2563EB', bg: '#DBEAFE', icon: 'test-tube' },
-  Radiology:   { color: '#7C3AED', bg: '#EDE9FE', icon: 'radioactive' },
-  General:     { color: '#059669', bg: '#D1FAE5', icon: 'clipboard-pulse' },
-  Prescription:{ color: '#D97706', bg: '#FEF3C7', icon: 'pill' },
-  Referral:    { color: '#DC2626', bg: '#FEE2E2', icon: 'account-arrow-right' },
-  Other:       { color: '#475569', bg: '#F1F5F9', icon: 'file-document' },
+const TYPE_META = {
+  Laboratory:   { color: Colors.primary, bg: Colors.primaryLight, icon: 'test-tube' },
+  Radiology:    { color: Colors.lavendarDark, bg: Colors.lavender, icon: 'radioactive' },
+  General:      { color: Colors.successDark, bg: Colors.successLight, icon: 'clipboard-pulse' },
+  Prescription: { color: Colors.warningDark, bg: Colors.warningLight, icon: 'pill' },
+  Referral:     { color: Colors.dangerDark, bg: Colors.dangerLight, icon: 'account-arrow-right' },
+  Other:        { color: Colors.neutral600, bg: Colors.neutral100, icon: 'file-document' },
 };
 
 function getTypeMeta(type: string) {
-  return TYPE_META[type] ?? TYPE_META['Other'];
+  return TYPE_META[type as keyof typeof TYPE_META] ?? TYPE_META['Other'];
 }
 
 export default function RecordsScreen({ navigation }: any) {
@@ -105,12 +105,6 @@ export default function RecordsScreen({ navigation }: any) {
           <Text style={styles.headerTitle}>Medical Vault</Text>
           <Text style={styles.headerSub}>{records.length} records secured</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('ReportUpload')}
-        >
-          <Ionicons name="add" size={26} color="white" />
-        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -147,11 +141,11 @@ export default function RecordsScreen({ navigation }: any) {
             </View>
 
             {/* Filters */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
               {['All', 'Laboratory', 'General', 'Radiology', 'Prescription'].map(f => (
                 <TouchableOpacity
                   key={f}
-                  style={[styles.filterChip, activeFilter === f && styles.activeFilter]}
+                  style={[styles.filterChip, activeFilter === f && styles.activeFilterChip]}
                   onPress={() => setActiveFilter(f)}
                 >
                   <Text style={[styles.filterText, activeFilter === f && styles.activeFilterText]}>{f}</Text>
@@ -163,10 +157,7 @@ export default function RecordsScreen({ navigation }: any) {
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="file-search-outline" size={72} color="#CBD5E1" />
                 <Text style={styles.emptyTitle}>No records found</Text>
-                <Text style={styles.emptySubtitle}>Tap + to upload your first medical document</Text>
-                <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('ReportUpload')}>
-                  <Text style={styles.emptyBtnText}>Upload Report</Text>
-                </TouchableOpacity>
+                <Text style={styles.emptySubtitle}>Your medical records must be anchored to the blockchain by an authorized hospital clinician.</Text>
               </View>
             ) : (
               filteredRecords.map(record => {
@@ -213,19 +204,19 @@ export default function RecordsScreen({ navigation }: any) {
                 <LineChart
                   data={{
                     labels: glucoseData.map(m => m.date.split('-')[2]),
-                    datasets: [{ data: glucoseData.map(m => m.value), color: () => '#2563EB', strokeWidth: 3 }],
+                    datasets: [{ data: glucoseData.map(m => m.value), color: () => Colors.primary, strokeWidth: 3 }],
                   }}
                   width={width - 60}
                   height={200}
                   chartConfig={{
-                    backgroundColor: '#fff', backgroundGradientFrom: '#fff', backgroundGradientTo: '#fff',
+                    backgroundColor: Colors.white, backgroundGradientFrom: Colors.white, backgroundGradientTo: Colors.white,
                     decimalPlaces: 0,
-                    color: (o = 1) => `rgba(37,99,235,${o})`,
-                    labelColor: (o = 1) => `rgba(100,116,139,${o})`,
-                    propsForDots: { r: '5', strokeWidth: '2', stroke: '#2563EB' },
+                    color: (o = 1) => `rgba(31,56,241,${o})`,
+                    labelColor: (o = 1) => `rgba(107,114,128,${o})`,
+                    propsForDots: { r: '5', strokeWidth: '2', stroke: Colors.primary },
                   }}
                   bezier
-                  style={{ borderRadius: 12 }}
+                  style={{ borderRadius: Radius.lg }}
                 />
                 <View style={styles.chartSummary}>
                   <View style={styles.summaryItem}>
@@ -236,7 +227,7 @@ export default function RecordsScreen({ navigation }: any) {
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Status</Text>
-                    <Text style={[styles.summaryValue, { color: '#10B981' }]}>Stable</Text>
+                    <Text style={[styles.summaryValue, { color: Colors.success }]}>Stable</Text>
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Records</Text>
@@ -248,10 +239,10 @@ export default function RecordsScreen({ navigation }: any) {
 
             <View style={styles.metricsGrid}>
               {[
-                { icon: 'heart-pulse', color: '#EF4444', label: 'Heart Rate', value: '72 bpm' },
-                { icon: 'water', color: '#3B82F6', label: 'Hydration', value: '1.8 L' },
-                { icon: 'thermometer', color: '#F59E0B', label: 'Temperature', value: '36.6 °C' },
-                { icon: 'lungs', color: '#8B5CF6', label: 'SpO2', value: '98%' },
+                { icon: 'heart-pulse', color: Colors.danger, label: 'Heart Rate', value: '72 bpm' },
+                { icon: 'water', color: Colors.primary, label: 'Hydration', value: '1.8 L' },
+                { icon: 'thermometer', color: Colors.warning, label: 'Temperature', value: '36.6 °C' },
+                { icon: 'lungs', color: Colors.lavendarDark, label: 'SpO2', value: '98%' },
               ].map(m => (
                 <View key={m.label} style={styles.metricCard}>
                   <MaterialCommunityIcons name={m.icon as any} size={28} color={m.color} />
@@ -374,7 +365,7 @@ export default function RecordsScreen({ navigation }: any) {
                       label="Close"
                       variant="ghost"
                       onPress={hideDetail}
-                      style={{ flex: 1, marginRight: Spacing.sm }}
+                      style={{ flex: 1 }}
                     />
                     <Button
                       label="View Document"
@@ -383,12 +374,6 @@ export default function RecordsScreen({ navigation }: any) {
                       style={{ flex: 1 }}
                     />
                   </View>
-                  <TouchableOpacity
-                    style={styles.deleteLink}
-                    onPress={() => handleDelete(selectedRecord.id)}
-                  >
-                    <Text style={styles.deleteLinkText}>Delete Record</Text>
-                  </TouchableOpacity>
                 </>
               );
             })()}
@@ -402,7 +387,7 @@ export default function RecordsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: Colors.neutral50 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
@@ -434,52 +419,43 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg, marginBottom: Spacing.md,
     borderWidth: 1.5, borderColor: Colors.neutral200,
   },
-  searchInput: { flex: 1, marginLeft: Spacing.md, fontSize: FontSize.body, color: Colors.neutral900, fontWeight: FontWeight.medium },
-  filterRow: { marginBottom: Spacing.lg },
+  searchIcon: { marginRight: Spacing.sm },
+  searchInput: { flex: 1, paddingVertical: Spacing.sm, fontSize: FontSize.body, color: Colors.neutral900 },
+  filterContainer: { marginBottom: Spacing.lg },
   filterChip: {
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.xl,
-    backgroundColor: Colors.white, marginRight: Spacing.md,
-    borderWidth: 1.5, borderColor: Colors.neutral200,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.md,
+    backgroundColor: Colors.neutral100, marginRight: Spacing.sm,
+    borderWidth: 1, borderColor: Colors.neutral200,
   },
-  activeFilter: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  activeFilterChip: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   filterText: { color: Colors.neutral600, fontWeight: FontWeight.bold, fontSize: FontSize.bodySmall },
   activeFilterText: { color: Colors.white, fontWeight: FontWeight.bold },
-  recordCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.white, padding: Spacing.md, borderRadius: Radius.lg,
-    marginBottom: Spacing.md, borderWidth: 1.5, borderColor: Colors.neutral200,
-  },
+  recordList: { gap: Spacing.md },
+  recordCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1.5, borderColor: Colors.neutral200 },
   iconBox: { width: 52, height: 52, borderRadius: Radius.md, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
   recordInfo: { flex: 1 },
   recordTitle: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.neutral900, marginBottom: Spacing.xs },
   recordDoctor: { fontSize: FontSize.body, color: Colors.neutral600, marginBottom: Spacing.md, fontWeight: FontWeight.medium },
-  recordMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  typeBadge: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radius.md },
+  recordMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  typeBadge: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Radius.sm },
   typeBadgeText: { fontSize: FontSize.bodySmall, fontWeight: FontWeight.bold, textTransform: 'uppercase' },
-  recordDate: { fontSize: FontSize.bodySmall, color: Colors.neutral500, fontWeight: FontWeight.medium },
+  recordDate: { fontSize: FontSize.bodySmall, color: Colors.neutral500 },
   notarizedBadge: {
     width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.successLight,
     justifyContent: 'center', alignItems: 'center', marginRight: Spacing.sm,
   },
-  emptyState: { alignItems: 'center', marginTop: 60, paddingHorizontal: Spacing.lg },
+  emptyState: { alignItems: 'center', paddingVertical: 60 },
   recordHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
   emptyTitle: { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.neutral600, marginTop: Spacing.lg },
-  emptySubtitle: { fontSize: FontSize.body, color: Colors.neutral500, textAlign: 'center', marginTop: Spacing.md },
-  emptyBtn: {
-    marginTop: Spacing.xl, backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md, borderRadius: Radius.lg,
-  },
+  emptySubtitle: { fontSize: FontSize.body, color: Colors.neutral500, marginTop: Spacing.sm, textAlign: 'center' },
+  emptyBtn: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.md, marginTop: Spacing.xl },
   emptyBtnText: { color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.body },
-  analyticsContainer: {},
-  chartCard: {
-    backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.xl, marginBottom: Spacing.lg,
-    borderWidth: 1.5, borderColor: Colors.neutral200,
-  },
+  
+  // Analytics
+  analyticsContainer: { gap: Spacing.lg },
+  chartCard: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1.5, borderColor: Colors.neutral200 },
   chartTitle: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.neutral900, marginBottom: Spacing.lg },
-  chartSummary: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    marginTop: Spacing.lg, paddingTop: Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.neutral100,
-  },
+  chartSummary: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.lg },
   summaryItem: { alignItems: 'center' },
   summaryLabel: { fontSize: FontSize.bodySmall, color: Colors.neutral600, fontWeight: FontWeight.medium, marginBottom: Spacing.sm },
   summaryValue: { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.neutral900 },
@@ -492,18 +468,18 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: FontSize.bodySmall, color: Colors.neutral600, marginTop: Spacing.md, marginBottom: Spacing.sm, fontWeight: FontWeight.medium },
   metricValue: { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.neutral900 },
   insightCard: {
-    flexDirection: 'row', backgroundColor: '#FFFBEB', borderRadius: Radius.lg,
+    flexDirection: 'row', backgroundColor: Colors.warningLight, borderRadius: Radius.lg,
     padding: Spacing.lg, alignItems: 'flex-start',
-    borderWidth: 1.5, borderColor: '#FEF3C7',
+    borderWidth: 1.5, borderColor: Colors.warningBorder,
   },
   insightContent: { flex: 1, marginLeft: Spacing.lg },
-  insightTitle: { fontSize: FontSize.body, fontWeight: FontWeight.bold, color: '#B45309', marginBottom: Spacing.sm },
-  insightText: { fontSize: FontSize.body, color: '#92400E', lineHeight: 22, fontWeight: FontWeight.regular },
+  insightTitle: { fontSize: FontSize.body, fontWeight: FontWeight.bold, color: Colors.warningDark, marginBottom: Spacing.sm },
+  insightText: { fontSize: FontSize.body, color: Colors.warningDark, lineHeight: 22, fontWeight: FontWeight.regular },
 
   // Bottom Sheet
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.neutral900 + '80',
     zIndex: 999,
   },
   backdrop: { flex: 1 },
@@ -517,7 +493,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius.xl,
     zIndex: 1000,
     maxHeight: '85%',
-    shadowColor: '#000',
+    shadowColor: Colors.neutral900,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,

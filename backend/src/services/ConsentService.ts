@@ -156,10 +156,11 @@ export class ConsentService {
     doctorId: string,
     clinicId: string | null,
     accessType: AccessType,
-    requestedCategories: DataCategory[]
+    requestedCategories: DataCategory[],
+    actorRole?: string
   ): Promise<{ allowed: boolean; consentId?: string; allowedCategories?: DataCategory[]; reason?: string }> {
 
-    // Check direct doctor consent
+    // Check direct doctor consent, clinic consent, role-based consent, or emergency access
     const result = await db.query(
       `SELECT id, data_categories, access_type, is_one_time, used_at, expires_at
          FROM consent_policies
@@ -167,14 +168,15 @@ export class ConsentService {
           AND is_revoked = FALSE
           AND (expires_at IS NULL OR expires_at > NOW())
           AND (
-            (grantee_type = 'doctor' AND grantee_id = $2)
+            (grantee_type = 'doctor'  AND grantee_id = $2)
             OR (grantee_type = 'clinic' AND grantee_id = $3)
+            OR (grantee_type = 'role'  AND grantee_id = $5)
             OR (grantee_type = 'purpose' AND grantee_id = 'emergency' AND $4 = 'emergency_read')
           )
           AND access_type = $4
         ORDER BY created_at DESC
         LIMIT 1`,
-      [patientId, doctorId, clinicId ?? '', accessType]
+      [patientId, doctorId, clinicId ?? '', accessType, actorRole ?? '']
     );
 
     if (result.rowCount === 0) {

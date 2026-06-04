@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -42,7 +42,10 @@ export default function AllergiesScreen({ navigation }: any) {
 
   const handleAddAllergy = async () => {
     if (!newAllergy.name.trim() || !newAllergy.reaction.trim()) {
-      toastRef.current?.show('Missing Fields', 'Please fill in the allergy name and reaction.', 'error');
+      toastRef.current?.show({
+        message: 'Please fill in the allergy name and reaction.',
+        type: 'error',
+      });
       return;
     }
     await addAllergy({
@@ -51,7 +54,10 @@ export default function AllergiesScreen({ navigation }: any) {
     });
     setNewAllergy({ name: '', type: 'Drug', severity: 'Low', reaction: '' });
     hideForm();
-    toastRef.current?.show('Success', 'Allergy added to your medical profile.', 'success');
+    toastRef.current?.show({
+      message: 'Allergy added to your medical profile.',
+      type: 'success',
+    });
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -80,10 +86,10 @@ export default function AllergiesScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <StatusBar style="light" />
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#1E293B" />
+          <Ionicons name="chevron-back" size={24} color={Colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Allergies</Text>
         <TouchableOpacity style={styles.addButton} onPress={showForm}>
@@ -93,74 +99,58 @@ export default function AllergiesScreen({ navigation }: any) {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.infoBox}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={24} color="#B45309" />
+          <MaterialCommunityIcons name="alert-circle-outline" size={24} color={Colors.warningDark} />
           <Text style={styles.infoText}>This information is shared with doctors during secure access sessions.</Text>
         </View>
 
         {allergies.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="check-circle-outline" size={60} color="#CBD5E1" />
+            <MaterialCommunityIcons name="check-circle-outline" size={60} color={Colors.neutral400} />
             <Text style={styles.emptyTitle}>No Allergies Recorded</Text>
             <Text style={styles.emptySubtitle}>Tap the + button to add a known allergy.</Text>
           </View>
         ) : (
-          allergies.map((item) => (
-            <Card key={item.id} style={styles.allergyCard}>
-              <CardBody>
-                <View style={styles.cardHeader}>
-                  <View style={[
-                    styles.severityBadge,
-                    item.severity === 'Critical' ? styles.criticalBg :
-                    item.severity === 'High' ? styles.highBg : styles.lowBg
-                  ]}>
-                    <Text style={[
-                      styles.severityText,
-                      item.severity === 'Critical' ? styles.criticalText :
-                      item.severity === 'High' ? styles.highText : styles.lowText
-                    ]}>{item.severity}</Text>
+          allergies.map((item) => {
+            let severityVariant: any = 'verified';
+            if (item.severity === 'High') severityVariant = 'warning';
+            if (item.severity === 'Critical') severityVariant = 'danger';
+
+            return (
+              <Card key={item.id} style={styles.allergyCard}>
+                <CardBody>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.severityWrapper}>
+                      <Badge variant={severityVariant}>{item.severity}</Badge>
+                    </View>
+                    <Text style={styles.allergyType}>{item.type}</Text>
+                    <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} style={styles.deleteBtn}>
+                      <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.allergyType}>{item.type}</Text>
-                  <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} style={styles.deleteBtn}>
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
 
-                <Text style={styles.allergyName}>{item.name}</Text>
+                  <Text style={styles.allergyName}>{item.name}</Text>
 
-                <View style={styles.reactionBox}>
-                  <Text style={styles.reactionLabel}>Reaction:</Text>
-                  <Text style={styles.reactionText}>{item.reaction}</Text>
-                </View>
-              </CardBody>
-            </Card>
-          ))
+                  <View style={styles.reactionBox}>
+                    <Text style={styles.reactionLabel}>Reaction:</Text>
+                    <Text style={styles.reactionText}>{item.reaction}</Text>
+                  </View>
+                </CardBody>
+              </Card>
+            );
+          })
         )}
       </ScrollView>
 
       {/* Bottom Sheet Overlay */}
       {isFormVisible && (
-        <Animated.View
-          style={[
-            styles.overlay,
-            { opacity: overlayOpacity }
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.backdrop}
-            activeOpacity={1}
-            onPress={hideForm}
-          />
+        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={hideForm} />
         </Animated.View>
       )}
 
       {/* Add Allergy Bottom Sheet */}
       {isFormVisible && (
-        <Animated.View
-          style={[
-            styles.bottomSheet,
-            { transform: [{ translateY: formTranslateY }] }
-          ]}
-        >
+        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: formTranslateY }] }]}>
           <View style={styles.dragHandle} />
 
           <View style={styles.formHeader}>
@@ -179,7 +169,7 @@ export default function AllergiesScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="e.g. Penicillin, Peanuts"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={Colors.neutral400}
               value={newAllergy.name}
               onChangeText={(t) => setNewAllergy({ ...newAllergy, name: t })}
             />
@@ -188,9 +178,9 @@ export default function AllergiesScreen({ navigation }: any) {
             <View style={styles.chipRow}>
               {types.map(t => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.chip, newAllergy.type === t && styles.chipActive]}
-                  onPress={() => setNewAllergy({ ...newAllergy, type: t })}
+                   key={t}
+                   style={[styles.chip, newAllergy.type === t && styles.chipActive]}
+                   onPress={() => setNewAllergy({ ...newAllergy, type: t })}
                 >
                   <Text style={[styles.chipText, newAllergy.type === t && styles.chipTextActive]}>{t}</Text>
                 </TouchableOpacity>
@@ -201,9 +191,9 @@ export default function AllergiesScreen({ navigation }: any) {
             <View style={styles.chipRow}>
               {severities.map(s => (
                 <TouchableOpacity
-                  key={s}
-                  style={[styles.chip, newAllergy.severity === s && styles.chipActive]}
-                  onPress={() => setNewAllergy({ ...newAllergy, severity: s })}
+                   key={s}
+                   style={[styles.chip, newAllergy.severity === s && styles.chipActive]}
+                   onPress={() => setNewAllergy({ ...newAllergy, severity: s })}
                 >
                   <Text style={[styles.chipText, newAllergy.severity === s && styles.chipTextActive]}>{s}</Text>
                 </TouchableOpacity>
@@ -214,7 +204,7 @@ export default function AllergiesScreen({ navigation }: any) {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="e.g. Hives, Swelling, Difficulty breathing"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={Colors.neutral400}
               value={newAllergy.reaction}
               onChangeText={(t) => setNewAllergy({ ...newAllergy, reaction: t })}
               multiline
@@ -245,46 +235,85 @@ export default function AllergiesScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.neutral50,
+  },
   header: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomLeftRadius: Radius.lg,
+    borderBottomRightRadius: Radius.lg,
   },
   backButton: {
-    width: 44, height: 44, borderRadius: Radius.md,
-    backgroundColor: Colors.white, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#F1F5F9',
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.white + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: { fontSize: FontSize.h2, fontWeight: FontWeight.bold, color: Colors.neutral900, letterSpacing: -0.5 },
+  headerTitle: {
+    fontSize: FontSize.h2,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: -0.5,
+  },
   addButton: {
-    width: 44, height: 44, borderRadius: Radius.md,
-    backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E0F2FE',
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.white + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  scrollContent: { padding: Spacing.lg },
+  scrollContent: {
+    padding: Spacing.lg,
+  },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningLight,
     padding: Spacing.md,
     borderRadius: Radius.lg,
     marginBottom: Spacing.xl,
     borderWidth: 1.5,
-    borderColor: '#FEF3C7',
+    borderColor: Colors.warningBorder,
     alignItems: 'center',
   },
-  infoText: { flex: 1, marginLeft: Spacing.md, fontSize: FontSize.body, color: '#92400E', lineHeight: 22, fontWeight: FontWeight.medium },
-  emptyState: { alignItems: 'center', marginTop: 80 },
-  emptyTitle: { fontSize: FontSize.h2, fontWeight: FontWeight.bold, color: Colors.neutral900, marginTop: Spacing.lg },
-  emptySubtitle: { fontSize: FontSize.body, color: Colors.neutral600, marginTop: Spacing.md, textAlign: 'center', lineHeight: 22 },
+  infoText: {
+    flex: 1,
+    marginLeft: Spacing.md,
+    fontSize: FontSize.body,
+    color: Colors.warningDark,
+    lineHeight: 20,
+    fontWeight: FontWeight.bold,
+  },
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 80,
+  },
+  emptyTitle: {
+    fontSize: FontSize.h2,
+    fontWeight: FontWeight.bold,
+    color: Colors.neutral900,
+    marginTop: Spacing.lg,
+  },
+  emptySubtitle: {
+    fontSize: FontSize.body,
+    color: Colors.neutral600,
+    marginTop: Spacing.md,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   allergyCard: {
     marginBottom: Spacing.md,
     borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -292,28 +321,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
-  severityBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.md },
-  criticalBg: { backgroundColor: '#FEE2E2' },
-  highBg: { backgroundColor: '#FFEDD5' },
-  lowBg: { backgroundColor: '#F1F5F9' },
-  severityText: { fontSize: FontSize.bodySmall, fontWeight: FontWeight.bold },
-  criticalText: { color: '#EF4444' },
-  highText: { color: '#F59E0B' },
-  lowText: { color: Colors.neutral600 },
-  allergyType: { fontSize: FontSize.bodySmall, color: Colors.neutral600, fontWeight: FontWeight.bold, textTransform: 'uppercase', flex: 1, marginLeft: Spacing.md },
-  deleteBtn: {
-    width: 36, height: 36, borderRadius: Radius.md,
-    backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center',
+  severityWrapper: {
+    alignSelf: 'flex-start',
   },
-  allergyName: { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.neutral900, marginBottom: Spacing.md },
-  reactionBox: { backgroundColor: Colors.primaryLight, padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1, borderColor: '#E0F2FE' },
-  reactionLabel: { fontSize: FontSize.bodySmall, color: Colors.neutral600, marginBottom: Spacing.xs, fontWeight: FontWeight.bold, textTransform: 'uppercase' },
-  reactionText: { fontSize: FontSize.body, color: Colors.neutral900, fontWeight: FontWeight.medium, lineHeight: 22 },
-
-  // Bottom Sheet Styles
+  allergyType: {
+    fontSize: FontSize.bodySmall,
+    color: Colors.neutral600,
+    fontWeight: FontWeight.bold,
+    textTransform: 'uppercase',
+    flex: 1,
+    marginLeft: Spacing.md,
+  },
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.dangerLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: Colors.dangerBorder,
+  },
+  allergyName: {
+    fontSize: FontSize.h3,
+    fontWeight: FontWeight.bold,
+    color: Colors.neutral900,
+    marginBottom: Spacing.md,
+  },
+  reactionBox: {
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.primaryMid,
+  },
+  reactionLabel: {
+    fontSize: FontSize.bodySmall,
+    color: Colors.neutral600,
+    marginBottom: Spacing.xs,
+    fontWeight: FontWeight.bold,
+    textTransform: 'uppercase',
+  },
+  reactionText: {
+    fontSize: FontSize.body,
+    color: Colors.neutral900,
+    fontWeight: FontWeight.medium,
+    lineHeight: 22,
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.neutral900 + '80',
     zIndex: 999,
   },
   backdrop: {
@@ -329,7 +386,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius.xl,
     zIndex: 1000,
     maxHeight: '85%',
-    shadowColor: '#000',
+    shadowColor: Colors.neutral900,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -351,11 +408,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  formTitle: { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.neutral900 },
+  formTitle: {
+    fontSize: FontSize.h3,
+    fontWeight: FontWeight.bold,
+    color: Colors.neutral900,
+  },
   formContent: {
     paddingHorizontal: Spacing.lg,
   },
-  inputLabel: { fontSize: FontSize.bodySmall, fontWeight: FontWeight.bold, color: Colors.neutral600, marginBottom: Spacing.sm, marginTop: Spacing.lg },
+  inputLabel: {
+    fontSize: FontSize.bodySmall,
+    fontWeight: FontWeight.bold,
+    color: Colors.neutral600,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.lg,
+  },
   input: {
     backgroundColor: Colors.neutral50,
     borderWidth: 1.5,
@@ -366,8 +433,15 @@ const styles = StyleSheet.create({
     color: Colors.neutral900,
     fontWeight: FontWeight.medium,
   },
-  textArea: { minHeight: 100, textAlignVertical: 'top' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
   chip: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
@@ -376,8 +450,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.neutral200,
   },
-  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { fontSize: FontSize.body, color: Colors.neutral600, fontWeight: FontWeight.bold },
-  chipTextActive: { color: Colors.white },
-  formActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xl },
+  chipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: {
+    fontSize: FontSize.body,
+    color: Colors.neutral600,
+    fontWeight: FontWeight.bold,
+  },
+  chipTextActive: {
+    color: Colors.white,
+  },
+  formActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.xl,
+  },
 });

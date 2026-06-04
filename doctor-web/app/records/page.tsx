@@ -119,9 +119,9 @@ CONFIDENTIAL - MEDICAL INFORMATION ONLY FOR AUTHORIZED PERSONNEL
   };
 
   const filteredRecords = records.filter(rec => {
-    const nameMatch = rec.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                      rec.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      rec.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const nameMatch = (rec.patientName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      (rec.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (rec.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const typeMatch = typeFilter === 'all' || rec.type === typeFilter;
     const statusMatch = statusFilter === 'all' || rec.status === statusFilter;
     return nameMatch && typeMatch && statusMatch;

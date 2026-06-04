@@ -17,6 +17,8 @@ export interface AuditInput {
   patientId?: string;
   actorId: string;
   actorRole: string;
+  actorFullName?: string;   // display name: "Nurse Inos" or "Dr. Amara Kofi"
+  clinicName?: string;      // hospital name: "Connaught Hospital, Freetown"
   tokenId?: string;
   consentId?: string;
   accessType: string;
@@ -39,7 +41,10 @@ export class AuditService {
       [
         input.patientId ?? null,
         input.actorId,
-        input.actorRole,
+        // Store role + full name together for easy display: "nurse:Nurse Inos"
+        input.actorFullName
+          ? `${input.actorRole}:${input.actorFullName}${input.clinicName ? ':' + input.clinicName : ''}`
+          : input.actorRole,
         input.tokenId ?? null,
         input.consentId ?? null,
         input.accessType,
@@ -59,6 +64,7 @@ export class AuditService {
       patientId: input.patientId,
       actorId: input.actorId,
       actorRole: input.actorRole,
+      actorFullName: input.actorFullName,
       accessType: input.accessType,
       outcome: input.outcome,
       isEmergency: input.isEmergency,

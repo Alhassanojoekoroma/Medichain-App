@@ -155,14 +155,41 @@ export default function ScanQRPage() {
       const patientId = raw.includes('/') ? raw.split('/').pop() || '' : raw;
       const mockMatch = MOCK_PATIENTS.find(
         p =>
-          p.id.toLowerCase() === patientId.toLowerCase() ||
-          p.name.toLowerCase().includes(patientId.toLowerCase())
+          (p.id || '').toLowerCase() === patientId.toLowerCase() ||
+          (p.name || '').toLowerCase().includes(patientId.toLowerCase())
       );
       if (mockMatch) {
         setScannedPatient(mockMatch);
         setResolvedPatientId(mockMatch.id);
       } else {
-        setResolveError(`No patient found matching "${patientId}"`);
+        // Query backend for this patient as a fallback
+        try {
+          const detail = await backendApi.getPatientDetail(patientId);
+          if (detail && detail.patient) {
+            const reconstructed = {
+              id: detail.patient.id,
+              name: detail.patient.full_name,
+              initials: detail.patient.full_name
+                .split(' ')
+                .map((n: string) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase() || 'PT',
+              age: new Date().getFullYear() - new Date(detail.patient.date_of_birth).getFullYear(),
+              gender: 'Female', // fallback gender
+              bloodType: detail.patient.blood_type || 'Unknown',
+              phone: detail.patient.phone || 'N/A',
+              emergencyContactName: detail.emergencyProfile?.emergency_contacts?.[0]?.name || 'None',
+              allergies: (detail.emergencyProfile?.allergies || []).map((a: any) => typeof a === 'string' ? a : a.name),
+            };
+            setScannedPatient(reconstructed as any);
+            setResolvedPatientId(detail.patient.id);
+          } else {
+            setResolveError(`No patient found matching "${patientId}"`);
+          }
+        } catch (err: any) {
+          setResolveError(err.message || `No patient found matching "${patientId}"`);
+        }
       }
     }
 

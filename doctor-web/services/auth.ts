@@ -61,14 +61,22 @@ export async function enrollDoctor(credentials: LoginCredentials): Promise<Enrol
     
     // Map details for local UI based on who logged in
     const isKamara = email.includes('local') || email.includes('kamara');
+    const isNurse = email.includes('nurse');
+    const isStaff = email.includes('staff');
+    
+    const role = data.role || (isNurse ? 'nurse' : isStaff ? 'staff' : 'doctor');
+    const name = isNurse ? 'Nurse Inos' : isStaff ? 'Staff Member' : (isKamara ? 'Dr. John Kamara' : 'Dr. Amara Kofi');
+    const licenseNumber = isNurse ? 'SL-NUR-2020-0112' : isStaff ? 'SL-STA-2021-0021' : (isKamara ? 'SL-MED-2022-0089' : 'SL-MED-2019-0047');
+    const fabricId = `${role}-${isNurse ? 'inos' : isStaff ? 'staff-member' : (isKamara ? 'john-kamara' : 'amara-kofi')}@medichain.sl`;
+
     const doctorDetails = {
-      id: data.doctorId || (isKamara ? 'd0010000-0000-0000-0000-000000000002' : 'd0010000-0000-0000-0000-000000000001'),
-      name: isKamara ? 'Dr. John Kamara' : 'Dr. Amara Kofi',
+      id: data.doctorId || (isNurse ? 'd0010000-0000-0000-0000-000000000003' : isStaff ? 'd0010000-0000-0000-0000-000000000004' : (isKamara ? 'd0010000-0000-0000-0000-000000000002' : 'd0010000-0000-0000-0000-000000000001')),
+      name: name,
       email: email,
-      role: 'doctor',
-      fabricId: `doctor-${isKamara ? 'john-kamara' : 'amara-kofi'}@medichain.sl`,
+      role: role,
+      fabricId: fabricId,
       hospitalAffiliation: 'Connaught Hospital, Freetown',
-      licenseNumber: isKamara ? 'SL-MED-2022-0089' : 'SL-MED-2019-0047',
+      licenseNumber: licenseNumber,
     };
 
     // Store token and user in sessionStorage (safe in browser only)

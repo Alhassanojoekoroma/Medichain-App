@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Calendar, FileText,
   QrCode, BarChart2, Bell, ShieldCheck,
   Settings, LogOut, ChevronUp, ChevronDown,
-  Lock, Menu, X,
+  Lock, Menu, X, Stethoscope,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LOGGED_IN_DOCTOR, MOCK_BLOCKCHAIN_STATUS, MOCK_NOTIFICATIONS } from '@/data/mockData';
@@ -20,6 +20,7 @@ interface SidebarProps {
 const mainNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/patients', icon: Users, label: 'Patients' },
+  { href: '/staff', icon: Stethoscope, label: 'Triage / Staff' },
   { href: '/appointments', icon: Calendar, label: 'Appointments' },
   { href: '/records', icon: FileText, label: 'Records' },
   { href: '/scan', icon: QrCode, label: 'Scan QR Code' },
@@ -39,9 +40,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      const u = sessionStorage.getItem('mc_user');
+      if (u) { try { setCurrentUser(JSON.parse(u)); } catch {} }
+    }
   }, []);
+
+  const displayName = currentUser?.name || LOGGED_IN_DOCTOR.name;
 
   const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
   const lastSyncDate = MOCK_BLOCKCHAIN_STATUS.lastSync
@@ -103,7 +112,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <span className="text-[#101326] font-medium">Dashboard</span>
           </div>
           <h1 className="text-xl font-bold text-[#101326] leading-tight">Welcome Back,</h1>
-          <h1 className="text-xl font-bold text-brand leading-tight">{LOGGED_IN_DOCTOR.name}</h1>
+          <h1 className="text-xl font-bold text-brand leading-tight">{displayName}</h1>
         </div>
 
         {/* Main Menu */}

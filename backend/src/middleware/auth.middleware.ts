@@ -6,7 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { TokenService } from '../services/TokenService';
 
 export interface AuthRequest extends Request {
-  doctor?: { id: string; role: string; clinicId?: string };
+  doctor?: { id: string; role: string; clinicId?: string; fullName?: string };
   patientId?: string;
   patient?: { id: string };
 }
@@ -18,7 +18,15 @@ export function requireDoctor(req: AuthRequest, res: Response, next: NextFunctio
   }
   try {
     const payload = TokenService.verifyDoctorJWT(header.slice(7));
-    req.doctor = { id: payload.sub, role: payload.role, clinicId: payload.clinicId };
+    if (!['doctor', 'nurse', 'admin', 'staff'].includes(payload.role)) {
+      return res.status(403).json({ error: 'Forbidden: Access restricted to hospital staff' });
+    }
+    req.doctor = {
+      id: payload.sub,
+      role: payload.role,
+      clinicId: payload.clinicId,
+      fullName: payload.fullName,
+    };
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });

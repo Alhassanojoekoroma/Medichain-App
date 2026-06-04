@@ -142,13 +142,23 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
   const doctor = req.doctor!;
 
   try {
+    // 0. Fetch clinic name for enriched audit logs
+    let clinicName: string | undefined;
+    if (doctor.clinicId) {
+      try {
+        const clinicRes = await db.query(`SELECT name FROM clinics WHERE id = $1`, [doctor.clinicId]);
+        if ((clinicRes.rowCount ?? 0) > 0) clinicName = clinicRes.rows[0].name;
+      } catch {}
+    }
+
     // 1. Check if doctor has valid consent to view this patient
     const consent = await ConsentService.checkConsent(
       patientId,
       doctor.id,
       doctor.clinicId || null,
       'read',
-      ['all']
+      ['all'],
+      doctor.role   // pass actor's role for role-based consent checks
     );
 
     if (!consent.allowed) {
@@ -157,11 +167,13 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
         patientId,
         actorId: doctor.id,
         actorRole: doctor.role,
+        actorFullName: doctor.fullName,
+        clinicName,
         accessType: 'patient_detail',
         outcome: 'denied',
-        denialReason: 'No consent for patient',
+        denialReason: consent.reason || 'No consent for patient',
       });
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ error: 'Access denied', reason: consent.reason });
     }
 
     // 2. Fetch patient personal data
@@ -186,7 +198,7 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
 
     const emergencyData = (emergencyRes.rowCount ?? 0) > 0 ? emergencyRes.rows[0] : null;
 
-    // 4. Fetch health records
+    // 4. Fetch health records (only returned to doctors)
     const recordsRes = await db.query(
       `SELECT id, patient_id, record_type, title, encrypted_cid, integrity_hash, 
               data_categories, uploaded_by, created_at
@@ -195,15 +207,30 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
       [patientId]
     );
 
-    // Log successful access
+    // 5. Fetch treatments (returned to both doctors and nurses)
+    const treatmentsRes = await db.query(
+      `SELECT t.id, t.patient_id, t.treatment_type, t.title, t.description, t.created_at, t.ledger_tx_hash,
+              d.full_name AS doctor_name
+         FROM treatments t
+         JOIN doctors d ON d.id = t.doctor_id
+        WHERE t.patient_id = $1
+        ORDER BY t.created_at DESC`,
+      [patientId]
+    );
+
+    // Log successful access with enriched actor info
     await AuditService.log({
       patientId,
       actorId: doctor.id,
       actorRole: doctor.role,
+      actorFullName: doctor.fullName,
+      clinicName,
       consentId: consent.consentId,
       accessType: 'patient_detail',
       outcome: 'granted',
     });
+
+    const isDoctor = doctor.role === 'doctor' || doctor.role === 'admin';
 
     res.json({
       patient: {
@@ -218,11 +245,14 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
         medications: emergencyData?.medications || [],
         chronicConditions: emergencyData?.chronic_conditions || [],
       },
-      records: recordsRes.rows,
+      // Nurses only see treatments/triage data; doctors see full records
+      records: isDoctor ? recordsRes.rows : [],
+      treatments: treatmentsRes.rows,
+      actorRole: doctor.role,    // tell the UI what the current user's role is
     });
   } catch (err: any) {
     console.error('Get patient error:', err);
-    res.status(500).json({ error: 'Failed to fetch patient' });
+    res.status(500).json({ error: 'Failed to fetch patient', details: err.message });
   }
 });
 
@@ -235,31 +265,52 @@ router.get('/patients', requireDoctor, async (req: AuthRequest, res: Response) =
   const doctor = req.doctor!;
 
   try {
-    // Fetch all consents for this doctor
-    const result = await db.query(
-      `SELECT DISTINCT p.id, p.full_name, p.blood_type, p.phone, ep.allergies
-         FROM consent_policies cp
-         JOIN patients p ON p.id = cp.patient_id
-         LEFT JOIN emergency_profiles ep ON ep.patient_id = p.id
-        WHERE (cp.grantee_id = $1 OR cp.grantee_id = $2)
-          AND cp.is_revoked = FALSE
-          AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
-        ORDER BY p.full_name ASC`,
-      [doctor.id, doctor.clinicId || 'no-clinic']
-    );
+    // Try the efficient JOIN query first (works when real DB is available)
+    let patients: any[] = [];
 
-    const patients = result.rows.map((row: any) => ({
-      id: row.id,
-      name: row.full_name,
-      bloodType: row.blood_type,
-      phone: row.phone,
-      allergies: row.allergies || [],
-    }));
+    try {
+      const result = await db.query(
+        `SELECT DISTINCT p.id, p.full_name, p.blood_type, p.phone, ep.allergies
+           FROM consent_policies cp
+           JOIN patients p ON p.id = cp.patient_id
+           LEFT JOIN emergency_profiles ep ON ep.patient_id = p.id
+          WHERE (cp.grantee_id = $1 OR cp.grantee_id = $2 OR cp.grantee_id = $3)
+            AND cp.is_revoked = FALSE
+            AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
+          ORDER BY p.full_name ASC`,
+        [doctor.id, doctor.clinicId || '', doctor.role || '']
+      );
+      patients = result.rows.map((row: any) => ({
+        id: row.id,
+        name: row.full_name,
+        bloodType: row.blood_type,
+        phone: row.phone,
+        allergies: row.allergies || [],
+      }));
+    } catch {
+      // Fallback: query mock patients one by one using the consent check
+      const allPatients = db.getMockPatients ? db.getMockPatients() : [];
+      for (const p of allPatients) {
+        const consent = await ConsentService.checkConsent(
+          p.id, doctor.id, doctor.clinicId || null, 'read', ['all'], doctor.role
+        );
+        if (consent.allowed) {
+          const epRes = await db.query(`SELECT allergies FROM emergency_profiles WHERE patient_id = $1`, [p.id]);
+          patients.push({
+            id: p.id,
+            name: p.full_name,
+            bloodType: p.blood_type,
+            phone: p.phone,
+            allergies: epRes.rows[0]?.allergies || [],
+          });
+        }
+      }
+    }
 
     res.json({ patients });
   } catch (err: any) {
     console.error('List patients error:', err);
-    res.status(500).json({ error: 'Failed to list patients' });
+    res.status(500).json({ error: 'Failed to list patients', details: err.message });
   }
 });
 

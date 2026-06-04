@@ -55,6 +55,7 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
+      const session = await AuthService.login(trimmedEmail, password);
       setUser({
         id: session.userId,
         name: session.fullName || 'New Patient',

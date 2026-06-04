@@ -6,11 +6,44 @@ import { StatusBar } from 'expo-status-bar';
 import { useStore } from '../store/useStore';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
 import { Toast } from '../components';
+import { ConsentServiceClient } from '../services/consentService';
 
 export default function MedicationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const toastRef = useRef<any>(null);
-  const { medications, updateMedicationStatus } = useStore();
+  const { medications, updateMedicationStatus, user, addMedication } = useStore();
+  const [syncing, setSyncing] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchAndSyncTreatments = async () => {
+      if (!user?.id) return;
+      setSyncing(true);
+      try {
+        const { treatments } = await ConsentServiceClient.getMyTreatments(user.id);
+        if (treatments && treatments.length > 0) {
+          for (const t of treatments) {
+            // Check if this treatment already exists in state
+            const exists = medications.some(m => m.id === t.id);
+            if (!exists) {
+              await addMedication({
+                id: t.id,
+                name: t.title,
+                dosage: t.description || 'As prescribed',
+                frequency: t.treatment_type === 'medication' ? 'Prescription' : 'Treatment Log',
+                time: new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: 'pending'
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Sync] Failed to sync treatments:', err);
+      } finally {
+        setSyncing(false);
+      }
+    };
+    fetchAndSyncTreatments();
+  }, [user?.id]);
 
   const handleMarkTaken = async (id: string, name: string) => {
     await updateMedicationStatus(id, 'taken');
@@ -53,7 +86,7 @@ export default function MedicationsScreen({ navigation }: any) {
               <Text style={styles.medName}>{medications[0]?.name} • {medications[0]?.frequency || medications[0]?.dosage}</Text>
             </View>
             <TouchableOpacity style={styles.remindBtn}>
-              <Ionicons name="notifications" size={24} color="white" />
+              <Ionicons name="notifications" size={24} color={Colors.white} />
             </TouchableOpacity>
           </View>
         )}
@@ -61,20 +94,20 @@ export default function MedicationsScreen({ navigation }: any) {
         <Text style={styles.sectionTitle}>Active Medications</Text>
         {medications.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="pill-off" size={48} color="#CBD5E1" />
+            <MaterialCommunityIcons name="pill-off" size={48} color={Colors.neutral300} />
             <Text style={styles.emptyStateText}>No active medications found.</Text>
           </View>
         ) : (
           medications.map((med) => (
             <View key={med.id} style={styles.medCard}>
               <View style={[styles.iconBox, {
-                backgroundColor: med.status === 'taken' ? '#ECFDF5' :
-                  med.status === 'skipped' ? '#FEF2F2' : '#E0F2FE'
+                backgroundColor: med.status === 'taken' ? Colors.successLight :
+                  med.status === 'skipped' ? Colors.dangerLight : Colors.primaryLight
               }]}>
                 <MaterialCommunityIcons
                   name="pill"
                   size={28}
-                  color={med.status === 'taken' ? '#10B981' : med.status === 'skipped' ? '#EF4444' : '#0284C7'}
+                  color={med.status === 'taken' ? Colors.success : med.status === 'skipped' ? Colors.danger : Colors.primary}
                 />
               </View>
               <View style={styles.medInfo}>
@@ -84,12 +117,12 @@ export default function MedicationsScreen({ navigation }: any) {
                 <Text style={styles.medTime}>🕐 {med.time}</Text>
                 <View style={styles.tagRow}>
                   <View style={[styles.tag, {
-                    backgroundColor: med.status === 'taken' ? '#ECFDF5' :
-                      med.status === 'skipped' ? '#FEF2F2' : '#E0F2FE'
+                    backgroundColor: med.status === 'taken' ? Colors.successLight :
+                      med.status === 'skipped' ? Colors.dangerLight : Colors.primaryLight
                   }]}>
                     <Text style={[styles.tagText, {
-                      color: med.status === 'taken' ? '#10B981' :
-                        med.status === 'skipped' ? '#EF4444' : '#0284C7'
+                      color: med.status === 'taken' ? Colors.success :
+                        med.status === 'skipped' ? Colors.danger : Colors.primary
                     }]}>
                       {med.status === 'taken' ? '✓ Taken' : med.status === 'skipped' ? '✕ Skipped' : '⏳ Pending'}
                     </Text>
@@ -102,13 +135,13 @@ export default function MedicationsScreen({ navigation }: any) {
                     style={styles.takeBtn}
                     onPress={() => handleMarkTaken(med.id, med.name)}
                   >
-                    <Ionicons name="checkmark" size={18} color="white" />
+                    <Ionicons name="checkmark" size={18} color={Colors.white} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.skipBtn}
                     onPress={() => handleMarkSkipped(med.id, med.name)}
                   >
-                    <Ionicons name="close" size={18} color="#EF4444" />
+                    <Ionicons name="close" size={18} color={Colors.danger} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -117,7 +150,7 @@ export default function MedicationsScreen({ navigation }: any) {
         )}
 
         <TouchableOpacity style={styles.refillCard}>
-          <Ionicons name="refresh" size={24} color="#2563EB" />
+          <Ionicons name="refresh" size={24} color={Colors.primary} />
           <Text style={styles.refillText}>Request Refill</Text>
         </TouchableOpacity>
       </ScrollView>

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Poppins } from 'next/font/google'
-import { AnalyticsWrapper } from '@/components/analytics-wrapper'
 import './globals.css'
 
 const poppins = Poppins({ weight: ['300', '400', '500', '600', '700', '800'], subsets: ["latin"], variable: '--font-poppins' });
@@ -37,7 +36,6 @@ export default function RootLayout({
     <html lang="en" className="bg-[#EAEEF2]">
       <body className={`${poppins.variable} font-sans antialiased`}>
         {children}
-        <AnalyticsWrapper />
       </body>
     </html>
   )

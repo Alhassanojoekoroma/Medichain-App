@@ -38,7 +38,7 @@ router.post(
       }
 
       const result = await db.query(
-        `SELECT id, password_hash, clinic_id FROM doctors WHERE email = $1 AND is_active = TRUE`,
+        `SELECT id, password_hash, clinic_id, role, full_name FROM doctors WHERE email = $1 AND is_active = TRUE`,
         [loginEmail]
       );
 
@@ -55,8 +55,8 @@ router.post(
         return;
       }
 
-      const token = TokenService.signDoctorJWT(doc.id, 'doctor', doc.clinic_id);
-      res.json({ success: true, token, doctorId: doc.id });
+      const token = TokenService.signDoctorJWT(doc.id, doc.role || 'doctor', doc.clinic_id, doc.full_name);
+      res.json({ success: true, token, doctorId: doc.id, role: doc.role || 'doctor', fullName: doc.full_name });
 
     } catch (err: any) {
       logger.error(`[Auth] Doctor login error: ${err.message}`);

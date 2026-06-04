@@ -95,15 +95,28 @@ export default function PatientsPage() {
     }
   };
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   useEffect(() => {
     fetchPatients();
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = sessionStorage.getItem('mc_user');
+      if (userStr) {
+        try {
+          setCurrentUser(JSON.parse(userStr));
+        } catch (e) {}
+      }
+    }
+  }, []);
+
   const filtered = patients.filter((p) => {
     const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
       (p.condition && p.condition.toLowerCase().includes(search.toLowerCase())) ||
-      p.id.toLowerCase().includes(search.toLowerCase());
+      (p.id || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'All' || p.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -136,14 +149,16 @@ export default function PatientsPage() {
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button
-              id="add-patient-btn"
-              onClick={() => router.push('/patients/new')}
-              className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add New Patient
-            </button>
+            {currentUser?.role === 'doctor' && (
+              <button
+                id="add-patient-btn"
+                onClick={() => router.push('/patients/new')}
+                className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add New Patient
+              </button>
+            )}
           </div>
         </div>
 

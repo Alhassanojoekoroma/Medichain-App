@@ -154,30 +154,75 @@ export default function PatientDetailPage() {
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [backendData, setBackendData] = useState<BackendPatientDetail | null>(null);
 
+  // Dynamic roles & treatment state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showPrescribeModal, setShowPrescribeModal] = useState(false);
+  const [prescribeForm, setPrescribeForm] = useState({ title: '', treatmentType: 'medication', description: '' });
+  const [prescribing, setPrescribing] = useState(false);
+  const [prescribeError, setPrescribeError] = useState<string | null>(null);
+
   // Fallback to mock data
   const mockPatient = MOCK_PATIENTS.find((p) => p.id === id) as Patient | undefined;
   const patientRecords = MOCK_RECORDS.filter((r) => r.patientId === id);
   const patientAppointments = MOCK_APPOINTMENTS.filter((a) => a.patientId === id);
 
-  useEffect(() => {
-    const fetchDetail = async () => {
-      setLoading(true);
-      try {
-        const data = await backendApi.getPatientDetail(id);
-        setBackendData(data);
-        setAccessDenied(false);
-      } catch (err: any) {
-        if (err.status === 403) {
-          setAccessDenied(true);
-        }
-        // On other errors (backend not running), we fall through to mockPatient
-        setBackendData(null);
-      } finally {
-        setLoading(false);
+  const fetchDetail = async () => {
+    setLoading(true);
+    try {
+      const data = await backendApi.getPatientDetail(id);
+      setBackendData(data);
+      setAccessDenied(false);
+    } catch (err: any) {
+      if (err.status === 403) {
+        setAccessDenied(true);
       }
-    };
+      setBackendData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = sessionStorage.getItem('mc_user');
+      if (userStr) {
+        try {
+          setCurrentUser(JSON.parse(userStr));
+        } catch (e) {}
+      }
+    }
+  }, []);
+
+  const handlePrescribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prescribeForm.title.trim()) return;
+    setPrescribing(true);
+    setPrescribeError(null);
+    try {
+      await backendApi.recordTreatment({
+        patientId: id,
+        treatmentType: prescribeForm.treatmentType,
+        title: prescribeForm.title.trim(),
+        description: prescribeForm.description.trim(),
+      });
+      await fetchDetail();
+      setShowPrescribeModal(false);
+      setPrescribeForm({ title: '', treatmentType: 'medication', description: '' });
+    } catch (err: any) {
+      setPrescribeError(err.message || 'Failed to record medication/treatment.');
+    } finally {
+      setPrescribing(false);
+    }
+  };
+
+  // Derive role from backend response (most accurate) or fall back to sessionStorage
+  const actorRole = backendData?.actorRole || currentUser?.role || 'doctor';
+  const isDoctor = actorRole === 'doctor' || actorRole === 'admin';
+  const isNurse  = actorRole === 'nurse';
 
   // Loading state
   if (loading) {
@@ -348,6 +393,15 @@ export default function PatientDetailPage() {
             <p className="text-sm text-[#8C91A8]">Patient ID: {patient.id}</p>
           </div>
           <div className="ml-auto flex gap-2">
+            {isDoctor && (
+              <button
+                onClick={() => setShowPrescribeModal(true)}
+                className="flex items-center gap-2 border border-[#8F76FF] text-[#8F76FF] hover:bg-[#EDE9FF] px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+              >
+                <Pill className="w-4 h-4" />
+                <span className="hidden sm:inline">Prescribe</span>
+              </button>
+            )}
             <button
               onClick={() => router.push(`/public/patient-qr/${id}`)}
               className="flex items-center gap-2 border border-[#D8DCE8] hover:border-brand px-3 py-2 rounded-xl text-sm font-medium text-[#5D6582] hover:text-brand transition-colors"
@@ -355,12 +409,31 @@ export default function PatientDetailPage() {
               <QrCode className="w-4 h-4" />
               <span className="hidden sm:inline">View QR</span>
             </button>
-            <button className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-3 py-2 rounded-xl text-sm font-medium transition-colors">
-              <Edit className="w-4 h-4" />
-              <span className="hidden sm:inline">Edit</span>
-            </button>
+            {isDoctor && (
+              <button
+                onClick={() => alert('Edit patient demographics coming soon.')}
+                className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Nurse triage read-only notice */}
+        {isNurse && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">Triage Read-Only Access (Nurse)</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                You are viewing this patient in triage mode. You can see allergies, medications, and treatment history.
+                Clinical diagnoses and full medical records are restricted to attending doctors only. All access is logged immutably on Hyperledger Fabric.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left: Demographics */}
@@ -478,14 +551,49 @@ export default function PatientDetailPage() {
               )}
             </div>
 
-            {/* Medications */}
+            {/* Treatments & Medication History */}
             <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <h3 className="font-semibold text-[#101326] mb-3 flex items-center gap-2">
-                <Pill className="w-4 h-4 text-[#8F76FF]" />
-                Current Medications
-              </h3>
-              <div className="space-y-2">
-                {(patient.medications as string[]).length > 0 ? (
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-[#101326] flex items-center gap-2">
+                  <Pill className="w-4 h-4 text-[#8F76FF]" />
+                  Treatments & Medication history
+                </h3>
+                {isDoctor && (
+                  <button
+                    onClick={() => setShowPrescribeModal(true)}
+                    className="text-xs text-brand hover:underline font-semibold"
+                  >
+                    + Issue Medication
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3">
+                {backendData && backendData.treatments && backendData.treatments.length > 0 ? (
+                  backendData.treatments.map((t: any) => (
+                    <div key={t.id} className="p-3 bg-[#EDE9FF] rounded-xl border border-[#D8DCE8] space-y-1.5">
+                      <div className="flex items-start justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#8F76FF] bg-white px-2 py-0.5 rounded-lg border border-[#EDE9FF]">
+                          {t.treatment_type}
+                        </span>
+                        {t.ledger_tx_hash && (
+                          <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
+                            Synced to Ledger
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-sm text-[#101326]">{t.title}</h4>
+                      {t.description && (
+                        <p className="text-xs text-[#5D6582] bg-white/70 p-2 rounded-lg italic">
+                          {t.description}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between text-[10px] text-[#8C91A8] pt-1">
+                        <span>Issued by: {t.doctor_name || 'Medical Practitioner'}</span>
+                        <span>{new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (patient.medications as string[]).length > 0 ? (
                   (patient.medications as string[]).map((med, i) => (
                     <div key={i} className="flex items-center gap-2 p-2 bg-[#EDE9FF] rounded-xl">
                       <div className="w-2 h-2 bg-[#8F76FF] rounded-full" />
@@ -493,7 +601,7 @@ export default function PatientDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-[#8C91A8]">No current medications</p>
+                  <p className="text-sm text-[#8C91A8]">No medications or treatments recorded yet</p>
                 )}
               </div>
             </div>
@@ -505,12 +613,14 @@ export default function PatientDetailPage() {
                   <FileText className="w-4 h-4 text-brand" />
                   Medical Records ({records.length})
                 </h3>
-                <button
-                  onClick={() => router.push('/records/upload')}
-                  className="text-xs text-brand hover:underline font-medium"
-                >
-                  + Upload
-                </button>
+                {isDoctor && (
+                  <button
+                    onClick={() => router.push('/records/upload')}
+                    className="text-xs text-brand hover:underline font-medium"
+                  >
+                    + Upload
+                  </button>
+                )}
               </div>
               <div className="space-y-2">
                 {records.map((record: any) => (
@@ -590,6 +700,131 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      {showPrescribeModal && (
+        <PrescribeModal
+          onClose={() => setShowPrescribeModal(false)}
+          onSubmit={handlePrescribe}
+          form={prescribeForm}
+          setForm={setPrescribeForm}
+          submitting={prescribing}
+          error={prescribeError}
+        />
+      )}
     </LayoutWrapper>
+  );
+}
+
+function PrescribeModal({
+  onClose,
+  onSubmit,
+  form,
+  setForm,
+  submitting,
+  error,
+}: {
+  onClose: () => void;
+  onSubmit: (e: React.FormEvent) => void;
+  form: { title: string; treatmentType: string; description: string };
+  setForm: React.Dispatch<React.SetStateAction<{ title: string; treatmentType: string; description: string }>>;
+  submitting: boolean;
+  error: string | null;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1 rounded-lg hover:bg-[#EAEEF2] transition-colors"
+        >
+          <X className="w-4 h-4 text-[#8C91A8]" />
+        </button>
+
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-[#EDE9FF] rounded-xl flex items-center justify-center">
+            <Pill className="w-5 h-5 text-[#8F76FF]" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-[#101326]">Record Patient Treatment</h3>
+            <p className="text-xs text-[#8C91A8]">Add a new prescription or clinical action</p>
+          </div>
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-[#5D6582] mb-1">
+              Treatment Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={form.treatmentType}
+              onChange={(e) => setForm(f => ({ ...f, treatmentType: e.target.value }))}
+              className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            >
+              <option value="medication">Medication / Prescription</option>
+              <option value="procedure">Clinical Procedure / Surgery</option>
+              <option value="therapy">Therapy / Rehabilitation</option>
+              <option value="other">Other Treatment</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#5D6582] mb-1">
+              Title / Medication Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Paracetamol 500mg or Appendectomy"
+              value={form.title}
+              onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
+              className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#5D6582] mb-1">
+              Instructions & Dosage Notes
+            </label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Take 1 tablet twice daily after meals for 5 days."
+              value={form.description}
+              onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+              className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !form.title.trim()}
+              className="flex-1 bg-[#8F76FF] hover:bg-[#7b5eff] disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Record'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

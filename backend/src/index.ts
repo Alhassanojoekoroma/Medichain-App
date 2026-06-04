@@ -15,9 +15,11 @@ import auditRoutes from './routes/audit.routes';
 import authRoutes from './routes/auth.routes';
 import patientsRoutes from './routes/patients.routes';
 import recordsRoutes from './routes/records.routes';
+import treatmentsRoutes from './routes/treatments.routes';
 import { db } from './config/db';
 import { logger } from './utils/logger';
 import { FabricGateway } from './services/FabricGateway';
+import { runMigrations } from './config/migrate';
 
 const app = express();
 const port = process.env.PORT || 5000; // running on 5000 to avoid conflict with frontend
@@ -63,6 +65,7 @@ app.use('/api/consent', consentRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/patients', patientsRoutes);
 app.use('/api/records', recordsRoutes);
+app.use('/api/treatments', treatmentsRoutes);
 
 app.get('/api/health', async (req, res) => {
   try {
@@ -92,13 +95,19 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // Connect to Fabric network and then start Express server
 FabricGateway.connect()
-  .then(() => {
+  .then(async () => {
+    // Run database migrations/seeds
+    await runMigrations();
+
     app.listen(port, () => {
       logger.info(`MediChain Backend API listening on port ${port}`);
     });
   })
-  .catch((err) => {
+  .catch(async (err) => {
     logger.error(`Failed to initialize Fabric connection: ${err.message}`);
+    // Run database migrations/seeds even if Fabric fails
+    await runMigrations();
+
     app.listen(port, () => {
       logger.info(`MediChain Backend API listening on port ${port} (DEGRADED)`);
     });

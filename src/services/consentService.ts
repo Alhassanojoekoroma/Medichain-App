@@ -2,9 +2,9 @@
  * src/services/consentService.ts
  * Patient Mobile App API client for Consent management.
  */
-import { AuthService } from './authService';
+import { AuthService, BACKEND_URL } from './authService';
 
-const API_BASE_URL = 'http://10.0.2.2:3001/api';
+const API_BASE_URL = `${BACKEND_URL}/api`;
 
 export interface ConsentRequestParams {
   granteeType: 'doctor' | 'clinic' | 'role' | 'purpose';
@@ -99,6 +99,21 @@ export class ConsentServiceClient {
 
     if (!response.ok) {
       throw new Error('Failed to fetch audit history');
+    }
+    return response.json();
+  }
+
+  /**
+   * Fetch treatments/medication history for the patient from backend
+   */
+  static async getMyTreatments(patientId: string) {
+    const response = await fetch(`${API_BASE_URL}/treatments/patient/${patientId}`, {
+      method: 'GET',
+      headers: await this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch treatments');
     }
     return response.json();
   }

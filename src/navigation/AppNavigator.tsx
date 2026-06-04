@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Radius } from '../theme';
+import { Colors, Spacing, Radius, FontSize, FontWeight } from '../theme';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -51,7 +51,7 @@ function TabNavigator() {
           return <MaterialCommunityIcons name={iconName} size={28} color={color} />;
         },
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarInactiveTintColor: Colors.neutral400,
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
@@ -62,18 +62,18 @@ function TabNavigator() {
           paddingBottom: 12,
           paddingTop: 8,
           borderRadius: Radius.xl,
-          backgroundColor: 'white',
+          backgroundColor: Colors.white,
           borderWidth: 1,
-          borderColor: '#E2E8F0',
+          borderColor: Colors.neutral200,
           elevation: 8,
-          shadowColor: '#000',
+          shadowColor: Colors.neutral900,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.1,
           shadowRadius: 12,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: FontSize.bodySmall,
+          fontWeight: FontWeight.bold,
         }
       })}
     >

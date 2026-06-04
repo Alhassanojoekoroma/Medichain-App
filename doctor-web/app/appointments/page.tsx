@@ -123,8 +123,8 @@ export default function AppointmentsPage() {
 
   const filteredAppointments = appointments.filter((app) => {
     const tabMatch = getAppointmentTabCategory(app.date) === activeTab;
-    const nameMatch = app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                      app.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const nameMatch = (app.patientName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      (app.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     const statusMatch = statusFilter === 'all' || app.status === statusFilter;
     return tabMatch && nameMatch && statusMatch;
   });

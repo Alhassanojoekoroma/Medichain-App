@@ -33,6 +33,69 @@ router.post('/', requirePatient, async (req: AuthRequest, res: Response) => {
 });
 
 /**
+ * POST /api/consent/clinic
+ * Patient grants consent to an entire clinic (all staff affiliated with that clinic).
+ * Body: { clinicId, dataCategories?, ttlHours?, purpose? }
+ */
+router.post('/clinic', requirePatient, async (req: AuthRequest, res: Response) => {
+  try {
+    const { clinicId, dataCategories, ttlHours, purpose } = req.body;
+    if (!clinicId) {
+      res.status(400).json({ error: 'clinicId is required' });
+      return;
+    }
+
+    const consentId = await ConsentService.grantConsent({
+      patientId: req.patientId!,
+      granteeType: 'clinic',
+      granteeId: clinicId,
+      accessType: 'read',
+      dataCategories: dataCategories || ['all'],
+      purpose: purpose || 'Clinic-level access',
+      ttlHours,
+    });
+
+    res.json({ success: true, consentId, message: `Consent granted to clinic ${clinicId}. All affiliated staff can now access your records.` });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to grant clinic consent', details: err.message });
+  }
+});
+
+/**
+ * POST /api/consent/role
+ * Patient grants consent to all staff with a specific role (e.g., all nurses).
+ * Body: { role: 'nurse'|'doctor'|'staff', dataCategories?, ttlHours?, purpose? }
+ * Use case: "Allow all nurses at my hospital to check my allergy list during triage."
+ */
+router.post('/role', requirePatient, async (req: AuthRequest, res: Response) => {
+  try {
+    const { role, dataCategories, ttlHours, purpose } = req.body;
+    if (!role || !['doctor', 'nurse', 'staff', 'admin'].includes(role)) {
+      res.status(400).json({ error: 'role must be one of: doctor, nurse, staff, admin' });
+      return;
+    }
+
+    const consentId = await ConsentService.grantConsent({
+      patientId: req.patientId!,
+      granteeType: 'role',
+      granteeId: role,
+      accessType: 'read',
+      dataCategories: dataCategories || ['labs', 'prescriptions'],
+      purpose: purpose || `Role-level access for ${role}s`,
+      ttlHours,
+    });
+
+    res.json({
+      success: true,
+      consentId,
+      message: `Consent granted to all ${role}s. Any credentialed ${role} can now access your specified medical data categories.`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to grant role consent', details: err.message });
+  }
+});
+
+/**
  * GET /api/consent/mine
  * List active consents for the patient.
  */
