@@ -13,6 +13,11 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+const jwt = require('jsonwebtoken');
+const WebSocket = require('ws');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret';
+
 // Initialize Gemini Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -38,6 +43,46 @@ app.get('/api/health', (req, res) => {
         blockchain: 'Connected to live Fabric Network'
     });
 });
+
+// Simple WebSocket server for real-time notifications (records/access logs)
+let wss;
+function broadcastWs(event) {
+        if (!wss) return;
+        const msg = JSON.stringify(event);
+        wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) client.send(msg);
+        });
+}
+
+// --- Simple in-memory doctor accounts (demo) ---
+const DOCTORS = [
+    { id: 'doctor_smith', password: 'password', name: 'Dr. Smith', role: 'doctor' },
+    { id: 'doctor_aminata', password: 'password', name: 'Dr. Aminata', role: 'doctor' },
+];
+
+// Auth: doctor login
+app.post('/api/auth/login', (req, res) => {
+    const { id, password } = req.body || {};
+    if (!id || !password) return res.status(400).json({ error: 'id and password required' });
+    const doc = DOCTORS.find(d => d.id === id && d.password === password);
+    if (!doc) return res.status(401).json({ error: 'Invalid credentials' });
+    const token = jwt.sign({ id: doc.id, role: doc.role, name: doc.name }, JWT_SECRET, { expiresIn: '8h' });
+    res.json({ token, doctorId: doc.id, name: doc.name });
+});
+
+// Middleware to authenticate doctor JWT
+function authenticateDoctor(req, res, next) {
+    const auth = req.headers['authorization'] || req.headers['Authorization'];
+    if (!auth || typeof auth !== 'string' || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing Authorization' });
+    const token = auth.split(' ')[1];
+    try {
+        const payload = jwt.verify(token, JWT_SECRET);
+        req.user = payload; // set doctor info
+        return next();
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+}
 
 // Endpoint for OCR Extraction using Gemini
 app.post('/api/extract', upload.single('document'), async (req, res) => {
@@ -160,6 +205,120 @@ app.post('/api/ipfs/upload', upload.single('document'), async (req, res) => {
     } catch (error) {
         console.error('❌ IPFS upload error:', error.message);
         res.status(500).json({ error: 'Failed to upload to IPFS: ' + error.message });
+    }
+});
+
+// Generate a server-signed short-lived QR token (JWT)
+app.post('/api/qr/generate', (req, res) => {
+    const userId = req.body?.userId || req.query.userId;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '2m' });
+    // Broadcast token issuance for auditing (no sensitive content)
+    broadcastWs({ type: 'qr.generated', userId, issuedAt: Date.now() });
+    res.json({ token, expiresIn: 120 });
+});
+
+// Verify token and return emergency payload if allowed
+app.post('/api/qr/verify', authenticateDoctor, async (req, res) => {
+    const { token } = req.body || {};
+    const doctorId = req.user?.id || req.user?.sub || 'unknown';
+    if (!token) return res.status(400).json({ error: 'token required' });
+    try {
+        const payload = jwt.verify(token, JWT_SECRET);
+        const patientId = payload.userId;
+
+        // Audit log the QR verification attempt
+        try {
+            const auditId = 'aud_' + Math.random().toString(36).substring(2, 11);
+            await fabric.submitTransaction('audit', 'AddAuditLog', auditId, doctorId, 'doctor', patientId, 'QR_VERIFY', `Doctor verified QR for patient ${patientId}`, 'success');
+        } catch (e) { console.warn('Audit log failed for QR verify', e.message); }
+
+        // Attempt to fetch emergency payload from chaincode, fallback to simulated
+        try {
+            const result = await fabric.evaluateTransaction('patient', 'GetEmergencyPayload', patientId);
+            const payloadObj = JSON.parse(result.toString());
+            broadcastWs({ type: 'qr.verified', doctorId, patientId, timestamp: Date.now() });
+            return res.json({ success: true, payload: payloadObj });
+        } catch (err) {
+            const simulated = {
+                patientId,
+                name: 'Alex Johnson',
+                bloodType: 'O+',
+                allergies: ['Penicillin', 'Peanuts'],
+                medications: ['Lisinopril 10mg'],
+                conditions: ['Hypertension'],
+                emergencyContact: '+232 76 555 123 (Wife)',
+                tokenExpiry: new Date(Date.now() + 4 * 60 * 60 * 1000).toLocaleTimeString()
+            };
+            broadcastWs({ type: 'qr.verified', doctorId, patientId, timestamp: Date.now(), simulated: true });
+            return res.json({ success: true, payload: simulated });
+        }
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+});
+
+// Emergency Break-Glass Access
+app.post('/api/emergency/access', async (req, res) => {
+    const { patientId, doctorId } = req.body;
+    
+    if (!patientId || !doctorId) {
+        return res.status(400).json({ error: 'Missing parameters' });
+    }
+
+    try {
+        console.log(`🚨 [Blockchain] EMERGENCY ACCESS TRIGGERED: Doctor ${doctorId} accessing ${patientId}`);
+        
+        // 1. Audit log the emergency access
+        try {
+            const auditId = 'aud_' + Math.random().toString(36).substring(2, 11);
+            await fabric.submitTransaction(
+                'audit',
+                'AddAuditLog',
+                auditId,
+                doctorId,
+                'doctor',
+                patientId,
+                'EMERGENCY_ACCESS',
+                `Break-Glass Protocol used via NFC Scan`,
+                'success'
+            );
+        } catch (auditErr) {
+            console.error('Failed to commit emergency audit trail:', auditErr);
+        }
+
+        // 2. Return the temporary emergency payload
+        res.json({
+            success: true,
+            payload: {
+                patientId,
+                name: 'Alex Johnson',
+                bloodType: 'O+',
+                allergies: ['Penicillin', 'Peanuts'],
+                medications: ['Lisinopril 10mg'],
+                conditions: ['Hypertension'],
+                emergencyContact: '+232 76 555 123 (Wife)',
+                tokenExpiry: new Date(Date.now() + 4 * 60 * 60 * 1000).toLocaleTimeString()
+            }
+        });
+    } catch (error) {
+        console.error('❌ Emergency Access Error:', error);
+        res.status(500).json({ error: 'Emergency access failed: ' + error.message });
+    }
+});
+
+// Wallet balance endpoint — attempts chaincode call then falls back to simulated balance
+app.get('/api/wallet/:patientId', async (req, res) => {
+    const pid = req.params.patientId;
+    if (!pid) return res.status(400).json({ error: 'patientId required' });
+    try {
+        const result = await fabric.evaluateTransaction('patient', 'GetWalletBalance', pid);
+        const balance = JSON.parse(result.toString());
+        return res.json({ balance });
+    } catch (err) {
+        // Simulate from local DB or return 0
+        const simulated = 0;
+        return res.json({ balance: simulated, simulated: true });
     }
 });
 
@@ -298,6 +457,101 @@ app.post('/api/access/revoke', async (req, res) => {
     }
 });
 
+// ── Patient CRUD ─────────────────────────────────────────────────────────────
+
+// Register a new patient on the blockchain
+app.post('/api/patients', async (req, res) => {
+    const { id, name, age, gender, dob, phone, email, address, bloodType, condition, allergies, medications, notes, doctorId } = req.body;
+    if (!id || !name) return res.status(400).json({ error: 'Patient id and name are required' });
+
+    try {
+        console.log(`📡 [Blockchain] Registering patient: ${id}`);
+        const result = await fabric.submitTransaction(
+            'patient',
+            'CreatePatient',
+            id,
+            JSON.stringify({ name, age, gender, dob, phone, email, address, bloodType, condition, allergies: allergies || [], medications: medications || [], notes: notes || '', status: 'Active', lastVisit: new Date().toISOString().split('T')[0] }),
+            doctorId || 'self'
+        );
+
+        // Audit log
+        try {
+            const auditId = 'aud_' + Math.random().toString(36).substring(2, 11);
+            await fabric.submitTransaction('audit', 'AddAuditLog', auditId, doctorId || 'self', 'doctor', id, 'CREATE_PATIENT', `Registered patient ${name}`, 'success');
+        } catch (e) { /* non-fatal */ }
+
+        res.status(201).json({ success: true, patientId: id, txHash: result.txHash });
+    } catch (error) {
+        console.error('❌ Create Patient Error:', error);
+        res.status(500).json({ error: 'Failed to register patient: ' + error.message });
+    }
+});
+
+// Get all patients for a doctor
+app.get('/api/patients', async (req, res) => {
+    const doctorId = req.query.doctorId || 'doctor_smith';
+    try {
+        console.log(`📡 [Blockchain] Querying patients for doctor: ${doctorId}`);
+        const result = await fabric.evaluateTransaction('patient', 'GetPatientsByDoctor', doctorId);
+        const patients = JSON.parse(result.toString() || '[]');
+        res.json(patients);
+    } catch (error) {
+        console.warn('⚠️ GetPatientsByDoctor not supported, returning empty:', error.message);
+        res.json([]);
+    }
+});
+
+// Get single patient
+app.get('/api/patients/:id', async (req, res) => {
+    try {
+        const result = await fabric.evaluateTransaction('patient', 'GetPatient', req.params.id);
+        res.json(JSON.parse(result.toString()));
+    } catch (error) {
+        res.status(404).json({ error: 'Patient not found: ' + error.message });
+    }
+});
+
+// ── Records ───────────────────────────────────────────────────────────────────
+
+// Get all records for a patient
+app.get('/api/records', async (req, res) => {
+    const patientId = req.query.patientId;
+    if (!patientId) return res.status(400).json({ error: 'patientId query param required' });
+    try {
+        console.log(`📡 [Blockchain] Querying records for patient: ${patientId}`);
+        const result = await fabric.evaluateTransaction('patient', 'GetPatientDocuments', patientId);
+        const records = JSON.parse(result.toString() || '[]');
+        res.json(records);
+    } catch (error) {
+        console.warn('⚠️ GetPatientDocuments error:', error.message);
+        res.json([]);
+    }
+});
+
+// ── Dashboard Stats ───────────────────────────────────────────────────────────
+app.get('/api/dashboard/stats', async (req, res) => {
+    try {
+        const healthRes = await fabric.evaluateTransaction('audit', 'GetAuditStats');
+        const stats = JSON.parse(healthRes.toString() || '{}');
+        res.json(stats);
+    } catch {
+        // Fallback: return zeros if chaincode doesn't expose stats yet
+        res.json({ totalPatients: 0, todayAppointments: 0, pendingRecords: 0, syncRate: 100 });
+    }
+});
+
+// ── Audit Log ─────────────────────────────────────────────────────────────────
+app.get('/api/audit/log', async (req, res) => {
+    const actorId = req.query.actorId || '';
+    try {
+        console.log(`📡 [Blockchain] Querying audit log for: ${actorId}`);
+        const result = await fabric.evaluateTransaction('audit', 'GetAuditTrailByActor', actorId);
+        res.json(JSON.parse(result.toString() || '[]'));
+    } catch (error) {
+        res.json([]);
+    }
+});
+
 // Graceful gateway shutdown
 process.on('SIGINT', async () => {
     console.log('Gracefully disconnecting from Fabric gateway...');
@@ -305,6 +559,16 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`🚀 MediChain API Gateway listening on port ${port}`);
 });
+
+// Attach WebSocket server
+wss = new WebSocket.Server({ server });
+wss.on('connection', (socket) => {
+    console.log('🔌 WebSocket client connected');
+    socket.on('close', () => console.log('🔌 WebSocket client disconnected'));
+});
+
+// Expose broadcast helper for other modules if needed
+module.exports.broadcastWs = broadcastWs;

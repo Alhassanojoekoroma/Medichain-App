@@ -50,3 +50,6 @@ backend/api/wallet/
 # medichain network generated artifacts (generated locally)
 medichain-network/crypto-config/
 medichain-network/channel-artifacts/
+
+# Go chaincode vendor directories
+**/vendor/
