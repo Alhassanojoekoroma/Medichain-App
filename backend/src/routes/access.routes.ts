@@ -269,8 +269,12 @@ router.get('/patients', requireDoctor, async (req: AuthRequest, res: Response) =
     let patients: any[] = [];
 
     try {
+      if ((db as any).isSimulated && (db as any).isSimulated()) {
+        throw new Error('Simulation mode');
+      }
+
       const result = await db.query(
-        `SELECT DISTINCT p.id, p.full_name, p.blood_type, p.phone, ep.allergies
+        `SELECT DISTINCT p.id, p.full_name, p.blood_type, p.phone, p.date_of_birth, ep.allergies
            FROM consent_policies cp
            JOIN patients p ON p.id = cp.patient_id
            LEFT JOIN emergency_profiles ep ON ep.patient_id = p.id
@@ -285,6 +289,7 @@ router.get('/patients', requireDoctor, async (req: AuthRequest, res: Response) =
         name: row.full_name,
         bloodType: row.blood_type,
         phone: row.phone,
+        dateOfBirth: row.date_of_birth,
         allergies: row.allergies || [],
       }));
     } catch {
@@ -301,6 +306,7 @@ router.get('/patients', requireDoctor, async (req: AuthRequest, res: Response) =
             name: p.full_name,
             bloodType: p.blood_type,
             phone: p.phone,
+            dateOfBirth: p.date_of_birth,
             allergies: epRes.rows[0]?.allergies || [],
           });
         }

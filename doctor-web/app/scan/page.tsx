@@ -168,19 +168,19 @@ export default function ScanQRPage() {
           if (detail && detail.patient) {
             const reconstructed = {
               id: detail.patient.id,
-              name: detail.patient.full_name,
-              initials: detail.patient.full_name
+              name: detail.patient.fullName,
+              initials: detail.patient.fullName
                 .split(' ')
                 .map((n: string) => n[0])
                 .join('')
                 .slice(0, 2)
                 .toUpperCase() || 'PT',
-              age: new Date().getFullYear() - new Date(detail.patient.date_of_birth).getFullYear(),
+              age: new Date().getFullYear() - new Date(detail.patient.dob).getFullYear(),
               gender: 'Female', // fallback gender
-              bloodType: detail.patient.blood_type || 'Unknown',
+              bloodType: detail.patient.bloodType || 'Unknown',
               phone: detail.patient.phone || 'N/A',
-              emergencyContactName: detail.emergencyProfile?.emergency_contacts?.[0]?.name || 'None',
-              allergies: (detail.emergencyProfile?.allergies || []).map((a: any) => typeof a === 'string' ? a : a.name),
+              emergencyContactName: 'None',
+              allergies: detail.patient.allergies.map((a: any) => typeof a === 'string' ? a : a.name),
             };
             setScannedPatient(reconstructed as any);
             setResolvedPatientId(detail.patient.id);

@@ -204,16 +204,16 @@ export default function ExploreDoctorsScreen({ navigation }: any) {
                         </Text>
                       </View>
                     </View>
-
-                    {/* Book Button */}
-                    <Button
-                      label="Book Appointment"
-                      variant="primary"
-                      size="small"
-                      onPress={() => handleBookAppointment(doctor.name)}
-                      style={styles.bookButton}
-                    />
                   </TouchableOpacity>
+
+                  {/* Book Button */}
+                  <Button
+                    label="Book Appointment"
+                    variant="primary"
+                    size="small"
+                    onPress={() => handleBookAppointment(doctor.name)}
+                    style={styles.bookButton}
+                  />
                 </CardBody>
               </Card>
             ))

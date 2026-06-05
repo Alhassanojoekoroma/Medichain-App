@@ -85,7 +85,7 @@ export default function AppointmentsScreen({ navigation }: any) {
           <Text style={styles.headerTitle}>My Appointments</Text>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => toastRef.current?.show({ message: 'Book new appointment', type: 'info' })}
+            onPress={() => navigation.navigate('ExploreDoctors')}
           >
             <Ionicons name="add" size={24} color={Colors.white} />
           </TouchableOpacity>

@@ -176,7 +176,10 @@ export default function HomeScreen({ navigation }: any) {
                     <Text style={styles.apptDocSpec}>{upcomingAppointment.specialty}</Text>
                     <Text style={styles.apptConfirmed}>Confirmed</Text>
                   </View>
-                  <TouchableOpacity style={styles.apptCallBtn}>
+                  <TouchableOpacity 
+                    style={styles.apptCallBtn}
+                    onPress={() => toastRef.current?.show({ message: 'Call feature coming soon', type: 'info' })}
+                  >
                     <MaterialCommunityIcons name="phone-outline" size={20} color={Colors.primary} />
                   </TouchableOpacity>
                 </View>
@@ -218,14 +221,14 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={styles.cleanActionLabel}>Find Doctor</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.flatActionCard} onPress={() => navigation.navigate('ReportUpload')} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.flatActionCard} onPress={() => navigation.navigate('ConsentManager')} activeOpacity={0.7}>
               <View style={[styles.cleanActionIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                <Ionicons name="document-text" size={22} color="#3B82F6" />
+                <Ionicons name="shield-checkmark" size={22} color="#3B82F6" />
               </View>
-              <Text style={styles.cleanActionLabel}>Add Report</Text>
+              <Text style={styles.cleanActionLabel}>Data Consent</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.flatActionCard} onPress={() => navigation.navigate('Security')} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.flatActionCard} onPress={() => navigation.navigate('QRGenerate')} activeOpacity={0.7}>
               <View style={[styles.cleanActionIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                 <Ionicons name="qr-code" size={22} color="#3B82F6" />
               </View>

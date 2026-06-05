@@ -26,6 +26,12 @@ export default function UploadRecordPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [fileHash, setFileHash] = useState('');
 
+  // Token resolution states
+  const [tokenInput, setTokenInput] = useState('');
+  const [resolvingToken, setResolvingToken] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [resolvedPatientName, setResolvedPatientName] = useState('');
+
   // Sync animation states
   const [syncStatus, setSyncStatus] = useState<'idle' | 'hashing' | 'ipfs' | 'fabric' | 'success' | 'error'>('idle');
   const [syncProgress, setSyncProgress] = useState(0);
@@ -58,6 +64,61 @@ export default function UploadRecordPage() {
       }
     }
   }, []);
+
+  const handleResolveToken = async () => {
+    if (!tokenInput.trim()) return;
+    setResolvingToken(true);
+    setResolveError(null);
+    setResolvedPatientName('');
+
+    const input = tokenInput.trim();
+
+    try {
+      // 1. Try to parse as JSON first
+      let isJson = false;
+      let parsedJson: any = null;
+      try {
+        parsedJson = JSON.parse(input);
+        isJson = typeof parsedJson === 'object' && parsedJson !== null;
+      } catch (e) {
+        isJson = false;
+      }
+
+      let targetPatientId = '';
+
+      if (isJson) {
+        // Assume it's a QR Payload, call scanQR
+        const scanRes = await backendApi.scanQR(parsedJson);
+        targetPatientId = scanRes.patientId;
+      } else {
+        // It's a raw token/UUID or mock ID.
+        // Let's resolve it. Let's see if it's one of the mock IDs P001-P008
+        if (/^P00[1-8]$/i.test(input)) {
+          // Map to UUID
+          const num = input.substring(3);
+          targetPatientId = `bb010000-0000-0000-0000-00000000000${num}`;
+        } else {
+          targetPatientId = input;
+        }
+      }
+
+      // Now fetch details to ensure we have access and to get the name
+      const detail = await backendApi.getPatientDetail(targetPatientId);
+      if (detail && detail.patient) {
+        setSelectedPatientId(targetPatientId);
+        setResolvedPatientName(detail.patient.fullName);
+        setTokenInput(''); // clear input on success
+      } else {
+        throw new Error('Patient record could not be read or does not exist');
+      }
+
+    } catch (err: any) {
+      console.error('Resolution error:', err);
+      setResolveError(err.message || 'Failed to resolve patient. Ensure code is valid and you have access.');
+    } finally {
+      setResolvingToken(false);
+    }
+  };
 
   // Generate simple mock SHA-256 hash for demonstration
   const generateMockHash = (fileName: string, fileSize: number) => {
@@ -277,30 +338,72 @@ export default function UploadRecordPage() {
             /* Upload Form input */
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-5">
               
-              {/* Patient selection */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Patient Select *
-                </label>
-                <select
-                  required
-                  value={selectedPatientId}
-                  onChange={(e) => setSelectedPatientId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700"
-                >
-                  <option value="">-- Choose patient --</option>
-                  {loadingPatients ? (
-                    <option disabled>Loading patients...</option>
-                  ) : patients.length === 0 ? (
-                    <option disabled>No accessible patients found</option>
-                  ) : (
-                    patients.map((pat) => (
-                      <option key={pat.id} value={pat.id}>
-                        {pat.name} ({pat.id})
+              {/* Patient selection & Token Resolution */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-4 rounded-xl border border-slate-200/60">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Select Patient From List *
+                  </label>
+                  <select
+                    required
+                    value={selectedPatientId}
+                    onChange={(e) => {
+                      setSelectedPatientId(e.target.value);
+                      setResolvedPatientName('');
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700 font-medium"
+                  >
+                    <option value="">-- Choose patient --</option>
+                    {selectedPatientId && !patients.some(p => p.id === selectedPatientId) && (
+                      <option value={selectedPatientId}>
+                        {resolvedPatientName || selectedPatientId.substring(0, 8) + '...'} (Resolved)
                       </option>
-                    ))
+                    )}
+                    {loadingPatients ? (
+                      <option disabled>Loading patients...</option>
+                    ) : patients.length === 0 ? (
+                      <option disabled>No accessible patients found</option>
+                    ) : (
+                      patients.map((pat) => (
+                        <option key={pat.id} value={pat.id}>
+                          {pat.name} ({pat.id.substring(0, 8)}...)
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Or Resolve Patient Access Token / QR Payload
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Paste patient ID, UUID, or QR JSON payload..."
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      className="flex-1 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition text-slate-700"
+                    />
+                    <button
+                      type="button"
+                      disabled={resolvingToken || !tokenInput.trim()}
+                      onClick={handleResolveToken}
+                      className="px-4 py-2 bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-semibold rounded-lg transition whitespace-nowrap flex items-center gap-1.5 shadow-sm"
+                    >
+                      {resolvingToken && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                      Resolve
+                    </button>
+                  </div>
+                  {resolveError && (
+                    <p className="text-xs text-rose-650 font-semibold">{resolveError}</p>
                   )}
-                </select>
+                  {resolvedPatientName && (
+                    <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                      <Check className="h-3.5 w-3.5" /> Resolved: {resolvedPatientName}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Record details */}

@@ -318,9 +318,24 @@ export default function SecurityScreen({ navigation }: any) {
 
           <Card style={styles.flatCard}>
             <CardBody>
-              <TouchableOpacity style={styles.settingItem}>
+              <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('ConsentManager')}>
                 <View style={[styles.settingIcon, { backgroundColor: Colors.primaryLight }]}>
                   <Ionicons name="shield-checkmark" size={20} color={Colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.settingLabel}>Data Consent</Text>
+                  <Text style={styles.settingDesc}>Manage active doctor & clinic permissions</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
+              </TouchableOpacity>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.flatCard}>
+            <CardBody>
+              <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('AccessHistory')}>
+                <View style={[styles.settingIcon, { backgroundColor: Colors.primaryLight }]}>
+                  <Ionicons name="list" size={20} color={Colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.settingLabel}>Activity Log</Text>
@@ -333,7 +348,10 @@ export default function SecurityScreen({ navigation }: any) {
 
           <Card style={styles.flatCard}>
             <CardBody>
-              <TouchableOpacity style={styles.settingItem}>
+              <TouchableOpacity 
+                style={styles.settingItem}
+                onPress={() => toastRef.current?.show({ message: 'Account deletion requires contacting support', type: 'info' })}
+              >
                 <View style={[styles.settingIcon, { backgroundColor: Colors.dangerLight }]}>
                   <Ionicons name="trash" size={20} color={Colors.danger} />
                 </View>

@@ -6,7 +6,7 @@
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
 export interface SyncQueueItem {
   id: string;

@@ -13,6 +13,7 @@ export interface BackendPatient {
   phone: string;
   email: string;
   allergies: any[];
+  dateOfBirth?: string;
 }
 
 export interface BackendPatientDetail {
@@ -325,6 +326,22 @@ export const backendApi = {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch access history.');
+    return res.json();
+  },
+
+  getLedgerAccessLogs: async (limit = 100): Promise<{ success: boolean; logs: any[] }> => {
+    const res = await fetch(`${BASE_URL}/api/audit?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch ledger activity logs.');
+    return res.json();
+  },
+
+  getClinicianConsents: async (): Promise<{ success: boolean; consents: any[] }> => {
+    const res = await fetch(`${BASE_URL}/api/consent`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch clinician consents.');
     return res.json();
   },
 

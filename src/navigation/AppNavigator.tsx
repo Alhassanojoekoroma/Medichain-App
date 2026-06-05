@@ -16,7 +16,6 @@ import DoctorProfileScreen from '../screens/DoctorProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SecurityScreen from '../screens/SecurityScreen';
-import ReportUploadScreen from '../screens/ReportUploadScreen';
 import DoctorScanScreen from '../screens/DoctorScanScreen';
 import AllergiesScreen from '../screens/AllergiesScreen';
 import HelpCenterScreen from '../screens/HelpCenterScreen';
@@ -54,22 +53,15 @@ function TabNavigator() {
         tabBarInactiveTintColor: Colors.neutral400,
         headerShown: false,
         tabBarStyle: {
-          position: 'absolute',
-          bottom: Spacing.md,
-          left: Spacing.lg,
-          right: Spacing.lg,
-          height: 70,
+          height: 64,
           paddingBottom: 12,
           paddingTop: 8,
-          borderRadius: Radius.xl,
           backgroundColor: Colors.white,
-          borderWidth: 1,
-          borderColor: Colors.neutral200,
-          elevation: 8,
-          shadowColor: Colors.neutral900,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
+          borderTopWidth: 1,
+          borderTopColor: Colors.neutral200,
+          borderWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
           fontSize: FontSize.bodySmall,
@@ -104,7 +96,6 @@ export default function AppNavigator() {
             <Stack.Screen name="DoctorProfile" component={DoctorProfileScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="Security" component={SecurityScreen} />
-            <Stack.Screen name="ReportUpload" component={ReportUploadScreen} />
             <Stack.Screen name="DoctorScan" component={DoctorScanScreen} />
             <Stack.Screen name="Allergies" component={AllergiesScreen} />
             <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />

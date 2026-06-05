@@ -2,9 +2,12 @@
  * backend/src/routes/consent.routes.ts
  * Patient consent management endpoints
  */
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { ConsentService, GrantConsentInput } from '../services/ConsentService';
-import { requirePatient, AuthRequest } from '../middleware/auth.middleware';
+import { requirePatient, requireDoctor, AuthRequest } from '../middleware/auth.middleware';
+import { db } from '../config/db';
+import { TokenService } from '../services/TokenService';
+import { AuditService } from '../services/AuditService';
 
 const router = Router();
 
@@ -96,6 +99,36 @@ router.post('/role', requirePatient, async (req: AuthRequest, res: Response) => 
 });
 
 /**
+ * GET /api/consent
+ * List active consents for the logged-in doctor (granted to them or their clinic).
+ * Requires Doctor JWT
+ */
+router.get('/', requireDoctor, async (req: AuthRequest, res: Response) => {
+  try {
+    const doctor = req.doctor!;
+    const result = await db.query(
+      `SELECT cp.id, cp.patient_id, p.full_name AS patient_name, cp.grantee_type,
+              cp.grantee_id, cp.access_type, cp.data_categories, cp.purpose,
+              cp.expires_at, cp.created_at, cp.is_one_time
+         FROM consent_policies cp
+         JOIN patients p ON p.id = cp.patient_id
+        WHERE cp.is_revoked = FALSE
+          AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
+          AND (
+            (cp.grantee_type = 'doctor' AND cp.grantee_id = $1)
+            OR (cp.grantee_type = 'clinic' AND cp.grantee_id = $2)
+          )
+        ORDER BY cp.created_at DESC`,
+      [doctor.id, doctor.clinicId || '']
+    );
+
+    res.json({ success: true, consents: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch doctor consents', details: err.message });
+  }
+});
+
+/**
  * GET /api/consent/mine
  * List active consents for the patient.
  */
@@ -110,19 +143,67 @@ router.get('/mine', requirePatient, async (req: AuthRequest, res: Response) => {
 
 /**
  * DELETE /api/consent/:id
- * Revoke a specific consent policy.
+ * Revoke a specific consent policy. Supports both Patient JWT and Doctor JWT.
  */
-router.delete('/:id', requirePatient, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Unauthorized: missing token' });
+    return;
+  }
+
+  const token = authHeader.slice(7);
   try {
-    const rowsAffected = await ConsentService.revokeConsent(
-      req.patientId!,
-      { consentId: req.params.id },
-      req.body.reason
-    );
-    if (rowsAffected === 0) {
-      return res.status(404).json({ error: 'Consent not found or already revoked' });
+    const payload = TokenService.verifyDoctorJWT(token);
+    
+    if (payload.role === 'patient') {
+      // Patient revoking consent they granted
+      const rowsAffected = await ConsentService.revokeConsent(
+        payload.sub,
+        { consentId: req.params.id },
+        req.body.reason
+      );
+      if (rowsAffected === 0) {
+        res.status(404).json({ error: 'Consent not found or already revoked' });
+        return;
+      }
+      res.json({ success: true, message: 'Consent revoked successfully.' });
+    } else if (['doctor', 'nurse', 'admin', 'staff'].includes(payload.role)) {
+      // Doctor/Clinic revoking consent granted to them
+      const consentId = req.params.id;
+      const result = await db.query(
+        `UPDATE consent_policies
+            SET is_revoked = TRUE, revoked_at = NOW()
+          WHERE id = $1 AND is_revoked = FALSE
+            AND (
+              (grantee_type = 'doctor' AND grantee_id = $2)
+              OR (grantee_type = 'clinic' AND grantee_id = $3)
+            )
+          RETURNING patient_id`,
+        [consentId, payload.sub, payload.clinicId || '']
+      );
+
+      if (result.rowCount === 0) {
+        res.status(404).json({ error: 'Consent not found, already revoked, or unauthorized' });
+        return;
+      }
+
+      const patientId = result.rows[0].patient_id;
+
+      // Log audit trail
+      await AuditService.log({
+        patientId,
+        actorId: payload.sub,
+        actorRole: payload.role,
+        actorFullName: payload.fullName,
+        accessType: 'revoke_consent',
+        outcome: 'granted',
+      });
+
+      res.json({ success: true, message: 'Access key/consent revoked successfully by clinician.' });
+    } else {
+      res.status(403).json({ error: 'Forbidden role' });
     }
-    res.json({ success: true, message: 'Consent revoked.' });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to revoke consent', details: err.message });
   }

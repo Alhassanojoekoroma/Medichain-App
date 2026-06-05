@@ -68,6 +68,37 @@ router.post(
       );
       const treatment = treatmentResult.rows[0];
 
+      // If this is a medication, append it to active medications in emergency profile
+      if (treatmentType === 'medication') {
+        try {
+          const epRes = await db.query(
+            `SELECT medications FROM emergency_profiles WHERE patient_id = $1`,
+            [patientId]
+          );
+          if (epRes.rowCount > 0) {
+            let currentMeds = epRes.rows[0].medications || [];
+            if (typeof currentMeds === 'string') {
+              try {
+                currentMeds = JSON.parse(currentMeds);
+              } catch {
+                currentMeds = [];
+              }
+            }
+            if (!Array.isArray(currentMeds)) {
+              currentMeds = [];
+            }
+            // Append new medication
+            currentMeds.push({ name: title, dosage: description || '', frequency: 'As directed' });
+            await db.query(
+              `UPDATE emergency_profiles SET medications = $1 WHERE patient_id = $2`,
+              [JSON.stringify(currentMeds), patientId]
+            );
+          }
+        } catch (epErr: any) {
+          logger.warn(`Failed to update emergency profile medications: ${epErr.message}`);
+        }
+      }
+
       // 4. Anchor on-chain
       const tx = await FabricGateway.submitTx(
         'patient',

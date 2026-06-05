@@ -52,61 +52,169 @@ const MOCK_DOCTORS: Record<string, any> = {
   },
 };
 
-const MOCK_PATIENTS: Record<string, any> = {
-  'bb010000-0000-0000-0000-000000000001': {
-    id: 'bb010000-0000-0000-0000-000000000001',
-    full_name: 'Alex Johnson',
-    date_of_birth: '1996-03-15',
-    phone: '+23276543210',
-    email: 'alex.j@example.com',
-    blood_type: 'O+',
-    wallet_address: '0xABCD1234',
-  },
-  'bb010000-0000-0000-0000-000000000002': {
-    id: 'bb010000-0000-0000-0000-000000000002',
-    full_name: 'Fatima Kamara',
-    date_of_birth: '1990-07-22',
-    phone: '+23277891234',
-    email: 'fatima.k@example.com',
-    blood_type: 'A+',
-    wallet_address: '0xEF015678',
-  },
-  'bb010000-0000-0000-0000-000000000003': {
-    id: 'bb010000-0000-0000-0000-000000000003',
-    full_name: 'Mohamed Sesay',
-    date_of_birth: '1985-11-10',
-    phone: '+23278765432',
-    email: 'mo.sesay@example.com',
-    blood_type: 'B+',
-    wallet_address: '0x23459ABC',
-  },
+const MOCK_PATIENTS: Record<string, any> = {};
+
+// Helper to define a patient both by UUID and by P00X mock ID
+const definePatient = (uuid: string, mockId: string, patientData: any) => {
+  const data = { id: uuid, ...patientData };
+  MOCK_PATIENTS[uuid] = data;
+  MOCK_PATIENTS[mockId] = data;
 };
 
-const MOCK_CONSENTS: any[] = [
-  // Doctor 1 → all patients
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000001', grantee_type: 'doctor', grantee_id: 'd0010000-0000-0000-0000-000000000001', access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000002', grantee_type: 'doctor', grantee_id: 'd0010000-0000-0000-0000-000000000001', access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000003', grantee_type: 'doctor', grantee_id: 'd0010000-0000-0000-0000-000000000001', access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  // Doctor 2 → all patients
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000001', grantee_type: 'doctor', grantee_id: 'd0010000-0000-0000-0000-000000000002', access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000002', grantee_type: 'doctor', grantee_id: 'd0010000-0000-0000-0000-000000000002', access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  // Clinic-level consent (all staff at the clinic can access patients)
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000001', grantee_type: 'clinic', grantee_id: MOCK_CLINIC.id, access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000002', grantee_type: 'clinic', grantee_id: MOCK_CLINIC.id, access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000003', grantee_type: 'clinic', grantee_id: MOCK_CLINIC.id, access_type: 'read', data_categories: JSON.stringify(['all']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
-  // Role-based consent: nurses can read triage data
-  { id: crypto.randomUUID(), patient_id: 'bb010000-0000-0000-0000-000000000001', grantee_type: 'role', grantee_id: 'nurse', access_type: 'read', data_categories: JSON.stringify(['labs', 'prescriptions']), is_revoked: false, is_one_time: false, used_at: null, expires_at: null },
+definePatient('bb010000-0000-0000-0000-000000000001', 'P001', {
+  full_name: 'Aminata Koroma',
+  date_of_birth: '1991-03-15',
+  phone: '+23276123456',
+  email: 'aminata.k@email.com',
+  blood_type: 'O+',
+  wallet_address: '0xABCD1234',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000002', 'P002', {
+  full_name: 'Mohamed Bangura',
+  date_of_birth: '1980-07-22',
+  phone: '+23277234567',
+  email: 'mbangura@email.com',
+  blood_type: 'A+',
+  wallet_address: '0xEF015678',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000003', 'P003', {
+  full_name: 'Fatmata Sesay',
+  date_of_birth: '1997-11-08',
+  phone: '+23278345678',
+  email: 'fatmata.s@email.com',
+  blood_type: 'B-',
+  wallet_address: '0x23459ABC',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000004', 'P004', {
+  full_name: 'Ibrahim Turay',
+  date_of_birth: '1963-05-01',
+  phone: '+23279456789',
+  email: 'ituray@email.com',
+  blood_type: 'AB+',
+  wallet_address: '0x34560DEF',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000005', 'P005', {
+  full_name: 'Isatu Mansaray',
+  date_of_birth: '2007-02-14',
+  phone: '+23276567890',
+  email: 'imansaray@email.com',
+  blood_type: 'O-',
+  wallet_address: '0x45671ABC',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000006', 'P006', {
+  full_name: 'Samuel Kamara',
+  date_of_birth: '1988-09-30',
+  phone: '+23277678901',
+  email: 'skamara@email.com',
+  blood_type: 'A-',
+  wallet_address: '0x56782DEF',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000007', 'P007', {
+  full_name: 'Mariama Conteh',
+  date_of_birth: '1974-04-05',
+  phone: '+23278789012',
+  email: 'mconteh@email.com',
+  blood_type: 'B+',
+  wallet_address: '0x67893ABC',
+});
+
+definePatient('bb010000-0000-0000-0000-000000000008', 'P008', {
+  full_name: 'Alhaji Jalloh',
+  date_of_birth: '1955-12-12',
+  phone: '+23279890123',
+  email: 'ajalloh@email.com',
+  blood_type: 'O+',
+  wallet_address: '0x78904DEF',
+});
+
+const MOCK_CONSENTS: any[] = [];
+
+// Seed default read consents for Doctor 1 (d0010000-0000-0000-0000-000000000001) to all 8 patients
+const patientUuids = [
+  'bb010000-0000-0000-0000-000000000001',
+  'bb010000-0000-0000-0000-000000000002',
+  'bb010000-0000-0000-0000-000000000003',
+  'bb010000-0000-0000-0000-000000000004',
+  'bb010000-0000-0000-0000-000000000005',
+  'bb010000-0000-0000-0000-000000000006',
+  'bb010000-0000-0000-0000-000000000007',
+  'bb010000-0000-0000-0000-000000000008',
 ];
 
+for (const pId of patientUuids) {
+  // Doctor 1 consent
+  MOCK_CONSENTS.push({
+    id: crypto.randomUUID(),
+    patient_id: pId,
+    grantee_type: 'doctor',
+    grantee_id: 'd0010000-0000-0000-0000-000000000001',
+    access_type: 'read',
+    data_categories: JSON.stringify(['all']),
+    is_revoked: false,
+    is_one_time: false,
+    used_at: null,
+    expires_at: null,
+    created_at: new Date().toISOString()
+  });
+  // Doctor 1 write consent (so the doctor can prescription/upload)
+  MOCK_CONSENTS.push({
+    id: crypto.randomUUID(),
+    patient_id: pId,
+    grantee_type: 'doctor',
+    grantee_id: 'd0010000-0000-0000-0000-000000000001',
+    access_type: 'write',
+    data_categories: JSON.stringify(['all', 'prescriptions']),
+    is_revoked: false,
+    is_one_time: false,
+    used_at: null,
+    expires_at: null,
+    created_at: new Date().toISOString()
+  });
+  // Clinic-level consent
+  MOCK_CONSENTS.push({
+    id: crypto.randomUUID(),
+    patient_id: pId,
+    grantee_type: 'clinic',
+    grantee_id: MOCK_CLINIC.id,
+    access_type: 'read',
+    data_categories: JSON.stringify(['all']),
+    is_revoked: false,
+    is_one_time: false,
+    used_at: null,
+    expires_at: null,
+    created_at: new Date().toISOString()
+  });
+}
+
 const MOCK_EMERGENCY: Record<string, any> = {
-  'bb010000-0000-0000-0000-000000000001': { allergies: [{ name: 'Penicillin', severity: 'Moderate' }], medications: [{ name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily' }], chronic_conditions: [{ name: 'Hypertension' }] },
-  'bb010000-0000-0000-0000-000000000002': { allergies: [], medications: [{ name: 'Metformin', dosage: '500mg', frequency: 'Twice daily' }], chronic_conditions: [{ name: 'Type 2 Diabetes' }] },
-  'bb010000-0000-0000-0000-000000000003': { allergies: [{ name: 'Sulfa drugs', severity: 'High' }], medications: [], chronic_conditions: [] },
+  'bb010000-0000-0000-0000-000000000001': { allergies: [{ name: 'Penicillin', severity: 'Moderate' }, { name: 'Aspirin', severity: 'Low' }], medications: [{ name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily' }, { name: 'Amlodipine', dosage: '5mg', frequency: 'Once daily' }], chronic_conditions: [{ name: 'Hypertension' }], emergency_contacts: [{ name: 'Ibrahim Koroma', phone: '+23276987654' }] },
+  'bb010000-0000-0000-0000-000000000002': { allergies: [{ name: 'Sulfa drugs', severity: 'Moderate' }], medications: [{ name: 'Metformin', dosage: '500mg', frequency: 'Twice daily' }], chronic_conditions: [{ name: 'Type 2 Diabetes' }], emergency_contacts: [{ name: 'Fatmata Bangura', phone: '+23277345678' }] },
+  'bb010000-0000-0000-0000-000000000003': { allergies: [{ name: 'NSAIDs', severity: 'Moderate' }, { name: 'Dust mites', severity: 'Low' }], medications: [{ name: 'Salbutamol', dosage: '100mcg', frequency: 'As needed' }], chronic_conditions: [{ name: 'Asthma' }], emergency_contacts: [{ name: 'Alhaji Sesay', phone: '+23278456789' }] },
+  'bb010000-0000-0000-0000-000000000004': { allergies: [{ name: 'Iodine contrast', severity: 'High' }], medications: [{ name: 'Aspirin', dosage: '75mg' }], chronic_conditions: [{ name: 'Coronary Artery Disease' }], emergency_contacts: [{ name: 'Mariama Turay', phone: '+23279567890' }] },
+  'bb010000-0000-0000-0000-000000000005': { allergies: [{ name: 'Morphine', severity: 'High' }], medications: [{ name: 'Hydroxyurea', dosage: '500mg' }], chronic_conditions: [{ name: 'Sickle Cell Disease' }], emergency_contacts: [{ name: 'Kadiatu Mansaray', phone: '+23276678901' }] },
+  'bb010000-0000-0000-0000-000000000006': { allergies: [], medications: [], chronic_conditions: [{ name: 'Malaria (recurrent)' }], emergency_contacts: [{ name: 'Fatmata Kamara', phone: '+23277678901' }] },
 };
+
+// Aliases for P00X in MOCK_EMERGENCY
+for (let i = 1; i <= 8; i++) {
+  const uuid = `bb010000-0000-0000-0000-00000000000${i}`;
+  const mockId = `P00${i}`;
+  if (MOCK_EMERGENCY[uuid]) {
+    MOCK_EMERGENCY[mockId] = MOCK_EMERGENCY[uuid];
+  } else {
+    MOCK_EMERGENCY[uuid] = { allergies: [], medications: [], chronic_conditions: [], emergency_contacts: [] };
+    MOCK_EMERGENCY[mockId] = MOCK_EMERGENCY[uuid];
+  }
+}
 
 const MOCK_RECORDS: any[] = [
   { id: 'rec0001-0000-0000-0000-000000000001', patient_id: 'bb010000-0000-0000-0000-000000000001', record_type: 'Laboratory', title: 'Full Blood Count — June 2026', encrypted_cid: 'QmXf8Y7zKpLm3NqRsT2uVwE5hJcGbMnAoP9iDkFlH6ySv', integrity_hash: '0xabc123def456', data_categories: JSON.stringify(['labs']), uploaded_by: 'd0010000-0000-0000-0000-000000000001', created_at: new Date(Date.now() - 86400000 * 3).toISOString(), ledger_tx_hash: '0xfabric001ledger' },
-  { id: 'rec0002-0000-0000-0000-000000000001', patient_id: 'bb010000-0000-0000-0000-000000000001', record_type: 'Prescription', title: 'Lisinopril 10mg — 30 day supply', encrypted_cid: 'QmPrescriptionMockCID', integrity_hash: '0xprescription456', data_categories: JSON.stringify(['prescriptions']), uploaded_by: 'd0010000-0000-0000-0000-000000000001', created_at: new Date(Date.now() - 86400000 * 7).toISOString(), ledger_tx_hash: '0xfabric003ledger' },
 ];
 
 const MOCK_TREATMENTS: any[] = [
@@ -119,7 +227,21 @@ const MOCK_ACCESS_TOKENS: any[] = [];
 // ─── Mock SQL router ─────────────────────────────────────────────────────────
 
 function mockQuery(text: string, params: any[] = []): { rows: any[]; rowCount: number } {
+  // Normalize parameters to resolve frontend mock IDs to UUIDs
+  params = params.map(p => {
+    if (p === 'P001') return 'bb010000-0000-0000-0000-000000000001';
+    if (p === 'P002') return 'bb010000-0000-0000-0000-000000000002';
+    if (p === 'P003') return 'bb010000-0000-0000-0000-000000000003';
+    if (p === 'P004') return 'bb010000-0000-0000-0000-000000000004';
+    if (p === 'P005') return 'bb010000-0000-0000-0000-000000000005';
+    if (p === 'P006') return 'bb010000-0000-0000-0000-000000000006';
+    if (p === 'P007') return 'bb010000-0000-0000-0000-000000000007';
+    if (p === 'P008') return 'bb010000-0000-0000-0000-000000000008';
+    return p;
+  });
+
   const sql = text.trim().replace(/\s+/g, ' ').toLowerCase();
+
 
   // Counts
   if (sql.includes('count(*)') || sql.includes('count(1)')) {
@@ -245,6 +367,31 @@ function mockQuery(text: string, params: any[] = []): { rows: any[]; rowCount: n
       hidden_fields: []
     };
     return { rows: [{ id: crypto.randomUUID() }], rowCount: 1 };
+  }
+  if (sql.includes('update emergency_profiles')) {
+    if (sql.includes('medications = $1')) {
+      const medications = typeof params[0] === 'string' ? JSON.parse(params[0]) : params[0];
+      const patientId = params[1];
+      if (MOCK_EMERGENCY[patientId]) {
+        MOCK_EMERGENCY[patientId].medications = medications;
+        // Keep alias in sync
+        for (let i = 1; i <= 8; i++) {
+          const uuid = `bb010000-0000-0000-0000-00000000000${i}`;
+          const mockId = `P00${i}`;
+          if (patientId === uuid || patientId === mockId) {
+            MOCK_EMERGENCY[uuid].medications = medications;
+            MOCK_EMERGENCY[mockId].medications = medications;
+          }
+        }
+      }
+    } else if (sql.includes('hidden_fields = $1')) {
+      const hiddenFields = typeof params[0] === 'string' ? JSON.parse(params[0]) : params[0];
+      const patientId = params[1];
+      if (MOCK_EMERGENCY[patientId]) {
+        MOCK_EMERGENCY[patientId].hidden_fields = hiddenFields;
+      }
+    }
+    return { rows: [], rowCount: 1 };
   }
   if (sql.includes('from emergency_profiles')) {
     const ep = MOCK_EMERGENCY[params[0]];
@@ -416,6 +563,15 @@ export const db = {
   },
 
   pool: pool as any,
-  getMockPatients: () => Object.values(MOCK_PATIENTS),
+  isSimulated: () => !dbAvailable,
+  getMockPatients: () => {
+    // Only return unique patient records by filtering out duplicate references (mock aliases)
+    const seen = new Set<string>();
+    return Object.values(MOCK_PATIENTS).filter((p: any) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  },
   getMockDoctors: () => Object.values(MOCK_DOCTORS),
 };

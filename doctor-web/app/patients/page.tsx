@@ -17,8 +17,7 @@ function adaptBackendPatient(bp: BackendPatient): Patient {
     id: bp.id,
     name: bp.name,
     initials,
-    // Backend patients have no DOB in the list endpoint, use placeholder
-    age: 0,
+    age: bp.dateOfBirth ? new Date().getFullYear() - new Date(bp.dateOfBirth).getFullYear() : 0,
     gender: 'Unknown' as any,
     bloodType: (bp.bloodType || 'O+') as any,
     phone: bp.phone,
