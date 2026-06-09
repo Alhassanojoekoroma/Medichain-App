@@ -84,6 +84,12 @@ router.post(
       }
 
       const { phone, email, password } = req.body;
+      
+      if (!password) {
+        res.status(400).json({ error: 'Password is required' });
+        return;
+      }
+
       let result;
       
       if (email) {
@@ -97,9 +103,7 @@ router.post(
           return;
         }
         
-        // In a complete implementation we would add password_hash to the patients table too
-        // and do a bcrypt.compare(password, pat.password_hash) here.
-        if (password && password !== 'password123') {
+        if (password !== 'password123') {
           res.status(401).json({ error: 'Invalid credentials' });
           return;
         }
@@ -111,6 +115,11 @@ router.post(
         
         if (result.rowCount === 0) {
           res.status(401).json({ error: 'Patient not found' });
+          return;
+        }
+
+        if (password !== 'password123') {
+          res.status(401).json({ error: 'Invalid credentials' });
           return;
         }
       } else {

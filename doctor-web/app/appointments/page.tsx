@@ -85,7 +85,7 @@ export default function AppointmentsPage() {
 
     const patient = patients.find(p => p.id === selectedPatientId);
     const patientName = patient ? patient.name : 'Unknown Patient';
-    const patientInitials = patientName
+    const patientInitials = (patientName || '')
       .split(' ')
       .map((n: string) => n[0])
       .join('')

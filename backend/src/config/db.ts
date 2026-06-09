@@ -405,7 +405,24 @@ function mockQuery(text: string, params: any[] = []): { rows: any[]; rowCount: n
     return { rows: [r], rowCount: 1 };
   }
   if (sql.includes('from health_records')) {
-    const rawRecs = params[0] ? MOCK_RECORDS.filter(r => r.patient_id === params[0]) : MOCK_RECORDS;
+    let rawRecs = MOCK_RECORDS;
+    if (params.length === 3) {
+      const [doctorId, clinicId, role] = params;
+      // Filter records by patient IDs for which the doctor has consent in MOCK_CONSENTS
+      const allowedPatients = patientUuids.filter(pId => {
+        return MOCK_CONSENTS.some(c =>
+          c.patient_id === pId && !c.is_revoked &&
+          (
+            (c.grantee_type === 'doctor' && c.grantee_id === doctorId) ||
+            (c.grantee_type === 'clinic' && c.grantee_id === clinicId) ||
+            (c.grantee_type === 'role' && c.grantee_id === role)
+          )
+        );
+      });
+      rawRecs = MOCK_RECORDS.filter(r => allowedPatients.includes(r.patient_id));
+    } else if (params[0]) {
+      rawRecs = MOCK_RECORDS.filter(r => r.patient_id === params[0]);
+    }
     const recs = rawRecs.map(r => ({
       ...r,
       patient_name: MOCK_PATIENTS[r.patient_id]?.full_name || 'Unknown Patient'

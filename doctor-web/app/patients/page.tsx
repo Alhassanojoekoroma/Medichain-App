@@ -11,8 +11,8 @@ import type { Patient, PatientStatus } from '@/types';
 // ─── Helper to adapt backend patient to UI shape ─────────────────────────────
 
 function adaptBackendPatient(bp: BackendPatient): Patient {
-  const names = bp.name.split(' ');
-  const initials = names.map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const names = (bp.name || '').split(' ');
+  const initials = names.map((n) => n.charAt(0)).join('').slice(0, 2).toUpperCase();
   return {
     id: bp.id,
     name: bp.name,

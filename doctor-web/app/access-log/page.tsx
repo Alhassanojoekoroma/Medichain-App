@@ -274,7 +274,7 @@ export default function AccessLogPage() {
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-2.5">
                               <div className="h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold flex items-center justify-center border border-indigo-100">
-                                {policy.patient_name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                                {(policy.patient_name || '').split(' ').map(n=>n.charAt(0)).join('').substring(0,2).toUpperCase()}
                               </div>
                               <div>
                                 <div className="font-semibold text-slate-900">{policy.patient_name}</div>

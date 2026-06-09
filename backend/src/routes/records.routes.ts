@@ -96,7 +96,7 @@ router.post(
 
 /**
  * GET /api/records
- * Returns a list of all health records in the database or those the doctor has access to
+ * Returns a list of health records that the requesting doctor has consent to view
  */
 router.get('/', requireDoctor, async (req: AuthRequest, res: Response): Promise<void> => {
   // Role check: Only doctors can read clinical medical records
@@ -105,12 +105,23 @@ router.get('/', requireDoctor, async (req: AuthRequest, res: Response): Promise<
     return;
   }
 
+  const doctor = req.doctor!;
+
   try {
     const recordsResult = await db.query(
-      `SELECT r.id, r.patient_id, p.full_name AS patient_name, r.record_type, r.title, r.encrypted_cid, r.integrity_hash, r.data_categories, r.uploaded_by, r.created_at
+      `SELECT DISTINCT r.id, r.patient_id, p.full_name AS patient_name, r.record_type, r.title, r.encrypted_cid, r.integrity_hash, r.data_categories, r.uploaded_by, r.created_at
          FROM health_records r
          JOIN patients p ON r.patient_id = p.id
-        ORDER BY r.created_at DESC`
+         JOIN consent_policies cp ON cp.patient_id = r.patient_id
+        WHERE cp.is_revoked = FALSE
+          AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
+          AND (
+            (cp.grantee_type = 'doctor' AND cp.grantee_id = $1)
+            OR (cp.grantee_type = 'clinic' AND cp.grantee_id = $2)
+            OR (cp.grantee_type = 'role' AND cp.grantee_id = $3)
+          )
+        ORDER BY r.created_at DESC`,
+      [doctor.id, doctor.clinicId || '', doctor.role || '']
     );
 
     res.json({

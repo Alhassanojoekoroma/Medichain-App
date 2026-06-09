@@ -36,6 +36,17 @@ export interface DoctorJWT {
 }
 
 export class TokenService {
+  static {
+    if (process.env.NODE_ENV === 'production') {
+      if (!process.env.QR_TOKEN_SECRET || process.env.QR_TOKEN_SECRET === 'dev-qr-secret-change-in-production') {
+        throw new Error('CRITICAL SECURITY ERROR: QR_TOKEN_SECRET must be set to a secure secret in production mode.');
+      }
+      if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret-change-in-production') {
+        throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET must be set to a secure secret in production mode.');
+      }
+    }
+  }
+
   // ── QR token issuance ─────────────────────────────────────
 
   static generateRawToken(): string {
