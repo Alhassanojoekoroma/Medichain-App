@@ -1,0 +1,1156 @@
+🏥
+MediChain SL
+Patient Native Mobile App
+Product Requirements Document
+Your records. Your control.
+Field
+Detail
+Version
+1.0
+Date
+April 2025
+Platform
+React Native (Expo) — Android & iOS
+Country
+Sierra Leone
+App Scope
+Patient Mobile App Only (15 Screens)
+Status
+Ready for Development
+Prepared By
+Alhassan OJOE Koroma — Project Lead
+Classification
+CONFIDENTIAL
+1. Executive Summary
+This document is the complete Product Requirements Document (PRD) for the MediChain SL Patient Native Mobile Application. It covers all 15 screens, functional requirements, technical specifications, user journeys, design guidelines, and the development roadmap.
+MediChain SL is a blockchain-powered healthcare platform built specifically for Sierra Leone. The Patient App is the first product to be built and launched. It gives patients complete ownership and control over their medical records while enabling secure, consent-based sharing with verified doctors through a one-time QR code system.
+The Doctor Web Application will be built in a separate phase after the Patient App is complete and validated.
+1.1 Why Build the Patient App First
+Patients are the primary data owners — no records can exist without patients first enrolling.
+Patient adoption drives doctor adoption. A network of engaged patients creates immediate value for doctors.
+The QR-based consent mechanism originates on the patient side — the doctor app is the receiver.
+Validating patient UX in real-world Sierra Leone conditions de-risks the entire platform.
+Faster time-to-market with a focused single-app scope.
+1.2 Problem Statement
+Sierra Leone's healthcare system faces critical challenges with medical record management:
+Patients lose paper records when moving between facilities, leading to duplicate testing and dangerous medication errors.
+No centralised system exists for verifying patient identity or medical history across hospitals.
+Doctors lack access to patient records at the point of care, increasing misdiagnosis risk.
+Rural patients cannot easily access specialists or follow up on care.
+No audit trail exists for who has accessed a patient's records.
+1.3 Solution — Patient App
+The MediChain SL Patient App solves these problems by providing:
+A patient-controlled, blockchain-secured digital health record system.
+One-time QR code access tokens that give doctors time-limited, scoped access to patient records.
+AI-powered display of structured medical data extracted from uploaded documents.
+USSD fallback for patients without smartphones (*326#).
+Offline-first architecture for areas with poor connectivity.
+Medicine tracking, drug interaction alerts, and appointment booking in a single platform.
+1.4 Key Metrics
+Metric
+Target
+Timeline
+Registered patients on platform
+10,000+
+Month 6
+QR generation success rate
+>99.5%
+Launch
+Core tasks completed offline
+>90%
+Launch
+AI data extraction accuracy
+>95%
+Launch
+Drug interaction alerts flagged
+100%
+Launch
+App launch to Home screen
+< 3 seconds (mid-range Android)
+Launch
+2. Product Goals & Objectives
+2.1 Primary Goals
+Empower patients with complete ownership of their medical history.
+Enable secure, consent-based record sharing between patients and doctors.
+Reduce medical errors through AI-extracted drug interaction alerts.
+Create a tamper-proof audit log of all record access events.
+Make quality healthcare accessible in low-connectivity, low-literacy environments.
+2.2 Out of Scope — Patient App v1
+Doctor-side features: record upload, QR scanning, drug interaction prescribing.
+Lab equipment integration (planned for v2).
+Government HMIS system integration (planned for v2).
+Multi-country support beyond Sierra Leone (planned for v3).
+Insurance claims processing.
+Pharmacy fulfilment and inventory management.
+3. User Persona — The Patient
+3.1 Primary Persona — Aminata Kamara
+Attribute
+Detail
+Name
+Aminata Kamara
+Age
+34
+Location
+Freetown, Sierra Leone
+Device
+Android smartphone (low-end, 2GB RAM)
+Connectivity
+2G/3G with frequent dropouts
+Literacy
+Secondary school education, basic smartphone use
+Pain Points
+Lost her paper records twice; scared of medication errors; cannot recall past prescriptions when seeing a new doctor.
+Goals
+Keep all her records in one safe place; share them easily with any doctor; track daily medications; find and book trusted doctors.
+Key Screens
+P-07 QR Share, P-04 Home, P-13 Medicine Tracker, P-05 Records List
+3.2 Secondary Persona — Fatmata Conteh (USSD / Feature Phone)
+Attribute
+Detail
+Name
+Fatmata Conteh
+Age
+28
+Location
+Kenema District, Sierra Leone
+Device
+Basic feature phone (no smartphone)
+Connectivity
+Voice/SMS only
+Pain Points
+Cannot use smartphone apps; travels far to nearest clinic; no way to share her record with a specialist in Freetown.
+Goals
+Access her records and generate an access code via USSD (*326#) so the doctor can look up her file.
+Key Interaction
+USSD Menu (*326#) — generates 6-digit lookup code for the doctor
+4. Technical Architecture — Patient App
+4.1 Technology Stack
+Layer
+Technology
+Purpose
+Mobile Framework
+React Native (Expo SDK 51+)
+Cross-platform iOS & Android from single codebase
+State Management
+Zustand + React Query
+Global app state and server data caching
+Local Database
+SQLite (via expo-sqlite)
+Offline-first record caching and medicine tracker
+Blockchain
+Hyperledger Fabric or Polygon
+Immutable record hashes and audit trail
+AI/ML
+Custom NLP + Claude API
+Medical data extraction display and drug checks
+Backend API
+Node.js + Express + GraphQL
+API layer, authentication, business logic
+Database
+PostgreSQL + Redis
+User data, sessions, cache
+Storage
+IPFS + Encrypted S3
+Medical document files (PDF, images)
+Authentication
+JWT + Biometric + OTP SMS
+Multi-factor authentication
+USSD
+Africa's Talking USSD API
+Feature phone access (*326#)
+Notifications
+Firebase Cloud Messaging
+Push notifications
+SMS
+Africell / Orange SL API
+OTP and appointment confirmations
+Payments
+Mastercard, Visa, Mobile Money
+Consultation fee processing
+Navigation
+React Navigation v6
+Screen routing and deep linking
+4.2 QR Handshake Protocol
+The QR access system is the core security mechanism visible to the patient:
+Patient opens QR Share screen (P-07) and selects scope (all records or a specific record).
+Server generates a one-time token with a 5-minute expiry window.
+QR code encodes: patient ID, session token, scope, and expiry timestamp.
+Doctor scans QR code with their verified doctor app.
+Server validates token, logs access on blockchain, and opens a timed session.
+After 5 minutes (or when session ends), the token is burned and access is revoked.
+Patient receives a real-time push notification when their QR is scanned.
+4.3 Offline-First Strategy
+The Patient App must function in Sierra Leone's low-connectivity environment:
+Core screens (Home, Records list, Medicine Tracker) work fully offline using local SQLite.
+Records are synced when connectivity is restored — background sync with conflict resolution.
+QR generation requires internet (security requirement — server-signed tokens only).
+Offline mode is indicated by a persistent status banner in the UI.
+Last-synced timestamp is shown to the patient for transparency.
+4.4 Security Architecture (Patient-Facing)
+Security Layer
+Implementation
+Data in Transit
+TLS 1.3 encryption for all API calls
+Data at Rest
+AES-256 encryption for all stored medical documents
+Authentication
+JWT (24hr expiry) + Biometric (Face ID / Fingerprint) + OTP SMS
+Session Management
+Auto-logout after 5 minutes of inactivity
+Blockchain Integrity
+SHA-256 hash for every record — tamper-proof verification
+QR Tokens
+Server-signed, single-use, 5-minute expiry, scope-limited
+Device Loss
+Remote session revoke via blockchain + biometric lock
+OWASP Compliance
+OWASP Mobile Top 10 requirements met before production launch
+5. Screen Inventory — All 15 Patient Screens
+Screen ID
+Screen Name
+Route
+Phase
+P-01
+Splash Screen
+/splash
+Phase 1 — Onboarding
+P-02
+Onboarding Slides
+/onboarding
+Phase 1 — Onboarding
+P-03
+Register / Login
+/auth
+Phase 1 — Onboarding
+P-04
+Home Dashboard
+/home
+Phase 2 — Core Dashboard
+P-05
+My Records List
+/records
+Phase 2 — Core Dashboard
+P-06
+Record Detail View
+/records/:id
+Phase 2 — Core Dashboard
+P-07 ★
+QR Share Screen (KEY SCREEN)
+/records/share
+Phase 3 — QR Access & Security
+P-08
+Access Log
+/records/access-log
+Phase 3 — QR Access & Security
+P-09
+Find Doctors
+/doctors
+Phase 4 — Find & Book
+P-10
+Doctor Profile
+/doctors/:id
+Phase 4 — Find & Book
+P-11
+Book Appointment
+/book/:doctorId
+Phase 4 — Find & Book
+P-12
+Booking Confirmation
+/book/success
+Phase 4 — Find & Book
+P-13
+Medicine Tracker
+/medicines
+Phase 5 — Health Management
+P-14
+Notifications
+/notifications
+Phase 5 — Health Management
+P-15
+Profile & Settings
+/profile
+Phase 5 — Health Management
+6. Screen Specifications — Phase 1: Onboarding
+P-01: Splash Screen
+Route: /splash  |  Phase: Phase 1 — Onboarding
+Layout & Components
+MediChain SL logo centered on primary blue (#2952FF) full-screen background.
+Tagline displayed below logo: "Your records. Your control." — white text, 18sp italic.
+Animated blockchain pulse indicator: animated ring expanding from logo center on loop.
+Auto-redirects to Onboarding (P-02) after 2.5 seconds.
+Business Logic
+On load: check AsyncStorage for existing auth token.
+If valid token found: skip onboarding — redirect directly to Home (P-04).
+If no token: redirect to Onboarding Slides (P-02).
+Acceptance Criteria
+[ ] App opens and shows splash in under 1 second on mid-range Android.
+[ ] Animation plays smoothly at 60fps.
+[ ] Auto-redirect fires at exactly 2.5 seconds.
+[ ] Logged-in users are never shown onboarding.
+P-02: Onboarding Slides
+Route: /onboarding  |  Phase: Phase 1 — Onboarding
+Layout & Components
+3-slide horizontal swipeable carousel using Expo's paged ScrollView or FlatList.
+Slide 1: Illustration + title 'Own your medical history' + subtitle copy.
+Slide 2: Illustration + title 'Share with one-time QR code' + subtitle copy.
+Slide 3: Illustration + title 'Works offline, anywhere' + subtitle copy.
+Progress dots at bottom — active dot: filled blue, inactive dots: gray outlines.
+'Skip' button top-right — navigates directly to Register/Login (P-03).
+'Get Started' button shown on last slide only — navigates to P-03.
+'Next' button on slides 1 and 2 — advances to next slide.
+Acceptance Criteria
+[ ] Swipe gesture transitions between slides smoothly.
+[ ] Progress dots update correctly on swipe and button press.
+[ ] Skip button always navigates to P-03 regardless of current slide.
+[ ] Only shown once — after first completion, not shown again on re-launch.
+P-03: Register / Login
+Route: /auth  |  Phase: Phase 1 — Onboarding
+Layout & Components
+Tab toggle at top: 'Register' and 'Login' — pill-style tabs, active tab in blue.
+Register Tab Fields
+Full Name — text input, required.
+Phone Number — numeric keypad, Sierra Leone prefix (+232) pre-filled.
+Date of Birth — date picker modal.
+Password — masked input with show/hide toggle.
+National ID Number — used to derive blockchain patient identity (hashed, not stored raw).
+Blood Type selector — dropdown: A+, A-, B+, B-, AB+, AB-, O+, O-.
+OTP Verification — 6-digit code sent via SMS; 60-second resend timer displayed.
+Primary CTA: 'Create my account' — blue pill button, full width.
+Login Tab Fields
+Phone Number — numeric keypad, +232 prefix pre-filled.
+Password — masked input with show/hide toggle.
+Biometric login toggle — Face ID / Fingerprint, stored in device secure keychain.
+'Forgot password?' link — initiates OTP-based password reset flow.
+Primary CTA: 'Sign in' — blue pill button, full width.
+Validation Rules
+Real-time inline field validation — error messages shown below each field in red.
+Phone number: must be valid Sierra Leone format.
+Password: minimum 8 characters, at least one number.
+OTP: 6-digit numeric only; auto-submits on last digit entry.
+Acceptance Criteria
+[ ] Register flow: patient account created and blockchain ID minted after OTP verification.
+[ ] Login flow: valid credentials redirect to Home (P-04).
+[ ] Biometric login works on supported devices.
+[ ] Invalid OTP shows error without navigating away.
+[ ] All field validation errors display correctly.
+6. Screen Specifications — Phase 2: Core Dashboard
+P-04: Home Dashboard
+Route: /home  |  Phase: Phase 2 — Core Dashboard
+Layout & Components
+Blue gradient header: greeting ('Good morning, Aminata'), patient name, circular avatar.
+Search bar below header — searches doctors and records simultaneously.
+4 Quick-action cards in a 2x2 grid: My Records, Share QR, Medicines, Find Doctor.
+Upcoming appointments section — max 2 cards: doctor name, time, appointment type.
+Drug alert banner: orange, dismissible, pinned at top if any active drug interactions exist.
+Bottom navigation bar: Home, Records, Doctors, Schedule, Profile — active dot indicator.
+Business Logic
+Loads patient data from local SQLite cache immediately on mount (no loading spinner for cached data).
+Triggers background API sync to refresh records, appointments, and alerts.
+Drug alert badge count shown on Medicines quick-action card if interactions exist.
+Offline mode: all cached data shown; sync banner shown at top of screen.
+Acceptance Criteria
+[ ] Home loads from cache in under 1 second even with no internet.
+[ ] Drug alert banner appears when interactions are detected.
+[ ] Bottom nav active state updates correctly on tab change.
+[ ] Greeting shows correct time-of-day (morning/afternoon/evening).
+P-05: My Records List
+Route: /records  |  Phase: Phase 2 — Core Dashboard
+Layout & Components
+Header: 'My Health Records' with (+) add/upload button top-right.
+Tab filter bar: All / Reports / Prescriptions / Labs / Scans.
+Blockchain status badge: 'X records secured on blockchain' — purple badge.
+Record cards: category icon, record name, uploading doctor, date, and status badge.
+Status badge variants: Verified (green), Active (blue), Pending (orange), Under Review (gray).
+Swipe left on record card reveals quick actions: Revoke and Share.
+Empty state: upload illustration + 'Upload your first record' CTA when list is empty.
+Pagination: 20 records per page, infinite scroll with load-more trigger at bottom.
+Acceptance Criteria
+[ ] Tab filter correctly filters record categories.
+[ ] Swipe-to-reveal actions appear and function correctly.
+[ ] Empty state shown when no records exist.
+[ ] Blockchain badge shows correct secured count.
+[ ] Pagination loads additional records smoothly.
+P-06: Record Detail View
+Route: /records/:id  |  Phase: Phase 2 — Core Dashboard
+Layout & Components
+Back arrow in header with record title.
+Uploaded by section: doctor name, facility name, and upload date.
+Blockchain hash: truncated to 16 chars with copy-to-clipboard icon; full hash accessible on long press.
+AI-extracted data section: diagnosis, medications, allergies — each in structured cards.
+Original document preview: inline PDF viewer or image viewer for scanned documents.
+'Share this record' button: navigates to QR Share (P-07) with this record pre-selected.
+Access history: chronological list of who accessed this specific record (name, hospital, date, time).
+Acceptance Criteria
+[ ] AI-extracted data renders correctly for all record types.
+[ ] PDF and image documents preview correctly inline.
+[ ] Copy blockchain hash copies full hash to clipboard.
+[ ] Access history shows all past access events for this record.
+[ ] Share button pre-selects this record in QR Share screen.
+6. Screen Specifications — Phase 3: QR Access & Security
+P-07: QR Share Screen ★  KEY SCREEN
+Route: /records/share  |  Phase: Phase 3 — QR Access & Security
+KEY SCREEN — This is the most critical screen in the Patient App
+This screen is the core value proposition of MediChain SL. Everything in the product
+leads to this moment: a patient generating a secure QR code and handing access to a doctor.
+It must be fast, clear, and work correctly every single time.
+Layout & Components
+Patient identity card at top: full name, patient ID, blood type — on blue card.
+Generated QR code: large (minimum 240x240 dp), centered, branded blue, MediChain SL logo watermark in center.
+One-time access key code displayed below QR in monospace font (e.g., MC-7492-XKQR).
+Countdown timer prominently displayed: 'Expires in 04:32' — counts down in real time, red below 60 seconds.
+Scope selector: radio buttons — 'Share all records' or 'Share specific record' (with record picker modal).
+Primary button: 'Generate new key' — invalidates current token and creates a new one.
+Danger outline button: 'Revoke access now' — immediately burns current token on the blockchain.
+Warning notice: 'Single use — expires after one scan or 5 minutes'.
+Screen brightness: automatically increases to maximum for easier scanning.
+Business Logic
+QR generation requires active internet connection — show clear error if offline.
+POST /qr/generate — server returns signed token with QR payload.
+Countdown timer runs client-side but token validity enforced server-side.
+When QR is scanned: push notification sent to patient immediately.
+Token is single-use — once scanned, a new QR must be generated for subsequent access.
+Revoke fires POST /qr/revoke/:tokenId and confirms with success animation.
+Error States
+No internet: 'QR generation requires internet connection. Please connect and try again.'
+Token expired: timer reaches 00:00, QR grays out with 'Expired — tap to generate new key.'
+Revoke failure: retry prompt with 'Could not revoke — try again.'
+Acceptance Criteria
+[ ] QR generated in under 2 seconds on active connection.
+[ ] Countdown timer is accurate and updates every second.
+[ ] Screen brightness raises to maximum on screen open; restores on screen exit.
+[ ] 'Share specific record' picker shows all patient records.
+[ ] Push notification received by patient when QR is scanned.
+[ ] Revoke invalidates token within 1 second (verified server-side).
+[ ] Offline state shows correct error — no QR shown.
+P-08: Access Log
+Route: /records/access-log  |  Phase: Phase 3 — QR Access & Security
+Layout & Components
+Header: 'Who viewed my records'.
+Filter tabs: All / This week / This month.
+Access log entries: doctor name, hospital, date/time, records accessed, session duration.
+Status badge per entry: Active access (green), Expired (gray), Revoked (red).
+'Revoke' button shown only on Active access entries — red, pill-shaped.
+Emergency access entries highlighted in orange with warning icon and 'EMERGENCY ACCESS' label.
+Blockchain audit trail notice pinned at bottom: 'All access events are permanently recorded on blockchain.'
+Acceptance Criteria
+[ ] All access events rendered in correct reverse-chronological order.
+[ ] Filter tabs correctly filter by time range.
+[ ] Revoke on active entry invalidates session and updates badge to Revoked.
+[ ] Emergency access events rendered with correct orange highlight.
+6. Screen Specifications — Phase 4: Find & Book Doctors
+P-09: Find Doctors
+Route: /doctors  |  Phase: Phase 4 — Find & Book
+Layout & Components
+Blue header with current location: 'Freetown, Sierra Leone' — tappable to change.
+Search bar: 'Search by name, specialty...' with real-time search results.
+Specialty filter pills (horizontal scroll): General, Cardio, Neuro, Ortho, Dental, Pediatric.
+Result count: '27 specialists found' — updates on filter change.
+Doctor cards: avatar, name, specialty, experience (years), price/hr, star rating, availability badge, favourite heart icon.
+Sort button (top-right icon): Distance / Price / Rating sort options.
+Acceptance Criteria
+[ ] Search returns results in under 500ms (debounced 300ms after last keystroke).
+[ ] Specialty filters are cumulative — multiple can be selected.
+[ ] Favourite heart icon persists across sessions.
+[ ] Sort options correctly reorder the results.
+P-10: Doctor Profile
+Route: /doctors/:id  |  Phase: Phase 4 — Find & Book
+Layout & Components
+Hero card: large doctor photo, name, specialty, hourly price.
+Stats row: years experience, total patients, total reviews.
+Tab navigation: About / Schedule / Experience / Reviews.
+About tab: bio text, education credentials, languages spoken.
+Schedule tab: day-of-week selector + available time slot grid (available = blue, taken = gray).
+Reviews tab: star rating breakdown bars + scrollable patient reviews.
+Sticky bottom bar: 'Book appointment' CTA + Video consult toggle.
+Acceptance Criteria
+[ ] All 4 tabs load and display correct content.
+[ ] Time slot grid shows real-time availability.
+[ ] Book appointment button routes to P-11 with doctor pre-selected.
+P-11: Book Appointment
+Route: /book/:doctorId  |  Phase: Phase 4 — Find & Book
+Layout & Components
+3-step stepper at top: Details (1) → Schedule (2) → Payment (3) — with progress indicators.
+Step 1 — Details
+Doctor summary card (name, specialty, photo).
+Appointment type toggle: In-person / Video.
+Duration dropdown: 30 min / 45 min / 60 min.
+Notes field: optional free-text for patient to describe their symptoms.
+Step 2 — Schedule
+Month calendar view with available dates highlighted.
+Day date strip below calendar for selected month.
+Available time slot grid — tapping a slot selects it (blue highlight).
+Step 3 — Payment
+Payment method selector: Mastercard, Visa, AmEx, Orange Money, Africell Money.
+Order summary card: doctor, date, time, duration, appointment type.
+Total price displayed prominently.
+'Confirm & Pay' primary button. 'Cancel' ghost button.
+Acceptance Criteria
+[ ] 'Continue' disabled if required fields not completed on current step.
+[ ] Back navigation returns to previous step without losing data.
+[ ] Payment fails show clear error and allow retry.
+[ ] Successful booking navigates to P-12.
+P-12: Booking Confirmation
+Route: /book/success  |  Phase: Phase 4 — Find & Book
+Layout & Components
+Success icon: large green circle with animated checkmark.
+'Appointment Booked!' heading.
+Confirmation card: doctor name, date, time, location (in-person) or video link.
+'Add to Calendar' button — integrates with device native calendar.
+'Back to Home' primary button.
+'View appointment details' secondary button.
+Business Logic
+Auto-sends SMS confirmation to patient's registered phone number.
+Creates appointment in local SQLite database for offline access.
+Acceptance Criteria
+[ ] SMS confirmation sent within 30 seconds of booking.
+[ ] 'Add to Calendar' creates correct calendar event on device.
+[ ] Back to Home navigates to P-04 and clears booking stack.
+6. Screen Specifications — Phase 5: Health Management & Profile
+P-13: Medicine Tracker
+Route: /medicines  |  Phase: Phase 5 — Health Management
+Layout & Components
+Week calendar strip at top — today highlighted in blue.
+Circular progress indicator: 'X of Y taken today' — updates in real time as meds are checked off.
+Morning / Afternoon / Evening sections — collapsible, each showing medicine cards.
+Medicine cards: medicine name, dose, instructions, pill icon, checkbox to mark as taken.
+Drug interaction warning banner: orange, dismissible — shown when two active meds conflict.
+Floating action button (+) bottom-right to add a new medication.
+Per-medication notification settings accessible via long press on medicine card.
+Business Logic
+Medication adherence tracked daily — stored locally in SQLite.
+Drug interaction engine checks all active medications on every new medication addition.
+Reminders sent via push notification at scheduled medication times.
+Weekly adherence summary generated every Sunday.
+Doctors can push medications to this tracker via a prescription upload (read-only from patient side).
+Acceptance Criteria
+[ ] Checking a medicine marks it taken and updates the circular progress.
+[ ] Drug interaction warning appears when conflicting medications are added.
+[ ] Push notification reminder fires at correct scheduled time.
+[ ] Tracker works fully offline — syncs when connection is restored.
+P-14: Notifications
+Route: /notifications  |  Phase: Phase 5 — Health Management
+Layout & Components
+Filter pills: All / Access Alerts / Appointments / Medicine.
+Notification cards: blue dot for unread, gray dot for read.
+Notification types and their content:
+QR Scanned: 'Dr. [Name] at [Hospital] just viewed your records.'
+Record Uploaded: 'Dr. [Name] uploaded a new [record type] to your file.'
+Appointment Reminder: '24 hours until your appointment with Dr. [Name].'
+Drug Interaction: 'Warning: [Med A] and [Med B] may interact. Tap to review.'
+Emergency Access: 'EMERGENCY: [Hospital] accessed your records without QR. Tap to review.'
+Relative timestamps: '2 mins ago', '1 hour ago', 'Yesterday', full date for older.
+'Mark all as read' button at top.
+Acceptance Criteria
+[ ] Unread notifications show blue dot and bold text.
+[ ] Tapping a notification navigates to the relevant screen.
+[ ] 'Mark all as read' clears all blue dots.
+[ ] Filter pills correctly filter notification types.
+P-15: Profile & Settings
+Route: /profile  |  Phase: Phase 5 — Health Management
+Layout & Components
+Blue header card: patient avatar, name, and blockchain patient ID (truncated).
+3 stat cards: Total records, Doctors accessed, Total visits.
+Health & Records menu section:
+Medical Records — navigates to P-05.
+QR Access Keys — navigates to P-07.
+Medications — navigates to P-13.
+Drug Alerts — navigates to drug alerts list.
+Security & Privacy menu section:
+Blockchain Security — view blockchain ID and integrity status.
+Access Log — navigates to P-08.
+Change Password — OTP-verified password reset flow.
+Biometrics — enable/disable Face ID or Fingerprint.
+App Settings menu section:
+Notifications — master toggle for push notifications.
+Offline Mode — force offline mode toggle.
+Language — English (v1); Krio, Temne, Mende on roadmap.
+USSD Setup — displays *326# code and setup instructions for feature phone.
+Danger zone: 'Log out' button — red, pill-shaped, at bottom.
+Acceptance Criteria
+[ ] All menu items navigate to correct screens.
+[ ] Stat cards show accurate counts from cached data.
+[ ] Logout clears all local session data and navigates to P-03.
+[ ] Biometric toggle correctly enables/disables biometric login.
+7. Patient User Journey
+7.1 Complete End-to-End Flow
+Step
+Screen
+User Action
+System Response
+Next Screen
+1
+P-01 Splash
+App opens
+Logo animates, auth check runs
+P-02 Onboarding
+2
+P-02 Onboarding
+Swipes through 3 slides or taps Skip
+Progress dots update
+P-03 Auth
+3
+P-03 Register
+Fills form, selects blood type
+OTP sent via SMS
+P-03 OTP Verify
+4
+P-03 OTP
+Enters 6-digit code
+Blockchain ID minted, account created
+P-04 Home
+5
+P-04 Home
+Views dashboard
+Records, appointments, alerts loaded
+Any tab
+6
+P-05 Records
+Taps My Records
+Record list with blockchain badges shown
+P-06 Detail
+7
+P-06 Detail
+Taps a record
+AI-extracted data and PDF shown
+P-07 QR Share
+8
+P-07 QR Share
+Selects scope, generates QR
+Server mints one-time token, countdown starts
+Awaiting scan
+9
+P-07 QR Share
+Doctor scans QR code
+Push notification sent to patient
+P-08 Access Log
+10
+P-08 Log
+Reviews who viewed records
+Blockchain audit trail displayed
+P-04 Home
+11
+P-09 Doctors
+Searches for specialist
+Filtered doctor list loads
+P-10 Profile
+12
+P-10 Profile
+Views doctor profile
+Stats, schedule, reviews shown
+P-11 Book
+13
+P-11 Book
+Selects date, time, payment
+Payment processed, slot reserved
+P-12 Confirm
+14
+P-12 Confirm
+Views confirmation
+SMS sent, calendar event available
+P-04 Home
+15
+P-13 Medicines
+Checks off morning pill
+Progress updates, streak tracked
+P-04 Home
+7.2 Key Patient Scenarios
+Scenario A — Emergency Hospital Visit
+Patient arrives at hospital unconscious with no paperwork.
+Doctor uses Emergency Access on the Doctor App (no patient action required).
+System logs emergency access on blockchain and sends retroactive push notification to patient.
+Patient sees the emergency access in P-08 with orange 'EMERGENCY ACCESS' highlight.
+Scenario B — Specialist Referral (Scoped QR)
+Patient opens P-07 and selects 'Share specific record' — picks GP referral letter.
+Specialist scans QR and sees only that one record — no other records visible.
+After 5 minutes, access expires automatically.
+Patient sees the access event in P-08 Access Log.
+Scenario C — USSD Fallback (Feature Phone)
+Patient without a smartphone dials *326# on their feature phone.
+USSD menu prompts for National ID number.
+System generates a 6-digit lookup code.
+Patient tells the doctor the code verbally.
+Doctor enters the code manually in the Doctor App fallback field.
+Access session begins as if a QR was scanned.
+8. Functional Requirements
+8.1 Authentication & Identity
+Requirement
+Details
+FR-AUTH-01
+Patient registers using phone number + OTP + National ID + blood type.
+FR-AUTH-02
+Blockchain patient identity derived from National ID (SHA-256 hash — raw ID never stored).
+FR-AUTH-03
+OTP sent via SMS — 6-digit code, valid for 5 minutes, 60-second resend timer.
+FR-AUTH-04
+Biometric login (Face ID / Fingerprint) stored in device secure keychain.
+FR-AUTH-05
+JWT tokens expire after 24 hours; refresh tokens valid for 30 days.
+FR-AUTH-06
+Auto-logout after 5 minutes of app inactivity.
+FR-AUTH-07
+All authentication events (login, logout, failed attempts) are logged server-side.
+8.2 Record Management
+Requirement
+Details
+FR-REC-01
+Patients can view all records uploaded to their profile by verified doctors.
+FR-REC-02
+Supported file types for viewing: PDF, JPEG, PNG, HEIC.
+FR-REC-03
+All uploaded records are encrypted with AES-256 before storage.
+FR-REC-04
+Records are permanently stored — patients can revoke access but cannot delete (regulatory).
+FR-REC-05
+Each record has a SHA-256 blockchain hash — verifiable for tamper-proof integrity at any time.
+FR-REC-06
+AI-extracted data (diagnosis, medications, allergies) displayed in structured cards on P-06.
+FR-REC-07
+Patient can share any record or all records via QR from P-05 or P-06.
+8.3 QR Access System
+Requirement
+Details
+FR-QR-01
+QR tokens are server-signed and cannot be generated offline.
+FR-QR-02
+Each token is strictly single-use — scanning once invalidates it immediately.
+FR-QR-03
+Tokens expire after exactly 5 minutes if not scanned.
+FR-QR-04
+Scope options: all records, records from last 30 days, or a single specific record.
+FR-QR-05
+Real-time push notification sent to patient within 2 seconds of QR being scanned.
+FR-QR-06
+Patient can revoke any active access token instantly from P-07 or P-08.
+FR-QR-07
+Token revocation confirmed on blockchain within 1 second.
+FR-QR-08
+Screen brightness auto-increases to max when P-07 is active; restored on exit.
+8.4 Medicine Tracker
+Requirement
+Details
+FR-MED-01
+Patient can add medications with name, dose, frequency, and schedule.
+FR-MED-02
+Push notification reminders fire at each scheduled medication time.
+FR-MED-03
+Drug interaction engine checks all active medications against WHO drug interaction database.
+FR-MED-04
+Drug interaction alert banner shown on P-13 and P-04 when conflicts detected.
+FR-MED-05
+Daily medication adherence tracked and summarised in weekly report.
+FR-MED-06
+Medications prescribed by doctors (via Doctor App) auto-populate patient tracker (read-only).
+FR-MED-07
+Medicine tracker works fully offline; syncs with server when connectivity restored.
+8.5 Appointment Booking
+Requirement
+Details
+FR-APT-01
+Patient can search doctors by specialty, location, price, and availability.
+FR-APT-02
+Booking requires: date, time slot, appointment type (in-person or video), and payment.
+FR-APT-03
+Payment methods: Mastercard, Visa, AmEx, Orange Money, Africell Money.
+FR-APT-04
+Booking confirmation sent via push notification and SMS within 30 seconds.
+FR-APT-05
+Patient can cancel or reschedule up to 24 hours before appointment.
+FR-APT-06
+Calendar integration: 'Add to Calendar' button creates native device calendar event.
+8.6 Notifications
+Notification Type
+Trigger
+Delivery
+QR Scan Alert
+Doctor scans patient QR code
+Push notification — within 2 seconds
+Record Uploaded
+Doctor uploads new record to patient profile
+Push notification — immediate
+Appointment Reminder
+24 hours and 1 hour before appointment
+Push notification + SMS
+Medicine Reminder
+At each scheduled medication time
+Push notification
+Drug Interaction Alert
+New drug interaction detected in tracker
+Push notification — immediate
+Emergency Access Alert
+Doctor uses emergency access (no QR)
+Push notification — immediate
+9. Non-Functional Requirements
+9.1 Performance
+Requirement
+Target
+App launch to Home screen (mid-range Android)
+< 3 seconds
+QR code generation
+< 2 seconds
+QR code scan validation (server-side)
+< 1 second
+AI medical data extraction (PDF)
+< 10 seconds
+Record list pagination (20 records)
+< 1 second
+Doctor search results
+< 500ms (after 300ms debounce)
+Push notification delivery after QR scan
+< 2 seconds
+9.2 Security
+All data in transit encrypted with TLS 1.3.
+All medical documents encrypted at rest with AES-256.
+Blockchain hashes provide tamper-proof integrity verification.
+API endpoints protected by JWT + rate limiting (100 requests/minute per user).
+OWASP Mobile Top 10 compliance required before production launch.
+Penetration testing required before production launch.
+Biometric credentials stored in device secure enclave — never transmitted.
+9.3 Availability & Reliability
+Target uptime: 99.9% (approximately 8.7 hours downtime per year).
+Core offline features (viewing cached records, medicine tracker) must function without internet.
+Blockchain nodes: minimum 3 validator nodes for fault tolerance.
+Database: primary + hot standby with automatic failover.
+Automated daily backups with 30-day retention.
+9.4 Accessibility (WCAG 2.1 AA)
+Minimum tap target size: 44x44 points.
+Colour contrast ratio: minimum 4.5:1 for body text.
+All interactive elements labelled for screen reader (TalkBack on Android, VoiceOver on iOS).
+Text size: all body text minimum 14sp; adjustable via device accessibility settings.
+Error messages never rely on colour alone — always include text and icon.
+QR code has accessible alternative (manual access key code shown in text).
+9.5 Compatibility
+Platform
+Minimum Version
+Notes
+Android
+Android 9.0 (API 28)
+Primary target — 80%+ of Sierra Leone devices
+iOS
+iOS 14.0
+Secondary target
+Screen sizes
+5-inch to 7-inch screens
+Responsive layout required
+RAM
+2GB minimum
+Optimised for low-end devices
+Storage
+100MB install size maximum
+Lean bundle for limited storage devices
+10. Design System Reference
+10.1 Colour Palette
+Token
+Hex Value
+Usage
+--primary
+#2952FF
+Primary buttons, active states, headers, links
+--primary-light
+#EEF2FF
+Card backgrounds, input focus backgrounds
+--primary-mid
+#B8C9FF
+Borders on primary elements
+--primary-dark
+#1A35CC
+Primary button pressed state
+--purple
+#8F76FF
+Blockchain, AI features, key screens
+--green
+#11C137
+Success states, verified badges
+--green-light
+#E6F9EB
+Success card backgrounds
+--orange
+#FA6E3C
+Warning states, drug alerts, emergency access
+--orange-light
+#FEF0EB
+Warning card backgrounds
+--dark
+#101326
+Primary text, headings
+--text-body
+#3D4259
+Body text
+--text-muted
+#8C91A8
+Captions, labels, placeholders
+--border
+#D8DCE8
+Card borders, dividers, input borders
+--bg
+#EAEEF2
+App background, disabled inputs
+10.2 Typography
+Style
+Size
+Weight
+Usage
+H1
+32px
+700 Bold
+Page titles
+H2
+24px
+700 Bold
+Section headings
+H3
+20px
+600 SemiBold
+Card titles, subsections
+H4
+16px
+600 SemiBold
+Labels, subheadings
+Body Large
+16px
+400 Regular
+Primary body text
+Body
+14px
+400 Regular
+Default body, card content
+Body Small
+13px
+400 Regular
+Secondary info, subtitles
+Caption
+12px
+400 Regular
+Timestamps, hints
+Label
+11px
+600 SemiBold
+Uppercase category labels, badges
+10.3 Border Radius
+Token
+Value
+Usage
+--radius-sm
+8px
+Small chips, badges, checkboxes
+--radius-md
+12px
+Input fields, notification cards, medicine cards
+--radius-lg
+16px
+Main content cards, doctor cards, stat cards
+--radius-xl
+24px
+Sheet/modal bottom containers, hero cards
+--radius-pill
+100px
+Buttons, tabs, filter chips, search bar
+10.4 Component Library — Key Components
+Buttons: Primary, Secondary, Outline, Ghost, Danger, Success, Icon, FAB, Small, Large.
+Inputs: Default, Focus, Error, Success, Disabled, With icon, Textarea, Select.
+Cards: Default white card, Doctor card, Stat card, Notification card, Medicine card, Record card.
+Badges: Primary (blue), Success (green), Warning (orange), Danger (red), Purple, Gray.
+Navigation: Top navigation bar, Bottom tab bar with active dot indicator, Tab pill navigation.
+Alerts: Info, Success, Warning, Danger — all with left accent border.
+Avatars: XL (64px), LG (52px), MD (40px), SM (32px), XS (24px) + status dot + stack.
+Progress: Linear progress bar, Circular progress indicator, 3-step stepper.
+Form controls: Toggle, Checkbox, Radio button.
+Date picker: Week strip calendar, Month calendar grid.
+Spacing: 8pt grid — common values: 4, 8, 12, 16, 24, 32, 48, 64px.
+11. Patient App API Endpoints
+Method
+Endpoint
+Description
+POST
+/auth/patient/register
+Register new patient with OTP
+POST
+/auth/patient/login
+Patient login with phone + password
+POST
+/auth/verify-otp
+Verify SMS OTP code
+POST
+/auth/refresh
+Refresh JWT access token
+POST
+/auth/biometric
+Biometric authentication confirmation
+GET
+/patient/profile
+Get patient profile and stats
+GET
+/patient/records
+Get patient's record list (paginated)
+GET
+/patient/records/:id
+Get specific record with AI-extracted data
+POST
+/qr/generate
+Generate one-time QR access token
+POST
+/qr/revoke/:tokenId
+Revoke active QR token
+GET
+/patient/access-log
+Get full access audit trail
+GET
+/doctors/search
+Search doctors with filters
+GET
+/doctors/:id
+Get doctor profile details
+POST
+/appointments/book
+Book an appointment
+GET
+/appointments
+Get patient appointments list
+POST
+/appointments/:id/cancel
+Cancel an appointment
+GET
+/patient/medicines
+Get medication list
+POST
+/patient/medicines
+Add new medication
+PATCH
+/patient/medicines/:id/taken
+Mark medication as taken
+POST
+/ai/drug-check
+Run drug interaction check
+GET
+/patient/notifications
+Get notification list
+POST
+/patient/notifications/read-all
+Mark all notifications as read
+12. Development Roadmap — Patient App
+12.1 Phase 1 — Foundation (Months 1–2)
+Project scaffolding: React Native (Expo), ESLint, Prettier, Git repository.
+Navigation setup: React Navigation v6 with all 15 screen routes configured.
+Design system implementation: colour tokens, typography, component library (buttons, cards, inputs).
+Authentication system: OTP, JWT, biometric — screens P-01, P-02, P-03.
+Basic blockchain integration: patient ID minting on registration.
+Local SQLite database setup with offline-first sync architecture.
+Firebase Cloud Messaging setup for push notifications.
+12.2 Phase 2 — Core Features (Months 3–4)
+Patient Home, Records list, and Record detail: P-04, P-05, P-06.
+QR Share and Access Log: P-07 (key screen), P-08.
+QR token generation and revocation API integration.
+Real-time countdown timer and screen brightness control on P-07.
+Push notification delivery for QR scan events.
+Offline caching for records and home dashboard.
+12.3 Phase 3 — Health & Booking (Month 5)
+Find Doctors, Doctor Profile, Book Appointment, Confirmation: P-09, P-10, P-11, P-12.
+Medicine Tracker with drug interaction alerts: P-13.
+Payment gateway integration: Mastercard, Visa, Mobile Money.
+Calendar integration for appointment events.
+SMS confirmation for appointments.
+12.4 Phase 4 — Intelligence & Polish (Month 6)
+Notifications screen: P-14.
+Profile & Settings: P-15 with USSD setup instructions.
+USSD integration: Africa's Talking *326# flow.
+Full offline-first sync implementation and conflict resolution.
+Performance optimisation: bundle size, image compression, lazy loading.
+Security penetration testing (OWASP Mobile Top 10).
+QA testing on low-end Android devices (2GB RAM target).
+Beta launch with 5 pilot clinics in Freetown.
+12.5 Sprint Breakdown — Patient App
+Sprint
+Duration
+Key Deliverables
+Sprint 1
+Week 1-2
+Project setup, design system, navigation skeleton, splash + onboarding (P-01, P-02)
+Sprint 2
+Week 3-4
+Register/Login screens (P-03), OTP flow, biometric auth, JWT integration
+Sprint 3
+Week 5-6
+Home Dashboard (P-04), Records List (P-05), offline SQLite caching
+Sprint 4
+Week 7-8
+Record Detail (P-06), QR Share (P-07) — full QR generation + countdown
+Sprint 5
+Week 9-10
+Access Log (P-08), push notifications, QR revocation, blockchain access logging
+Sprint 6
+Week 11-12
+Find Doctors (P-09), Doctor Profile (P-10), search + filter
+Sprint 7
+Week 13-14
+Book Appointment (P-11), Payment integration, Confirmation (P-12)
+Sprint 8
+Week 15-16
+Medicine Tracker (P-13), drug interaction engine, reminders
+Sprint 9
+Week 17-18
+Notifications (P-14), Profile & Settings (P-15), USSD setup
+Sprint 10
+Week 19-20
+Performance optimisation, security testing, QA, pilot launch
+13. Risk Register — Patient App
+Risk
+Description
+Severity
+Mitigation
+Connectivity
+Low-connectivity users cannot generate QR tokens
+High
+USSD fallback (*326#), offline cached records, clear offline error state on P-07
+QR Replay Attack
+Attacker intercepts and replays a QR token
+High
+Single-use token + 5-min expiry + server-signed tokens + real-time revocation
+AI Display Error
+AI incorrectly extracted medical data shown on P-06
+High
+Display AI data as 'AI-extracted — verify with your doctor' disclaimer
+Device Loss
+Patient loses phone with app open
+Medium
+Remote session revoke via blockchain + biometric lock + auto-logout 5min idle
+Adoption
+Low patient uptake in first months
+Medium
+Clinic partnerships + community health worker training + simplified onboarding
+Low-end Device Performance
+App runs slowly on 2GB Android devices
+Medium
+Performance budget enforcement, lazy loading, minimal bundle size
+Data Breach
+Patient medical data exposed
+Critical
+AES-256 + TLS 1.3 + penetration testing + minimal data stored on-chain
+USSD Unavailability
+Africa's Talking USSD service downtime
+Low
+Fallback to manual patient ID entry on Doctor App side
+14. Glossary
+Term
+Definition
+Blockchain Hash
+A unique 64-character cryptographic fingerprint of a medical record, stored on-chain to prove the record has not been altered.
+One-time Token
+A single-use QR access code that is invalidated after first scan or after 5 minutes, whichever comes first.
+USSD
+Unstructured Supplementary Service Data — a protocol for feature phones accessed by dialing a short code (*326#).
+AI Parser
+The AI engine that reads an uploaded medical document and extracts structured medical data (diagnoses, medications, allergies).
+Emergency Access
+A doctor override that allows access to patient records without a QR code — requires hospital credentials and is logged on-chain.
+Scope
+The set of records a patient chooses to share when generating a QR code: all records, recent records, or a single record.
+HPCSL
+Health and Pharmaceutical Council of Sierra Leone — the medical licensing body that verifies doctors on the platform.
+JWT
+JSON Web Token — the secure token used to authenticate patient sessions. Expires after 24 hours.
+SQLite
+Local database stored on the patient's device for offline-first record caching and medicine tracking.
+DPG
+Digital Public Good — an open-source solution meeting the Digital Public Goods Alliance standard. MediChain SL is DPG-aligned.
+MediChain SL  |  Patient Mobile App PRD  |  Version 1.0  |  April 2025
+Built for Sierra Leone. Designed for the World.
+CONFIDENTIAL — MediChain SL Project Team | Limkokwing University Sierra Leone

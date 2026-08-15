@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AccessRequestService } from '../services/AccessRequestService';
+import { syntheticSandboxOnly } from '../middleware/containment.middleware';
 import { requireDoctor, requirePatient, AuthRequest } from '../middleware/auth.middleware';
 import { logger } from '../utils/logger';
 
@@ -19,6 +20,7 @@ const router = Router();
 router.post(
   '/', 
   requireDoctor, 
+  syntheticSandboxOnly('Access request creation'),
   [
     body('patientId').notEmpty().withMessage('patientId is required'),
     body('reason').notEmpty().withMessage('reason is required'),
@@ -114,6 +116,7 @@ router.get('/patient/history', requirePatient, async (req: AuthRequest, res: Res
 router.patch(
   '/:id/approve', 
   requirePatient, 
+  syntheticSandboxOnly('Access request approval'),
   [
     body('dataCategories').optional().isArray()
   ],
@@ -154,6 +157,7 @@ router.patch(
 router.patch(
   '/:id/deny', 
   requirePatient, 
+  syntheticSandboxOnly('Access request denial'),
   [
     body('denialReason').optional().isString()
   ],

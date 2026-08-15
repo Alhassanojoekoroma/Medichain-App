@@ -1,46 +1,35 @@
-import type { Metadata } from 'next'
-import { Poppins } from 'next/font/google'
-import './globals.css'
-import { AuthGuard } from '@/components/AuthGuard'
-import { AuthProvider } from '@/hooks/useAuth'
+import type { Metadata } from "next";
+import { Plus_Jakarta_Sans, Sora } from "next/font/google";
+import "./globals.css";
+import LayoutWrapper from "@/components/layout-wrapper";
 
-const poppins = Poppins({ weight: ['300', '400', '500', '600', '700', '800'], subsets: ["latin"], variable: '--font-poppins' });
+const plusJakartaSans = Plus_Jakarta_Sans({ 
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta",
+});
+
+const sora = Sora({ 
+  subsets: ["latin"],
+  variable: "--font-sora",
+});
 
 export const metadata: Metadata = {
-  title: 'MediChain SL | Doctor Portal',
-  description: 'MediChain SL — Blockchain-secured medical records for Sierra Leone. Doctor Web Portal.',
-  generator: 'MediChain SL',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
-}
+  title: "MediChain SL | Ministry of Health Portal",
+  description: "National Health Dashboard for Sierra Leone Ministry of Health",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-[#EAEEF2]">
-      <body className={`${poppins.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <AuthGuard>{children}</AuthGuard>
-        </AuthProvider>
+    <html lang="en">
+      <body className={`${plusJakartaSans.variable} ${sora.variable} antialiased`}>
+        <LayoutWrapper>
+          {children}
+        </LayoutWrapper>
       </body>
     </html>
-  )
+  );
 }

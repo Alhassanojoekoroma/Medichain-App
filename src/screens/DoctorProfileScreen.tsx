@@ -1,400 +1,247 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  Image,
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { Card, CardBody, Badge, Button, Toast } from '../components';
-import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
+import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow } from '../theme';
+
+const TABS = ['About', 'Schedule', 'Experience', 'Reviews'];
+const TIME_SLOTS = ['08:00', '09:00', '10:00', '13:00', '14:00', '15:00'];
 
 export default function DoctorProfileScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
-  const toastRef = useRef<any>(null);
-  
-  const doctor = route.params?.doctor || {
-    id: '1',
-    name: 'Dr. Sarah Wilson',
-    specialty: 'Cardiologist',
-    rating: 4.8,
-    reviews: 245,
-    avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80',
-    experience: '12 years',
-    availability: 'Available Today',
-    price: '$50',
-    bio: 'Dr. Sarah Wilson is a board-certified cardiologist with over 12 years of experience in cardiac care. She specializes in preventive cardiology and management of heart conditions.',
-    education: ['Harvard Medical School', 'Johns Hopkins Hospital Residency'],
-    languages: ['English', 'Spanish', 'Mandarin'],
-    certifications: ['Board Certified Cardiologist', 'ACC Fellow'],
+  const doctor = route?.params?.doctor ?? {
+    id: '1', name: 'Prof. Dr. Niall Horan', specialty: 'Orthopedic Specialist',
+    exp: 5, patients: 9845, rating: 4.9, price: 36, available: true, initials: 'NH',
   };
-
-  const handleBookAppointment = () => {
-    toastRef.current?.show({
-      message: `Appointment with ${doctor.name} booked!`,
-      type: 'success',
-    });
-    setTimeout(() => {
-      navigation.goBack();
-    }, 1500);
-  };
+  const [activeTab, setActiveTab] = useState('About');
+  const [selectedSlot, setSlot]   = useState('');
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <StatusBar style="light" />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ═══ HEADER ═══ */}
-        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.white} />
+      <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+
+        {/* Hero card */}
+        <View style={[styles.hero, { paddingTop: insets.top + Spacing.xl }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}
+            accessibilityRole="button" accessibilityLabel="Go back">
+            <Ionicons name="arrow-back" size={22} color={Colors.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Doctor Profile</Text>
-          <TouchableOpacity style={styles.actionButton} onPress={() => toastRef.current?.show({ message: 'Profile link copied!', type: 'success' })}>
-            <Ionicons name="share-social" size={24} color={Colors.white} />
-          </TouchableOpacity>
+
+          <View style={styles.heroAvatar}>
+            <Text style={styles.heroAvatarText}>{doctor.initials}</Text>
+          </View>
+          <Text style={styles.heroName}>{doctor.name}</Text>
+          <Text style={styles.heroSpec}>{doctor.specialty}</Text>
+          <Text style={styles.heroPrice}>Le {doctor.price.toLocaleString()} / consultation</Text>
+          {doctor.available ? (
+            <View style={styles.availPill}>
+              <View style={styles.availDot} />
+              <Text style={styles.availText}>Available today</Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* ═══ DOCTOR CARD ═══ */}
-        <View style={styles.section}>
-          <Card style={styles.flatCard}>
-            <CardBody>
-            <View style={styles.doctorHeader}>
-              <Image
-                source={{ uri: doctor.avatar }}
-                style={styles.largeAvatar}
-              />
-              <View style={styles.doctorHeaderContent}>
-                <Text style={styles.doctorName}>{doctor.name}</Text>
-                <Text style={styles.specialty}>{doctor.specialty}</Text>
-                <View style={styles.ratingContainer}>
-                  <MaterialCommunityIcons name="star" size={18} color={Colors.warning} />
-                  <Text style={styles.rating}>{doctor.rating}</Text>
-                  <Text style={styles.reviews}>({doctor.reviews})</Text>
-                </View>
-                <Text style={styles.experience}>{doctor.experience}</Text>
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          {[
+            { label: 'Patients',  value: `${(doctor.patients / 1000).toFixed(1)}K` },
+            { label: 'Experience',value: `${doctor.exp} yrs` },
+            { label: 'Rating',    value: `${doctor.rating} ★` },
+          ].map((stat, i) => (
+            <View key={stat.label} style={[styles.statItem, i < 2 && styles.statDivider]}>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
+            {TABS.map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.tab, activeTab === t && styles.tabActive]}
+                onPress={() => setActiveTab(t)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === t }}
+              >
+                <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Tab contents */}
+        <View style={styles.tabContent}>
+          {activeTab === 'About' && (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>ABOUT</Text>
+              <Text style={styles.about}>
+                {doctor.name} is a board-certified {doctor.specialty} with {doctor.exp}+ years of experience at Connaught Hospital, Freetown. Specializing in complex joint conditions, sports injuries, and rehabilitation programmes for Sierra Leone's patient population.
+              </Text>
+              <View style={styles.infoRows}>
+                <View style={styles.infoRow}><Ionicons name="business" size={16} color={Colors.textMuted} />
+                  <Text style={styles.infoText}>Connaught Hospital, Freetown</Text></View>
+                <View style={styles.infoRow}><Ionicons name="language" size={16} color={Colors.textMuted} />
+                  <Text style={styles.infoText}>English, Krio</Text></View>
+                <View style={styles.infoRow}><Ionicons name="shield-checkmark" size={16} color={Colors.textMuted} />
+                  <Text style={styles.infoText}>NRA Registered · Board Certified</Text></View>
               </View>
             </View>
-          </CardBody>
-        </Card>
-        </View>
+          )}
 
-        {/* ═══ QUICK INFO ═══ */}
-        <View style={styles.section}>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              <View style={styles.infoGrid}>
-                <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: Colors.primaryLight }]}>
-                    <MaterialCommunityIcons name="clock-outline" size={20} color={Colors.primary} />
-                  </View>
-                  <Text style={styles.infoLabel}>Availability</Text>
-                  <Text style={styles.infoValue}>{doctor.availability}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: Colors.successLight }]}>
-                    <Ionicons name="cash" size={20} color={Colors.success} />
-                  </View>
-                  <Text style={styles.infoLabel}>Consultation Fee</Text>
-                  <Text style={styles.infoValue}>{doctor.price}</Text>
-                </View>
+          {activeTab === 'Schedule' && (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>AVAILABLE SLOTS — TODAY</Text>
+              <View style={styles.slotGrid}>
+                {TIME_SLOTS.map((t, i) => {
+                  const taken = i % 4 === 3;
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.slot, selectedSlot === t && styles.slotActive, taken && styles.slotTaken]}
+                      onPress={() => !taken && setSlot(t)}
+                      disabled={taken}
+                    >
+                      <Text style={[styles.slotText, selectedSlot === t && styles.slotTextActive, taken && styles.slotTextTaken]}>{t}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            </CardBody>
-          </Card>
-        </View>
+            </View>
+          )}
 
-        {/* ═══ BIO ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              <Text style={styles.bioText}>{doctor.bio}</Text>
-            </CardBody>
-          </Card>
-        </View>
-
-        {/* ═══ EDUCATION ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Education</Text>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              {doctor.education?.map((edu: string, index: number) => (
-                <View key={index}>
-                  <View style={styles.educationItem}>
-                    <MaterialCommunityIcons
-                      name="school"
-                      size={20}
-                      color={Colors.primary}
-                    />
-                    <Text style={styles.educationText}>{edu}</Text>
+          {activeTab === 'Experience' && (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>EDUCATION & TRAINING</Text>
+              {[
+                { year: '2010', title: 'MBBS, Fourah Bay College', desc: 'University of Sierra Leone' },
+                { year: '2013', title: 'MSc Orthopaedic Surgery', desc: 'University of Ghana Medical School' },
+                { year: '2016', title: 'Fellowship in Sports Medicine', desc: `King's College Hospital, London` },
+              ].map((e, i) => (
+                <View key={i} style={styles.expRow}>
+                  <Text style={styles.expYear}>{e.year}</Text>
+                  <View style={styles.expBody}>
+                    <Text style={styles.expTitle}>{e.title}</Text>
+                    <Text style={styles.expDesc}>{e.desc}</Text>
                   </View>
-                  {index < doctor.education.length - 1 && (
-                    <View style={styles.divider} />
-                  )}
                 </View>
               ))}
-            </CardBody>
-          </Card>
-        </View>
+            </View>
+          )}
 
-        {/* ═══ CERTIFICATIONS ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Certifications</Text>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              {doctor.certifications?.map((cert: string, index: number) => (
-                <View key={index}>
-                  <View style={styles.certItem}>
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={20}
-                      color={Colors.success}
-                    />
-                    <Text style={styles.certText}>{cert}</Text>
+          {activeTab === 'Reviews' && (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>PATIENT REVIEWS</Text>
+              {[
+                { name: 'Aminata K.', rating: 5, text: 'Excellent doctor. Very thorough, explained everything clearly.', date: '10 Jun 2025' },
+                { name: 'Ibrahim S.', rating: 4, text: 'Professional and friendly. Waited a bit but worth it.', date: '5 May 2025' },
+              ].map((r, i) => (
+                <View key={i} style={[styles.reviewRow, i > 0 && styles.reviewDivider]}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.reviewName}>{r.name}</Text>
+                    <Text style={styles.reviewDate}>{r.date}</Text>
                   </View>
-                  {index < doctor.certifications.length - 1 && (
-                    <View style={styles.divider} />
-                  )}
+                  <Text style={styles.reviewStars}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</Text>
+                  <Text style={styles.reviewText}>{r.text}</Text>
                 </View>
               ))}
-            </CardBody>
-          </Card>
+            </View>
+          )}
         </View>
-
-        {/* ═══ LANGUAGES ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Languages</Text>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              <View style={styles.languagesContainer}>
-                {doctor.languages?.map((lang: string, index: number) => (
-                  <Badge
-                    key={index}
-                    variant="primary"
-                  >
-                    {lang}
-                  </Badge>
-                ))}
-              </View>
-            </CardBody>
-          </Card>
-        </View>
-
-        <View style={{ height: Spacing.lg }} />
       </ScrollView>
 
-      {/* ═══ BOTTOM BAR ═══ */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <Button
-          label="Book Appointment"
-          variant="primary"
-          size="large"
-          onPress={handleBookAppointment}
-        />
+      {/* Sticky footer CTA */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md }]}>
+        <TouchableOpacity
+          style={styles.bookBtn}
+          onPress={() => navigation.navigate('BookAppointment', { doctor })}
+          accessibilityRole="button"
+          accessibilityLabel="Book appointment"
+        >
+          <Text style={styles.bookBtnText}>Book Appointment</Text>
+        </TouchableOpacity>
       </View>
-
-      <Toast ref={toastRef} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.lg,
-  },
+  screen: { flex: 1, backgroundColor: Colors.bg },
+  scroll: { flex: 1 },
 
-  // ═══ HEADER ═══
-  header: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomLeftRadius: Radius.lg,
-    borderBottomRightRadius: Radius.lg,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: FontSize.h2,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    letterSpacing: -0.5,
-  },
-  actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  hero:     { backgroundColor: Colors.primary, alignItems: 'center', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xxl },
+  backBtn:  { position: 'absolute', top: 56, left: Spacing.xl, width: 40, height: 40,
+    borderRadius: Radius.pill, backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center' },
+  heroAvatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)', alignItems: 'center', justifyContent: 'center',
+    marginBottom: Spacing.lg },
+  heroAvatarText: { fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white },
+  heroName:   { fontSize: FontSize.h2, fontWeight: FontWeight.bold, color: Colors.white, textAlign: 'center' },
+  heroSpec:   { fontSize: FontSize.body, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  heroPrice:  { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.white, marginTop: 8 },
+  availPill:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 5 },
+  availDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.green },
+  availText:  { fontSize: FontSize.bodySmall, color: Colors.white },
 
-  // ═══ DOCTOR CARD ═══
-  flatCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    marginBottom: Spacing.md,
-  },
-  doctorHeader: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  largeAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: Radius.lg,
-  },
-  doctorHeaderContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  doctorName: {
-    fontSize: FontSize.h3,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginBottom: Spacing.xs,
-  },
-  specialty: {
-    fontSize: FontSize.body,
-    color: Colors.neutral600,
-    marginBottom: Spacing.sm,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  rating: {
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-  },
-  reviews: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral500,
-  },
-  experience: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral600,
-    fontWeight: FontWeight.medium,
-  },
+  statsRow:   { flexDirection: 'row', backgroundColor: Colors.white, marginHorizontal: Spacing.lg,
+    borderRadius: Radius.lg, marginTop: -Spacing.xl, ...Shadow.card, overflow: 'hidden' },
+  statItem:   { flex: 1, alignItems: 'center', paddingVertical: Spacing.lg },
+  statDivider:{ borderRightWidth: 1, borderRightColor: Colors.border },
+  statValue:  { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.primary },
+  statLabel:  { fontSize: FontSize.caption, color: Colors.textMuted, marginTop: 4 },
 
-  // ═══ SECTIONS ═══
-  section: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-    marginTop: Spacing.md,
-  },
-  sectionTitle: {
-    fontSize: FontSize.h3,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginBottom: Spacing.md,
-  },
+  tabRow:    { backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  tabScroll: { paddingHorizontal: Spacing.lg, gap: Spacing.md, paddingVertical: Spacing.sm },
+  tab:       { paddingHorizontal: Spacing.lg, paddingVertical: 8, borderRadius: Radius.pill, backgroundColor: Colors.bg },
+  tabActive: { backgroundColor: Colors.primary },
+  tabText:   { fontSize: FontSize.bodySmall, fontWeight: FontWeight.medium, color: Colors.textMuted },
+  tabTextActive: { color: Colors.white },
 
-  // ═══ INFO GRID ═══
-  infoGrid: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  infoItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-  },
-  infoIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: Radius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  infoLabel: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral600,
-    marginBottom: Spacing.xs,
-  },
-  infoValue: {
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    textAlign: 'center',
-  },
+  tabContent: { padding: Spacing.lg },
+  card:       { backgroundColor: Colors.white, borderRadius: Radius.lg, borderWidth: 1,
+    borderColor: Colors.border, padding: Spacing.lg, ...Shadow.card },
+  cardLabel:  { fontSize: FontSize.label, fontWeight: FontWeight.medium, color: Colors.textMuted,
+    letterSpacing: 0.6, marginBottom: Spacing.md },
+  about:      { fontSize: FontSize.body, color: Colors.textBody, lineHeight: 22 },
+  infoRows:   { marginTop: Spacing.lg, gap: Spacing.md },
+  infoRow:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  infoText:   { fontSize: FontSize.bodySmall, color: Colors.textBody },
 
-  // ═══ BIO ═══
-  bioText: {
-    fontSize: FontSize.body,
-    color: Colors.neutral700,
-    lineHeight: 22,
-  },
+  slotGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  slot:          { paddingHorizontal: Spacing.lg, paddingVertical: 10, borderRadius: Radius.md,
+    borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.white },
+  slotActive:    { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  slotTaken:     { backgroundColor: Colors.bg, borderColor: Colors.bg },
+  slotText:      { fontSize: FontSize.bodySmall, color: Colors.dark, fontWeight: FontWeight.medium },
+  slotTextActive:{ color: Colors.white },
+  slotTextTaken: { color: Colors.textMuted },
 
-  // ═══ EDUCATION ═══
-  educationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.md,
-  },
-  educationText: {
-    fontSize: FontSize.body,
-    color: Colors.neutral700,
-    fontWeight: FontWeight.medium,
-  },
+  expRow:   { flexDirection: 'row', gap: Spacing.md, paddingVertical: Spacing.sm },
+  expYear:  { fontSize: FontSize.caption, fontWeight: FontWeight.bold, color: Colors.primary, width: 36 },
+  expBody:  { flex: 1 },
+  expTitle: { fontSize: FontSize.bodySmall, fontWeight: FontWeight.medium, color: Colors.dark },
+  expDesc:  { fontSize: FontSize.caption, color: Colors.textMuted, marginTop: 2 },
 
-  // ═══ CERTIFICATIONS ═══
-  certItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.md,
-  },
-  certText: {
-    fontSize: FontSize.body,
-    color: Colors.neutral700,
-    fontWeight: FontWeight.medium,
-  },
+  reviewRow:    { paddingVertical: Spacing.md },
+  reviewDivider:{ borderTopWidth: 1, borderTopColor: Colors.border },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  reviewName:   { fontSize: FontSize.bodySmall, fontWeight: FontWeight.bold, color: Colors.dark },
+  reviewDate:   { fontSize: FontSize.caption, color: Colors.textMuted },
+  reviewStars:  { fontSize: FontSize.body, color: '#FFA800', marginBottom: 4 },
+  reviewText:   { fontSize: FontSize.bodySmall, color: Colors.textBody, lineHeight: 18 },
 
-  // ═══ DIVIDER ═══
-  divider: {
-    height: 1,
-    backgroundColor: Colors.neutral200,
-  },
-
-  // ═══ LANGUAGES ═══
-  languagesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-
-  // ═══ BOTTOM BAR ═══
-  bottomBar: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral200,
-    backgroundColor: Colors.white,
-  },
+  footer: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.md,
+    backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border },
+  bookBtn: { backgroundColor: Colors.primary, borderRadius: Radius.pill, alignItems: 'center', paddingVertical: 14 },
+  bookBtnText: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.white },
 });

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/dejen/OneDrive/Documents/Medichain%20App/apps/clinical-portal/app/error.tsx"],"sourcesContent":["'use client';\n\nexport default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {\n  return <div className=\"notice error\"><h1>We could not load this view</h1><p>No clinical action was completed.</p><button className=\"button\" onClick={reset}>Try again</button></div>;\n}\n"],"names":["ErrorPage","reset","className","onClick"],"mappings":";;;;;AAAA;;AAEe,SAASA,UAAU,EAAEC,KAAK,EAA6D;IACpG,qBAAO,4QAAC;QAAIC,WAAU;;0BAAe,4QAAC;0BAAG;;;;;;0BAAgC,4QAAC;0BAAE;;;;;;0BAAqC,4QAAC;gBAAOA,WAAU;gBAASC,SAASF;0BAAO;;;;;;;;;;;;AAC9J"}}]
+}

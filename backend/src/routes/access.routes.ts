@@ -9,6 +9,9 @@ import { AuditService } from '../services/AuditService';
 import { QRPayload, TokenService } from '../services/TokenService';
 import { requireDoctor, AuthRequest } from '../middleware/auth.middleware';
 import { db } from '../config/db';
+import { disabledPendingSecurityReview, syntheticSandboxOnly } from '../middleware/containment.middleware';
+import { authorize } from '../domain/authorization';
+import { BreakGlassService } from '../services/BreakGlassService';
 
 const router = Router();
 
@@ -17,7 +20,7 @@ const router = Router();
  * A doctor scans a NORMAL QR code.
  * Requires Doctor JWT.
  */
-router.post('/scan', requireDoctor, async (req: AuthRequest, res: Response) => {
+router.post('/scan', requireDoctor, syntheticSandboxOnly('QR-based patient access'), async (req: AuthRequest, res: Response) => {
   const payload: QRPayload = req.body.qrPayload;
   const doctor = req.doctor!;
 
@@ -54,6 +57,16 @@ router.post('/scan', requireDoctor, async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied: ' + consentCheck.reason });
     }
 
+    const policy = authorize({
+      actor: req.actor!,
+      resource: { type: 'clinical-record', patientId, facilityId: req.actor!.facilityId },
+      action: 'read',
+      purpose: 'treatment',
+      hasActiveConsent: true,
+      hasCareRelationship: true,
+    });
+    if (!policy.allowed) return res.status(403).json({ error: 'Access denied', code: policy.code });
+
     // Log granted access
     await AuditService.log({
       patientId,
@@ -89,45 +102,34 @@ router.post('/scan', requireDoctor, async (req: AuthRequest, res: Response) => {
  * A paramedic/doctor scans an EMERGENCY QR code.
  * DOES NOT require authentication (anonymous access allowed for emergencies).
  */
-router.post('/emergency', async (req: Request, res: Response) => {
-  const payload: QRPayload = req.body.qrPayload;
-
-  if (!payload || payload.type !== 'EMERGENCY') {
-    return res.status(400).json({ error: 'Invalid QR payload. Expected EMERGENCY.' });
-  }
-
+router.post('/emergency', requireDoctor, async (req: AuthRequest, res: Response) => {
+  const { patientId, breakGlassId } = req.body;
+  if (!patientId || !breakGlassId) return res.status(400).json({ error: { code: 'BREAK_GLASS_CONTEXT_REQUIRED' } });
   try {
-    // 1. Resolve Emergency token
-    const emergencyProfile = await QRService.resolveEmergencyToken(payload);
-
-    // We don't have the patientId directly from the payload (only token), 
-    // so the QRService.resolveEmergencyToken needs to return it or we fetch it.
-    // Assuming resolveEmergencyToken returns patientId and profile data.
-    // For the sake of the mock, we assume emergencyProfile has patientId if we needed to log it accurately,
-    // but the AuditService can take null patientId if it's an invalid scan.
-    
-    // We should extract patientId from the DB result in resolveEmergencyToken, 
-    // let's assume it returns { patientId: '...', ...profileData }
-    const patientId = emergencyProfile.patientId as string;
-    delete emergencyProfile.patientId; // don't send to client if not needed
-
-    // Log emergency access
+    const approved = await BreakGlassService.verify(breakGlassId, patientId, req.doctor!.id, req.doctor!.clinicId ?? '');
+    const policy = authorize({
+      actor: req.actor!,
+      resource: { type: 'emergency-summary', patientId, facilityId: req.actor!.facilityId },
+      action: 'read', purpose: 'emergency', breakGlassApproved: approved,
+    });
+    if (!policy.allowed) return res.status(403).json({ error: { code: policy.code } });
+    const result = await db.query(
+      `SELECT allergies, blood_type, medications, chronic_conditions
+         FROM emergency_profiles WHERE patient_id = $1`,
+      [patientId]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: { code: 'EMERGENCY_SUMMARY_NOT_FOUND' } });
     await AuditService.log({
       patientId,
-      actorId: 'anonymous_emergency',
-      actorRole: 'emergency_responder',
+      actorId: req.doctor!.id,
+      actorRole: req.doctor!.role,
       accessType: 'emergency_read',
       isEmergency: true,
       outcome: 'granted',
     });
-
-    res.json({
-      success: true,
-      profile: emergencyProfile,
-    });
-
-  } catch (err: any) {
-    res.status(400).json({ error: err.message || 'Failed to resolve emergency QR' });
+    res.json({ success: true, profile: result.rows[0], obligations: policy.obligations });
+  } catch {
+    res.status(500).json({ error: { code: 'EMERGENCY_ACCESS_FAILED' } });
   }
 });
 
@@ -137,7 +139,7 @@ router.post('/emergency', async (req: Request, res: Response) => {
  * Returns personal info + all accessible records.
  * Requires doctor JWT.
  */
-router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: Response) => {
+router.get('/patient/:patientId', requireDoctor, syntheticSandboxOnly('Patient chart access'), async (req: AuthRequest, res: Response) => {
   const { patientId } = req.params;
   const doctor = req.doctor!;
 
@@ -175,6 +177,13 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
       });
       return res.status(403).json({ error: 'Access denied', reason: consent.reason });
     }
+
+    const policy = authorize({
+      actor: req.actor!,
+      resource: { type: 'clinical-record', patientId, facilityId: req.actor!.facilityId },
+      action: 'read', purpose: 'treatment', hasActiveConsent: true, hasCareRelationship: true,
+    });
+    if (!policy.allowed) return res.status(403).json({ error: 'Access denied', reason: policy.code });
 
     // 2. Fetch patient personal data
     const patientRes = await db.query(
@@ -230,7 +239,7 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
       outcome: 'granted',
     });
 
-    const isDoctor = doctor.role === 'doctor' || doctor.role === 'admin';
+    const isDoctor = doctor.role === 'doctor';
 
     res.json({
       patient: {
@@ -261,8 +270,12 @@ router.get('/patient/:patientId', requireDoctor, async (req: AuthRequest, res: R
  * List all patients accessible to this doctor (has consent).
  * Returns minimal patient summaries.
  */
-router.get('/patients', requireDoctor, async (req: AuthRequest, res: Response) => {
+router.get('/patients', requireDoctor, syntheticSandboxOnly('Broad patient listing'), async (req: AuthRequest, res: Response) => {
   const doctor = req.doctor!;
+
+  if (!['doctor', 'nurse'].includes(doctor.role) || !doctor.clinicId) {
+    return res.status(403).json({ error: 'Clinical role and facility are required' });
+  }
 
   try {
     // Try the efficient JOIN query first (works when real DB is available)
@@ -293,8 +306,8 @@ router.get('/patients', requireDoctor, async (req: AuthRequest, res: Response) =
         allergies: row.allergies || [],
       }));
     } catch {
-      // Fallback: query mock patients one by one using the consent check
-      const allPatients = db.getMockPatients ? db.getMockPatients() : [];
+      // Fallback: query sandbox patients one by one using the consent check
+      const allPatients = db.getSandboxPatients ? db.getSandboxPatients() : [];
       for (const p of allPatients) {
         const consent = await ConsentService.checkConsent(
           p.id, doctor.id, doctor.clinicId || null, 'read', ['all'], doctor.role

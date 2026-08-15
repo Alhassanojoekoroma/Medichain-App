@@ -23,6 +23,9 @@
       }
     ],
     "paths": {
+      "@palmchain/web-client": ["../packages/palmchain-web-client/index.ts"],
+      "@palmchain/web-bff": ["../packages/palmchain-web-bff/index.ts"],
+      "next/*": ["./node_modules/next/*"],
       "@/*": [
         "./*"
       ]

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "status": "engineering-targets-pending-pilot-baseline",
+  "web": { "largestContentfulPaintMs": 2500, "interactionToNextPaintMs": 200, "cumulativeLayoutShift": 0.1, "initialJavaScriptKbGzip": 250 },
+  "api": { "ordinaryP95Ms": 500, "emergencyResolverP95Ms": 2000, "errorRatePercent": 1 },
+  "mobile": { "coldStartMs": 3000, "offlineQueueVisibleMs": 500, "minimumTouchTargetCssPx": 44 },
+  "networkProfiles": ["offline", "intermittent", "slow-2g", "fast-3g"],
+  "notes": "Targets require representative device and pilot-load validation; they are not measured production claims."
+}

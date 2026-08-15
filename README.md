@@ -1,6 +1,8 @@
 # MediChain SL
 
-> **Patient-owned medical records on blockchain. Built for Sierra Leone. Open source. Production-ready.**
+> **Security-contained prototype. Not approved for real patient data, pilot use, production deployment, or public network exposure.**
+
+Phase 1 containment is active. Direct client AI, legacy AI/IPFS/sync routes, demo authentication outside an explicit synthetic sandbox, and unverified clinical/Fabric workflows are disabled. See `docs/audit/07_Release_Decision.md` before running or changing the system.
 
 ---
 
@@ -331,24 +333,13 @@ Create `.env.example` and copy:
 cp .env.example .env
 ```
 
-**`.env` file**:
+**Client `.env` file (non-secret values only)**:
 ```bash
-# Gemini API Key (for medical document OCR)
-EXPO_PUBLIC_GEMINI_API_KEY=sk_your_gemini_api_key_here
-
-# IPFS Configuration (optional; uses Pinata if not set)
-IPFS_API_URL=https://ipfs.io/api/v0
-IPFS_GATEWAY_URL=https://gateway.ipfs.io
-
-# Backend API
-API_URL=http://localhost:3000
-API_PORT=3000
-
-# Hyperledger Fabric (deployment-specific)
-FABRIC_CHANNEL_NAME=medichain
-FABRIC_CHAINCODE_ID=medichain_patient
-FABRIC_NETWORK_CONFIG=path/to/connection-profile.json
+EXPO_PUBLIC_API_URL=http://localhost:5000
+EXPO_PUBLIC_APP_NAME="PalmChain Synthetic Sandbox"
 ```
+
+Never place AI/provider keys, database URLs, signing secrets, or Fabric private keys in the mobile client. Backend secrets must be runtime-injected; see `backend/.env.example`.
 
 ### 2. Hyperledger Fabric Configuration
 
@@ -675,12 +666,9 @@ AND(Ministry of Health MSP, Hospital MSP)
 
 ### Mobile App Issues
 
-**Error: "Gemini API key not configured"**
-```bash
-# Solution: Set environment variable
-export EXPO_PUBLIC_GEMINI_API_KEY="your_key_here"
-npm run start
-```
+**AI document processing unavailable**
+
+This is the expected Phase 1 containment behavior. Do not add a provider key to the mobile application. AI may be reintroduced only through an approved server-side, authenticated and clinically governed workflow.
 
 **Error: "Database not initialized"**
 ```bash
@@ -823,4 +811,4 @@ Help us expand healthcare IT access in Sierra Leone and beyond:
 
 **Built with  for healthcare accessibility in Sierra Leone**
 
-*Version 1.0 | April 2026 | Production Ready*
+*Version 1.0 prototype | Phase 1 security containment | Not production ready*

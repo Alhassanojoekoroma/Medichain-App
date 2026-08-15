@@ -1,677 +1,79 @@
-import React, { useState, useRef } from 'react';
-import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  Image, Animated, TextInput, KeyboardAvoidingView, Platform
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, CardBody, Toast } from '../components';
-import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
+import { Avatar } from '../components/ui/Avatar';
 import { useStore } from '../store/useStore';
 import { AuthService } from '../services/authService';
 
+type ProfileRow = { icon: keyof typeof Ionicons.glyphMap; title: string; description: string; screen: string };
+
+const SECURITY: ProfileRow[] = [
+  { icon: 'phone-portrait-outline', title: 'Devices & sessions', description: 'Review or revoke signed-in devices', screen: 'Sessions' },
+  { icon: 'key-outline', title: 'Account recovery', description: 'SMS OTP and re-verification guidance', screen: 'AccountRecovery' },
+];
+const SETTINGS: ProfileRow[] = [
+  { icon: 'language-outline', title: 'Language', description: 'English', screen: 'Language' },
+];
+
 export default function ProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const toastRef = useRef<any>(null);
-  const { user, setUser, logout } = useStore();
+  const user = useStore((state) => state.user);
+  const storeLogout = useStore((state) => state.logout);
+  const [signingOut, setSigningOut] = useState(false);
+  const initials = (user?.name ?? 'P').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editedInfo, setEditedInfo] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    weight: user?.weight || '',
-    height: user?.height || '',
-    bloodType: user?.bloodType || '',
-    phone: user?.phone || '',
-  });
+  const signOut = () => Alert.alert('Sign out?', 'Your encrypted local record cache will be removed from this device.', [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Sign out', style: 'destructive', onPress: async () => {
+      try {
+        setSigningOut(true);
+        await AuthService.logout();
+        await storeLogout();
+      } catch {
+        await storeLogout();
+      } finally {
+        setSigningOut(false);
+      }
+    } },
+  ]);
 
-  const slideAnimRef = useRef(new Animated.Value(500)).current;
-  const overlayOpacityRef = useRef(new Animated.Value(0)).current;
+  return <View style={styles.screen}>
+    <StatusBar style="light" />
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.xl }]}>
+        <Avatar initials={initials} size="xl" color="blue" style={styles.avatar as any} />
+        <Text style={styles.name}>{user?.name ?? 'Patient'}</Text>
+        <Text style={styles.phone}>{user?.phone || 'Phone number not available'}</Text>
+        <View style={styles.verified}><Ionicons name="shield-checkmark" size={14} color={Colors.white} /><Text style={styles.verifiedText}>Verified patient account</Text></View>
+      </View>
 
-  const showForm = () => {
-    setEditedInfo({
-      name: user?.name || '',
-      email: user?.email || '',
-      weight: user?.weight || '',
-      height: user?.height || '',
-      bloodType: user?.bloodType || '',
-      phone: user?.phone || '',
-    });
-    setShowEditForm(true);
+      <View style={styles.identityCard}>
+        <Text style={styles.identityTitle}>Your identity</Text>
+        <Text style={styles.identityText}>Identity details are read-only after facility verification. Contact the verifying facility if a correction is needed.</Text>
+      </View>
 
-    Animated.parallel([
-      Animated.timing(slideAnimRef, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacityRef, {
-        toValue: 0.5,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+      <Section title="Security" rows={SECURITY} navigation={navigation} />
+      <Section title="Settings" rows={SETTINGS} navigation={navigation} />
 
-  const hideForm = () => {
-    Animated.parallel([
-      Animated.timing(slideAnimRef, {
-        toValue: 500,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacityRef, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowEditForm(false);
-    });
-  };
+      <TouchableOpacity style={[styles.signOut, signingOut && styles.disabled]} onPress={signOut} disabled={signingOut} accessibilityRole="button" accessibilityLabel="Sign out">
+        <Ionicons name="log-out-outline" size={20} color={Colors.danger} /><Text style={styles.signOutText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
+      </TouchableOpacity>
+      <Text style={styles.version}>MediChain SL · v2.0</Text>
+    </ScrollView>
+  </View>;
+}
 
-  const handleLogout = () => {
-    toastRef.current?.show({
-      message: 'Are you sure you want to logout?',
-      type: 'info',
-      duration: 0,
-      action: {
-        label: 'Logout',
-        onPress: async () => {
-          await AuthService.logout();
-          logout();
-        },
-      },
-    });
-  };
-
-  const handleSaveProfile = () => {
-    if (!editedInfo.name.trim()) {
-      toastRef.current?.show({
-        message: 'Name cannot be empty.',
-        type: 'error',
-      });
-      return;
-    }
-
-    setUser({
-      ...user!,
-      name: editedInfo.name.trim(),
-      email: editedInfo.email.trim(),
-      weight: editedInfo.weight,
-      height: editedInfo.height,
-      bloodType: editedInfo.bloodType,
-      phone: editedInfo.phone,
-    });
-
-    hideForm();
-    toastRef.current?.show({
-      message: 'Profile updated successfully.',
-      type: 'success',
-    });
-  };
-
-  return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ═══ HEADER SECTION ═══ */}
-        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <View style={{ width: 44 }} />
-          <Text style={styles.headerTitle}>My Profile</Text>
-          <TouchableOpacity
-            style={styles.editHeaderBtn}
-            onPress={showForm}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="create-outline" size={24} color={Colors.white} />
-          </TouchableOpacity>
-        </View>
-
-        {/* ═══ PROFILE INFO CARD ═══ */}
-        <View style={styles.section}>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              <View style={styles.profileContent}>
-                <View style={styles.avatarContainer}>
-                  <Image
-                    source={{
-                      uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
-                    }}
-                    style={styles.avatar}
-                  />
-                  <View style={styles.onlineBadge} />
-                </View>
-
-                <Text style={styles.profileName}>{user?.name || 'User'}</Text>
-                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-                <Text style={styles.profilePhone}>{user?.phone || 'No phone added'}</Text>
-              </View>
-            </CardBody>
-          </Card>
-        </View>
-
-        {/* ═══ HEALTH METRICS ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Health Information</Text>
-          <Card style={styles.flatCard}>
-            <CardBody>
-              <View style={styles.metricsGrid}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Blood Type</Text>
-                  <Text style={styles.metricValue}>{user?.bloodType || '—'}</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Weight</Text>
-                  <Text style={styles.metricValue}>{user?.weight || '—'}</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Height</Text>
-                  <Text style={styles.metricValue}>{user?.height || '—'}</Text>
-                </View>
-              </View>
-            </CardBody>
-          </Card>
-        </View>
-
-        {/* ═══ MEDICAL INFORMATION ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Medical Information</Text>
-          <View style={styles.menuItemsContainer}>
-            <TouchableOpacity
-              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
-              onPress={() => navigation.navigate('Allergies')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.dangerLight }]}>
-                <MaterialCommunityIcons name="alert-decagram-outline" size={22} color={Colors.danger} />
-              </View>
-              <Text style={styles.flatMenuText}>Allergies</Text>
-              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.flatMenuItem}
-              onPress={() => navigation.navigate('Medications')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.successLight }]}>
-                <MaterialCommunityIcons name="pill" size={22} color={Colors.success} />
-              </View>
-              <Text style={styles.flatMenuText}>Active Medications</Text>
-              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ═══ APP SETTINGS ═══ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App Settings</Text>
-          <View style={styles.menuItemsContainer}>
-            <TouchableOpacity
-              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
-              onPress={() => navigation.navigate('Notifications')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.primaryLight }]}>
-                <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
-              </View>
-              <Text style={styles.flatMenuText}>Notifications</Text>
-              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
-              onPress={() => navigation.navigate('Security')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.lavender }]}>
-                <Ionicons name="shield-checkmark-outline" size={22} color={Colors.primary} />
-              </View>
-              <Text style={styles.flatMenuText}>Privacy & Security</Text>
-              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.flatMenuItem, styles.menuItemWithBorder]}
-              onPress={() => navigation.navigate('HelpCenter')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.neutral100 }]}>
-                <Ionicons name="help-circle-outline" size={22} color={Colors.neutral600} />
-              </View>
-              <Text style={styles.flatMenuText}>Help Center</Text>
-              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.flatMenuItem}
-              onPress={showForm}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconBox, { backgroundColor: Colors.primaryLight }]}>
-                <Ionicons name="create-outline" size={22} color={Colors.primary} />
-              </View>
-              <Text style={styles.flatMenuText}>Edit Profile</Text>
-              <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ═══ LOGOUT BUTTON ═══ */}
-        <View style={styles.section}>
-          <Button
-            label="Logout"
-            variant="danger"
-            onPress={handleLogout}
-            icon={<Ionicons name="log-out-outline" size={20} color={Colors.white} />}
-          />
-        </View>
-
-        <View style={{ height: Spacing.xxxl }} />
-      </ScrollView>
-
-      {/* ═══ EDIT FORM BOTTOM SHEET ═══ */}
-      {showEditForm && (
-        <Animated.View
-          style={[
-            styles.bottomSheetOverlay,
-            { opacity: overlayOpacityRef },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.overlayTouchable}
-            onPress={hideForm}
-            activeOpacity={1}
-          />
-        </Animated.View>
-      )}
-
-      <Animated.View
-        style={[
-          styles.bottomSheetContainer,
-          {
-            transform: [{ translateY: slideAnimRef }],
-          },
-        ]}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.bottomSheetContent}
-        >
-          <View style={[styles.dragHandle, { marginTop: insets.bottom }]} />
-
-          <ScrollView
-            contentContainerStyle={styles.formScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.formTitle}>Edit Profile</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your full name"
-                placeholderTextColor={Colors.neutral400}
-                value={editedInfo.name}
-                onChangeText={(t) => setEditedInfo({ ...editedInfo, name: t })}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={Colors.neutral400}
-                value={editedInfo.email}
-                onChangeText={(t) => setEditedInfo({ ...editedInfo, email: t })}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your phone number"
-                placeholderTextColor={Colors.neutral400}
-                value={editedInfo.phone}
-                onChangeText={(t) => setEditedInfo({ ...editedInfo, phone: t })}
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Blood Type</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., O+, AB-"
-                placeholderTextColor={Colors.neutral400}
-                value={editedInfo.bloodType}
-                onChangeText={(t) => setEditedInfo({ ...editedInfo, bloodType: t })}
-              />
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={[styles.inputGroup, styles.inputGroupHalf]}>
-                <Text style={styles.inputLabel}>Weight (kg)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Weight"
-                  placeholderTextColor={Colors.neutral400}
-                  value={editedInfo.weight}
-                  onChangeText={(t) => setEditedInfo({ ...editedInfo, weight: t })}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={[styles.inputGroup, styles.inputGroupHalf]}>
-                <Text style={styles.inputLabel}>Height (cm)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Height"
-                  placeholderTextColor={Colors.neutral400}
-                  value={editedInfo.height}
-                  onChangeText={(t) => setEditedInfo({ ...editedInfo, height: t })}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-          </ScrollView>
-
-          <View style={[styles.formActions, { paddingBottom: insets.bottom + Spacing.lg, flexDirection: 'row' }]}>
-            <Button
-              label="Cancel"
-              variant="ghost"
-              onPress={hideForm}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Save Changes"
-              variant="primary"
-              onPress={handleSaveProfile}
-              style={{ flex: 1 }}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </Animated.View>
-
-      <Toast ref={toastRef} />
-    </View>
-  );
+function Section({ title, rows, navigation }: { title: string; rows: ProfileRow[]; navigation: any }) {
+  return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><View style={styles.menu}>{rows.map((row, index) => <TouchableOpacity key={row.title} style={[styles.row, index > 0 && styles.divider]} onPress={() => navigation.navigate(row.screen)} accessibilityRole="button" accessibilityLabel={row.title}><View style={styles.iconWrap}><Ionicons name={row.icon} size={20} color={Colors.primary} /></View><View style={styles.rowCopy}><Text style={styles.rowTitle}>{row.title}</Text><Text style={styles.rowDescription}>{row.description}</Text></View><Ionicons name="chevron-forward" size={18} color={Colors.textMuted} /></TouchableOpacity>)}</View></View>;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.lg,
-  },
-
-  // ═══ HEADER ═══
-  header: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomLeftRadius: Radius.lg,
-    borderBottomRightRadius: Radius.lg,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: FontSize.h2,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    letterSpacing: -0.5,
-  },
-  editHeaderBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // ═══ SECTIONS ═══
-  section: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xxl,
-    marginTop: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: FontSize.h3,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginBottom: Spacing.lg,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral200,
-  },
-
-  // ═══ FLAT CARDS ═══
-  flatCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    ...Shadow.card,
-  },
-
-  // ═══ PROFILE SECTION ═══
-  profileContent: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: Spacing.xl,
-  },
-  avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: Radius.lg,
-    borderWidth: 4,
-    borderColor: Colors.white,
-    ...Shadow.card,
-  },
-  onlineBadge: {
-    position: 'absolute',
-    bottom: -6,
-    right: -6,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.success,
-    borderWidth: 4,
-    borderColor: Colors.white,
-    ...Shadow.strong,
-  },
-  profileName: {
-    fontSize: FontSize.h2,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  profileEmail: {
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.medium,
-    color: Colors.neutral600,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  profilePhone: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral500,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-
-  // ═══ METRICS ═══
-  metricsGrid: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: Spacing.md,
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.md,
-  },
-  metricLabel: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral600,
-    marginBottom: Spacing.sm,
-    fontWeight: FontWeight.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  metricValue: {
-    fontSize: FontSize.h3,
-    fontWeight: FontWeight.bold,
-    color: Colors.primary,
-  },
-  metricDivider: {
-    width: 1,
-    backgroundColor: Colors.neutral200,
-  },
-
-  // ═══ MENU ITEMS ═══
-  menuItemsContainer: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    overflow: 'hidden',
-    ...Shadow.card,
-  },
-  flatMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    padding: Spacing.md,
-  },
-  menuItemWithBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral100,
-  },
-  menuIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  flatMenuText: {
-    flex: 1,
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.medium,
-    color: Colors.neutral900,
-  },
-
-  // ═══ BOTTOM SHEET ═══
-  bottomSheetOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: Colors.neutral900 + '80',
-    zIndex: 10,
-  },
-  overlayTouchable: {
-    flex: 1,
-  },
-  bottomSheetContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    zIndex: 11,
-    maxHeight: '90%',
-  },
-  bottomSheetContent: {
-    flex: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.neutral300,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  formScrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-  formTitle: {
-    fontSize: FontSize.h2,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginBottom: Spacing.xl,
-  },
-  inputGroup: {
-    marginBottom: Spacing.xl,
-  },
-  inputLabel: {
-    fontSize: FontSize.bodySmall,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: Colors.neutral50,
-    borderWidth: 1.5,
-    borderColor: Colors.neutral200,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: FontSize.body,
-    color: Colors.neutral900,
-    fontWeight: FontWeight.regular,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-  },
-  inputGroupHalf: {
-    flex: 1,
-  },
-  formActions: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral200,
-    gap: Spacing.md,
-  },
+  screen: { flex: 1, backgroundColor: Colors.bg }, content: { paddingBottom: Spacing.xxxl },
+  header: { backgroundColor: Colors.primary, alignItems: 'center', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xxxl }, avatar: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.45)' }, name: { fontSize: FontSize.h2, fontWeight: FontWeight.bold, color: Colors.white, marginTop: Spacing.md }, phone: { fontSize: FontSize.bodySmall, color: 'rgba(255,255,255,0.78)', marginTop: 3 }, verified: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: Spacing.sm, paddingVertical: 5, marginTop: Spacing.md, borderRadius: Radius.pill, backgroundColor: 'rgba(0,0,0,0.18)' }, verifiedText: { color: Colors.white, fontSize: FontSize.caption, fontWeight: FontWeight.bold },
+  identityCard: { margin: Spacing.lg, marginBottom: Spacing.sm, padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.primaryMid, backgroundColor: Colors.primaryLight }, identityTitle: { color: Colors.primaryDark, fontSize: FontSize.body, fontWeight: FontWeight.bold }, identityText: { color: Colors.primaryDark, fontSize: FontSize.bodySmall, lineHeight: 20, marginTop: 4 },
+  section: { marginHorizontal: Spacing.lg, marginTop: Spacing.lg }, sectionTitle: { color: Colors.textMuted, fontSize: FontSize.caption, fontWeight: FontWeight.medium, textTransform: 'uppercase', letterSpacing: .7, paddingHorizontal: Spacing.sm, marginBottom: Spacing.sm }, menu: { backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.lg, overflow: 'hidden' }, row: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md }, divider: { borderTopWidth: 1, borderTopColor: Colors.border }, iconWrap: { width: 38, height: 38, borderRadius: Radius.sm, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' }, rowCopy: { flex: 1 }, rowTitle: { color: Colors.dark, fontSize: FontSize.body, fontWeight: FontWeight.bold }, rowDescription: { color: Colors.textMuted, fontSize: FontSize.caption, marginTop: 2 },
+  signOut: { minHeight: 48, marginHorizontal: Spacing.lg, marginTop: Spacing.xxl, borderWidth: 1, borderColor: Colors.danger, borderRadius: Radius.pill, backgroundColor: Colors.dangerLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }, signOutText: { color: Colors.danger, fontSize: FontSize.body, fontWeight: FontWeight.bold }, disabled: { opacity: .6 }, version: { color: Colors.textMuted, fontSize: FontSize.label, textAlign: 'center', marginTop: Spacing.lg },
 });

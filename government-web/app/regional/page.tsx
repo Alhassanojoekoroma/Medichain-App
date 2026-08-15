@@ -5,15 +5,34 @@ import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { MobileMenuButton } from '@/components/dashboard/sidebar';
 import { Header } from '@/components/dashboard/header';
-import { MOCK_REGIONAL_STATS } from '@/data/mockData';
-import { Map, MapPin, Building, Award, Landmark, RefreshCw } from 'lucide-react';
+import { EMPTY_REGIONAL_STATS } from '@/data/runtimeData';
+import { Map, MapPin, Building, Award, Landmark, RefreshCw, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function GovernmentRegionalStats() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(MOCK_REGIONAL_STATS[0].region);
+  const [selectedRegion, setSelectedRegion] = useState('');
 
-  const regionData = MOCK_REGIONAL_STATS.find(r => r.region === selectedRegion) || MOCK_REGIONAL_STATS[0];
+  const regionData = EMPTY_REGIONAL_STATS.find(r => r.region === selectedRegion);
+
+  if (!regionData) {
+    return (
+      <ProtectedRoute allowedRoles={['government']}>
+        <div className="min-h-screen bg-[#EAEEF2] government-portal">
+          <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
+          <main className="lg:pl-[260px]">
+            <div className="mx-auto max-w-4xl px-4 py-10">
+              <MobileMenuButton onClick={() => setSidebarOpen(true)} />
+              <section role="status" className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+                <h1 className="text-xl font-bold">District reporting feed not connected</h1>
+                <p className="mt-2 text-sm">No regional statistics are available, and no demonstration figures are being substituted. Connect the approved aggregate data service before using this screen.</p>
+              </section>
+            </div>
+          </main>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute allowedRoles={['government']}>
@@ -48,7 +67,7 @@ export default function GovernmentRegionalStats() {
                       onChange={(e) => setSelectedRegion(e.target.value)}
                       className="border border-[#D8DCE8] bg-white rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition cursor-pointer text-slate-700"
                     >
-                      {MOCK_REGIONAL_STATS.map((r, i) => (
+                      {EMPTY_REGIONAL_STATS.map((r, i) => (
                         <option key={i} value={r.region}>{r.region}</option>
                       ))}
                     </select>
@@ -104,11 +123,17 @@ export default function GovernmentRegionalStats() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Chart of regional comparison */}
-                  <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm space-y-4">
-                    <h3 className="font-bold text-slate-900 text-sm">Inter-Regional Workload Comparison</h3>
+                  <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-5 border border-[#D8DCE8] shadow-sm">
+                    <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-sky-50 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0284c7]" />
+                      </div>
+                      <h3 className="text-sm sm:text-base font-semibold text-[#101326]">Inter-Regional Workload Comparison</h3>
+                      <span className="ml-auto text-xs text-[#8C91A8]">SL Districts</span>
+                    </div>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={MOCK_REGIONAL_STATS}>
+                        <BarChart data={EMPTY_REGIONAL_STATS}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                           <XAxis dataKey="region" stroke="#8C91A8" fontSize={11} tickLine={false} />
                           <YAxis stroke="#8C91A8" fontSize={11} tickLine={false} axisLine={false} />
@@ -120,8 +145,13 @@ export default function GovernmentRegionalStats() {
                   </div>
 
                   {/* Regional Leaderboard info */}
-                  <div className="lg:col-span-1 bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm space-y-4 text-left">
-                    <h3 className="font-bold text-slate-900 text-sm">Prevalence and Stock Insights</h3>
+                  <div className="lg:col-span-1 bg-white rounded-2xl p-4 sm:p-5 border border-[#D8DCE8] shadow-sm text-left">
+                    <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                        <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-650" />
+                      </div>
+                      <h3 className="text-sm sm:text-base font-semibold text-[#101326]">Prevalence and Stock Insights</h3>
+                    </div>
                     <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
                       <p>
                         The region <strong className="text-slate-800">{regionData.region}</strong> is reporting a total of <strong className="text-[#0284c7]">{regionData.patients.toLocaleString()}</strong> admissions.

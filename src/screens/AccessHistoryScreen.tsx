@@ -6,6 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 import { ConsentServiceClient } from '../services/consentService';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
 import { Card, CardBody, Badge, Toast } from '../components';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('AccessHistoryScreen');
 
 export default function AccessHistoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -19,7 +22,7 @@ export default function AccessHistoryScreen({ navigation }: any) {
       const result = await ConsentServiceClient.getAuditHistory(50);
       setHistory(result.history || []);
     } catch (error) {
-      console.error(error);
+      logger.error('Failed to load access history', error);
       toastRef.current?.show({
         message: 'Failed to load access history',
         type: 'error',

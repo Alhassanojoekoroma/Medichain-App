@@ -1,0 +1,5 @@
+{
+  "/find-patient/page": "app/find-patient/page.js",
+  "/page": "app/page.js",
+  "/upload/page": "app/upload/page.js"
+}

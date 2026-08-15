@@ -3,6 +3,7 @@ import { Poppins } from 'next/font/google'
 import './globals.css'
 import { AuthGuard } from '@/components/AuthGuard'
 import { AuthProvider } from '@/hooks/useAuth'
+import { SessionExpiryGuard } from '@palmchain/web-client'
 
 const poppins = Poppins({ weight: ['300', '400', '500', '600', '700', '800'], subsets: ["latin"], variable: '--font-poppins' });
 
@@ -35,10 +36,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-[#EAEEF2]">
+    <html lang="en" className="bg-[var(--primary-50)]">
       <body className={`${poppins.variable} font-sans antialiased`}>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
         <AuthProvider>
-          <AuthGuard>{children}</AuthGuard>
+          <SessionExpiryGuard />
+          <AuthGuard><div id="main-content" tabIndex={-1}>{children}</div></AuthGuard>
         </AuthProvider>
       </body>
     </html>

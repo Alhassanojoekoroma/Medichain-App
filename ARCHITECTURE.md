@@ -1,5 +1,7 @@
 # MediChain SL — Architecture & Implementation Guide
 
+> **Historical prototype document — not release evidence.** Phase 0 issued a FAIL/STOP SHIP decision and Phase 1 containment disables unsafe legacy, demo, AI, emergency and clinical paths. Do not use credentials or deployment instructions in this file. The controlling status is `docs/audit/07_Release_Decision.md`.
+
 ## Executive Summary
 
 MediChain SL is a **patient-owned**, **blockchain-based** medical records system designed for Sierra Leone and other low-resource healthcare contexts. This document describes the architecture, addressing all 8 critical gaps identified in the blockchain architecture gap analysis.

@@ -12,7 +12,7 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#EAEEF2]">
+    <div className="min-h-screen bg-[var(--primary-50)]">
       <div className="flex">
         <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
         <div className="flex-1 min-w-0 lg:pl-[260px]">

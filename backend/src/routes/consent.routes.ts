@@ -2,12 +2,13 @@
  * backend/src/routes/consent.routes.ts
  * Patient consent management endpoints
  */
-import { Router, Response, Request } from 'express';
+import { Router, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { ConsentService, GrantConsentInput } from '../services/ConsentService';
-import { requirePatient, requireDoctor, AuthRequest } from '../middleware/auth.middleware';
+import { requirePatient, requireDoctor, requireAuthenticated, AuthRequest } from '../middleware/auth.middleware';
 import { db } from '../config/db';
-import { TokenService } from '../services/TokenService';
 import { AuditService } from '../services/AuditService';
+import { enforcePolicy } from '../middleware/authorization.middleware';
 
 const router = Router();
 
@@ -15,8 +16,18 @@ const router = Router();
  * POST /api/consent
  * Patient grants consent to a doctor, clinic, or role.
  */
-router.post('/', requirePatient, async (req: AuthRequest, res: Response) => {
+router.post('/', requirePatient,
+  body('granteeType').isIn(['doctor', 'clinic']),
+  body('granteeId').isString().isLength({ min: 1, max: 100 }),
+  body('accessType').optional().isIn(['read', 'write']),
+  body('dataCategories').isArray({ min: 1, max: 5 }),
+  body('dataCategories.*').isIn(['labs', 'prescriptions', 'imaging', 'notes', 'referrals']),
+  body('purpose').isIn(['treatment', 'care-coordination']),
+  body('ttlHours').isInt({ min: 1, max: 720 }),
+  enforcePolicy({ resourceType: 'consent', action: 'create', patientIdFrom: 'actor' }), async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', details: errors.array() } });
     const input: GrantConsentInput = {
       patientId: req.patientId!,
       granteeType: req.body.granteeType,
@@ -31,7 +42,7 @@ router.post('/', requirePatient, async (req: AuthRequest, res: Response) => {
     const consentId = await ConsentService.grantConsent(input);
     res.json({ success: true, consentId, message: 'Consent granted successfully.' });
   } catch (err: any) {
-    res.status(500).json({ error: 'Failed to grant consent', details: err.message });
+    res.status(400).json({ error: { code: err.message || 'CONSENT_INVALID', message: 'Consent request was not accepted' } });
   }
 });
 
@@ -40,8 +51,16 @@ router.post('/', requirePatient, async (req: AuthRequest, res: Response) => {
  * Patient grants consent to an entire clinic (all staff affiliated with that clinic).
  * Body: { clinicId, dataCategories?, ttlHours?, purpose? }
  */
-router.post('/clinic', requirePatient, async (req: AuthRequest, res: Response) => {
+router.post('/clinic', requirePatient,
+  body('clinicId').isUUID(),
+  body('dataCategories').isArray({ min: 1, max: 5 }),
+  body('dataCategories.*').isIn(['labs', 'prescriptions', 'imaging', 'notes', 'referrals']),
+  body('purpose').isIn(['treatment', 'care-coordination']),
+  body('ttlHours').isInt({ min: 1, max: 720 }),
+  enforcePolicy({ resourceType: 'consent', action: 'create', patientIdFrom: 'actor' }), async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', details: errors.array() } });
     const { clinicId, dataCategories, ttlHours, purpose } = req.body;
     if (!clinicId) {
       res.status(400).json({ error: 'clinicId is required' });
@@ -53,14 +72,14 @@ router.post('/clinic', requirePatient, async (req: AuthRequest, res: Response) =
       granteeType: 'clinic',
       granteeId: clinicId,
       accessType: 'read',
-      dataCategories: dataCategories || ['all'],
-      purpose: purpose || 'Clinic-level access',
+      dataCategories,
+      purpose,
       ttlHours,
     });
 
-    res.json({ success: true, consentId, message: `Consent granted to clinic ${clinicId}. All affiliated staff can now access your records.` });
+    res.json({ success: true, consentId, message: `Consent granted to verified clinicians at facility ${clinicId}, subject to relationship and purpose checks.` });
   } catch (err: any) {
-    res.status(500).json({ error: 'Failed to grant clinic consent', details: err.message });
+    res.status(400).json({ error: { code: err.message || 'CONSENT_INVALID', message: 'Facility consent was not accepted' } });
   }
 });
 
@@ -70,32 +89,8 @@ router.post('/clinic', requirePatient, async (req: AuthRequest, res: Response) =
  * Body: { role: 'nurse'|'doctor'|'staff', dataCategories?, ttlHours?, purpose? }
  * Use case: "Allow all nurses at my hospital to check my allergy list during triage."
  */
-router.post('/role', requirePatient, async (req: AuthRequest, res: Response) => {
-  try {
-    const { role, dataCategories, ttlHours, purpose } = req.body;
-    if (!role || !['doctor', 'nurse', 'staff', 'admin'].includes(role)) {
-      res.status(400).json({ error: 'role must be one of: doctor, nurse, staff, admin' });
-      return;
-    }
-
-    const consentId = await ConsentService.grantConsent({
-      patientId: req.patientId!,
-      granteeType: 'role',
-      granteeId: role,
-      accessType: 'read',
-      dataCategories: dataCategories || ['labs', 'prescriptions'],
-      purpose: purpose || `Role-level access for ${role}s`,
-      ttlHours,
-    });
-
-    res.json({
-      success: true,
-      consentId,
-      message: `Consent granted to all ${role}s. Any credentialed ${role} can now access your specified medical data categories.`,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to grant role consent', details: err.message });
-  }
+router.post('/role', requirePatient, (_req, res) => {
+  res.status(410).json({ error: { code: 'BROAD_ROLE_CONSENT_REMOVED', message: 'Choose a verified practitioner or facility and granular data categories.' } });
 });
 
 /**
@@ -145,21 +140,14 @@ router.get('/mine', requirePatient, async (req: AuthRequest, res: Response) => {
  * DELETE /api/consent/:id
  * Revoke a specific consent policy. Supports both Patient JWT and Doctor JWT.
  */
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized: missing token' });
-    return;
-  }
-
-  const token = authHeader.slice(7);
+router.delete('/:id', requireAuthenticated, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const payload = TokenService.verifyDoctorJWT(token);
+    const payload = req.actor!;
     
     if (payload.role === 'patient') {
       // Patient revoking consent they granted
       const rowsAffected = await ConsentService.revokeConsent(
-        payload.sub,
+        payload.id,
         { consentId: req.params.id },
         req.body.reason
       );
@@ -180,7 +168,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
               OR (grantee_type = 'clinic' AND grantee_id = $3)
             )
           RETURNING patient_id`,
-        [consentId, payload.sub, payload.clinicId || '']
+        [consentId, payload.id, payload.facilityId || '']
       );
 
       if (result.rowCount === 0) {
@@ -193,9 +181,8 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
       // Log audit trail
       await AuditService.log({
         patientId,
-        actorId: payload.sub,
+        actorId: payload.id,
         actorRole: payload.role,
-        actorFullName: payload.fullName,
         accessType: 'revoke_consent',
         outcome: 'granted',
       });

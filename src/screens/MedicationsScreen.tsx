@@ -82,7 +82,6 @@ export default function MedicationsScreen({ navigation }: any) {
             <View style={styles.summaryInfo}>
               <Text style={styles.summaryText}>Today's Progress</Text>
               <Text style={styles.timeText}>{takenCount}/{medications.length}</Text>
-              {/* BUG FIX #4: med.frequency now exists on the type */}
               <Text style={styles.medName}>{medications[0]?.name} • {medications[0]?.frequency || medications[0]?.dosage}</Text>
             </View>
             <TouchableOpacity style={styles.remindBtn}>
@@ -112,7 +111,6 @@ export default function MedicationsScreen({ navigation }: any) {
               </View>
               <View style={styles.medInfo}>
                 <Text style={styles.medTitle}>{med.name}</Text>
-                {/* BUG FIX #4: Safely renders frequency with fallback */}
                 <Text style={styles.medSubtitle}>{med.dosage} • {med.frequency || 'As directed'}</Text>
                 <Text style={styles.medTime}>🕐 {med.time}</Text>
                 <View style={styles.tagRow}>

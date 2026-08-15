@@ -7,6 +7,7 @@ import { FabricGateway } from '../services/FabricGateway';
 import { AuditService } from '../services/AuditService';
 import { TokenService } from '../services/TokenService';
 import { logger } from '../utils/logger';
+import { syntheticSandboxOnly } from '../middleware/containment.middleware';
 import crypto from 'crypto';
 
 const router = Router();
@@ -18,6 +19,7 @@ const router = Router();
 router.post(
   '/',
   requireDoctor,
+  syntheticSandboxOnly('Clinical treatment creation'),
   [
     body('patientId').notEmpty().isUUID().withMessage('Valid Patient ID is required'),
     body('treatmentType').notEmpty().isIn(['medication', 'procedure', 'therapy', 'other']).withMessage('Valid treatment type is required'),
@@ -57,7 +59,8 @@ router.post(
 
       // 2. Generate on-chain audit hashes
       const docHash = `0x${crypto.createHash('sha256').update(`${patientId}:${title}:${description}:${Date.now()}`).digest('hex')}`;
-      const docCid = `Qm${crypto.randomBytes(22).toString('hex')}`;
+      // No document is stored for a structured treatment entry, so no CID is claimed.
+      const docCid = '';
 
       // 3. Save treatment in PostgreSQL
       const treatmentResult = await db.query(
@@ -107,8 +110,7 @@ router.post(
         docHash,
         docCid,
         'prescription', // Type on-chain is prescription/treatment
-        doctorId,
-        'patient_signed_tx_placeholder'
+        doctorId
       );
 
       // 5. Update treatment row with ledger transaction hash

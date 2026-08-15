@@ -1,5 +1,7 @@
 # MedChain - FINAL DEPLOYMENT CHECKLIST
 
+> **Historical prototype document — not release evidence.** Phase 0 issued a FAIL/STOP SHIP decision and Phase 1 containment disables unsafe legacy, demo, AI, emergency and clinical paths. Do not use credentials or deployment instructions in this file. The controlling status is `docs/audit/07_Release_Decision.md`.
+
 **Status:** 🟢 96% COMPLETE - Ready for Production  
 **Last Updated:** April 28, 2026  
 **Estimated Time to Launch:** 8-12 hours

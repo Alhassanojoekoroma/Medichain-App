@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/dejen/OneDrive/Documents/Medichain%20App/apps/clinical-portal/app/loading.tsx"],"sourcesContent":["export default function Loading() { return <div className=\"card\" role=\"status\">Loading the latest authorized state…</div>; }\n"],"names":["Loading","className","role"],"mappings":";;;;;;AAAe,SAASA;IAAY,qBAAO,4QAAC;QAAIC,WAAU;QAAOC,MAAK;kBAAS;;;;;;AAA4C"}}]
+}

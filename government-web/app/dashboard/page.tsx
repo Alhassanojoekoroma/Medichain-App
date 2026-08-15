@@ -1,147 +1,249 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import ProtectedRoute from '@/components/shared/ProtectedRoute';
-import { Sidebar } from '@/components/dashboard/sidebar';
-import { MobileMenuButton } from '@/components/dashboard/sidebar';
-import { Header } from '@/components/dashboard/header';
-import { MOCK_REGIONAL_STATS, MOCK_DISEASE_STATS } from '@/data/mockData';
-import { MapPin, TrendingUp, AlertTriangle, ShieldCheck, Heart, Users, Activity } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import React, { useState, useEffect } from "react";
 
-export default function GovernmentDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const DISTRICTS = [
+  { name: "Western Area Urban", pct: 72, cases: 1842 },
+  { name: "Western Area Rural", pct: 58, cases: 654 },
+  { name: "Bo", pct: 65, cases: 923 },
+  { name: "Kenema", pct: 61, cases: 741 },
+  { name: "Kono", pct: 53, cases: 312 },
+  { name: "Bombali", pct: 68, cases: 488 },
+  { name: "Kailahun", pct: 44, cases: 267 },
+  { name: "Kambia", pct: 71, cases: 198 },
+  { name: "Karene", pct: 49, cases: 143 },
+  { name: "Moyamba", pct: 63, cases: 221 },
+  { name: "Pujehun", pct: 55, cases: 176 },
+  { name: "Port Loko", pct: 69, cases: 534 },
+  { name: "Tonkolili", pct: 57, cases: 289 },
+  { name: "Falaba", pct: 41, cases: 91 },
+];
 
-  // Sum up some stats
-  const totalNationalCases = MOCK_DISEASE_STATS.reduce((acc, curr) => acc + curr.cases, 0);
-  const averageGrowth = 4.8; // mock %
+const HEATMAP_DATA = [
+  { row: "Pujehun Central", cells: [0.2, 0.3, 0.4, 0.7, 0.85, 0.9] },
+  { row: "Bo Town", cells: [0.4, 0.5, 0.5, 0.6, 0.7, 0.8] },
+  { row: "Kenema City", cells: [0.3, 0.4, 0.4, 0.3, 0.2, 0.1] },
+  { row: "Kambia District", cells: [0.1, 0.1, 0.2, 0.2, 0.3, 0.2] },
+  { row: "Bombali Sebora", cells: [0.5, 0.4, 0.3, 0.2, 0.1, 0.1] },
+];
+
+export default function DashboardPage() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate network loading
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mc-empty">
+        <div className="mc-skeleton" style={{ width: 200, height: 32, marginBottom: 16 }}></div>
+        <div className="mc-skeleton" style={{ width: 120, height: 24 }}></div>
+      </div>
+    );
+  }
 
   return (
-    <ProtectedRoute allowedRoles={['government']}>
-      <div className="min-h-screen bg-[#EAEEF2] government-portal">
-        <div className="flex">
-          {/* Sidebar */}
-          <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
+    <>
+      <div className="page-header">
+        <div>
+          <div style={{ fontSize: 14, color: 'var(--gray-500)', fontWeight: 600, marginBottom: 4 }}>Ministry of Health — Sierra Leone</div>
+          <h1 className="page-title">National Health Dashboard</h1>
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button className="btn btn-soft">
+            <i dangerouslySetInnerHTML={{ __html: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>` }} />
+            Export
+          </button>
+          <div className="search">
+            <i dangerouslySetInnerHTML={{ __html: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>` }} />
+            <input type="date" defaultValue="2026-08-06" style={{ background: 'transparent', border: 'none', outline: 'none' }} />
+          </div>
+        </div>
+      </div>
 
-          {/* Main Content */}
-          <div className="flex-1 min-w-0 lg:pl-[260px]">
-            <div className="px-3 sm:px-4 lg:px-6 max-w-[1600px] mx-auto">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <MobileMenuButton onClick={() => setSidebarOpen(true)} />
-                <div className="flex-1">
-                  <Header />
+      <div className="grid grid-4" style={{ marginBottom: 32 }}>
+        {/* KPI 1 */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">National cases</div>
+            <span className="delta delta-up">+312</span>
+          </div>
+          <div className="kpi-value">
+            <span className="n">12,847</span>
+          </div>
+          <div className="vbar-chart">
+            {[20, 35, 45, 30, 60, 50, 80].map((h, i) => (
+              <div key={i} className={`bar ${i === 6 ? 'hi' : ''}`} style={{ height: `${h}%` }}></div>
+            ))}
+          </div>
+        </div>
+
+        {/* KPI 2 */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Active outbreaks</div>
+          </div>
+          <div className="kpi-value" style={{ marginBottom: 0 }}>
+            <span className="n">3</span>
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <span className="badge badge-red"><i className="dot"></i>Immediate Action</span>
+          </div>
+        </div>
+
+        {/* KPI 3 */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Vaccine coverage</div>
+          </div>
+          <div className="kpi-value" style={{ marginBottom: 0 }}>
+            <span className="n">67%</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <svg width="120" height="60" viewBox="0 0 100 50">
+              {Array.from({ length: 8 }).map((_, i) => {
+                const angle = -90 + (i * (180 / 7));
+                return (
+                  <line 
+                    key={i} 
+                    x1="50" y1="50" x2="50" y2="10" 
+                    stroke={i < 5 ? "var(--brand)" : "var(--gray-200)"} 
+                    strokeWidth="8" 
+                    strokeLinecap="round" 
+                    transform={`rotate(${angle} 50 50)`} 
+                  />
+                );
+              })}
+            </svg>
+          </div>
+        </div>
+
+        {/* KPI 4 */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Connected facilities</div>
+            <span className="delta delta-up">+2</span>
+          </div>
+          <div className="kpi-value">
+            <span className="n">48</span>
+          </div>
+          <div className="hstack" style={{ marginTop: 24 }}>
+            <div style={{ width: '58%', background: 'var(--brand)', height: '100%' }}></div>
+            <div style={{ width: '29%', background: 'var(--brand-tint)', height: '100%' }}></div>
+            <div style={{ width: '13%', background: 'var(--gray-200)', height: '100%' }}></div>
+          </div>
+          <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--gray-500)', marginTop: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--brand)' }}></i> Govt: 28</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--brand-tint)' }}></i> Pvt: 14</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gray-200)' }}></i> NGO: 6</span>
+          </div>
+        </div>
+      </div>
+
+      <h2 style={{ fontSize: 18, color: 'var(--ink-900)', marginBottom: 16 }}>Districts — Vaccine Coverage</h2>
+      <div className="grid grid-4" style={{ marginBottom: 32 }}>
+        {DISTRICTS.map((d) => {
+          let tone = 'green';
+          if (d.pct < 50) tone = 'red';
+          else if (d.pct <= 65) tone = 'amber';
+
+          const rate = d.pct / 100;
+          return (
+            <div key={d.name} className="card" style={{ textAlign: 'center', padding: '18px 14px' }}>
+              <div style={{ fontSize: 12, color: 'var(--gray-500)', fontWeight: 700, marginBottom: 10 }}>{d.name}</div>
+              <div className="gauge-ring-wrap" style={{ height: 80 }}>
+                <svg width={120} height={80} viewBox="0 0 120 80" style={{ overflow: 'visible' }}>
+                  <path d="M12 68 A48 48 0 0 1 108 68" fill="none" stroke="var(--gray-200)" strokeWidth={12} strokeLinecap="round" />
+                  <path d="M12 68 A48 48 0 0 1 108 68" fill="none" stroke="var(--brand)" strokeWidth={12} strokeLinecap="round" strokeDasharray={150.8} strokeDashoffset={150.8 * (1 - rate)} />
+                </svg>
+                <div className="gauge-center" style={{ top: '65%' }}>
+                  <div className="n num" style={{ fontSize: 20 }}>{d.pct}%</div>
                 </div>
               </div>
+              <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 6 }}>Vaccine coverage</div>
+              <span className={`badge badge-${tone}`} style={{ marginTop: 8 }}>
+                <i className="dot" />{d.cases.toLocaleString()} cases
+              </span>
+            </div>
+          );
+        })}
+      </div>
 
-              <div className="space-y-6 pb-8">
-                {/* Title */}
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-display">National Public Health Registry</h1>
-                  <p className="text-sm text-slate-500">
-                    Sierra Leone Ministry of Health and Sanitation real-time epidemiological statistics & ledger commits.
-                  </p>
-                </div>
+      <div className="grid grid-2">
+        {/* Left Col: Heatmap */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Case Density by Chiefdom — 6 Month Heatmap</div>
+          </div>
+          <div className="heatmap" style={{ gridTemplateColumns: "120px repeat(6, 1fr)" }}>
+            <div className="clabel"></div>
+            <div className="clabel">Jan</div>
+            <div className="clabel">Feb</div>
+            <div className="clabel">Mar</div>
+            <div className="clabel">Apr</div>
+            <div className="clabel">May</div>
+            <div className="clabel">Jun</div>
 
-                {/* Info Alert */}
-                <div className="bg-[#e0f2fe] border border-sky-200 text-sky-850 p-4 rounded-2xl text-xs flex items-center gap-3">
-                  <ShieldCheck className="w-5 h-5 text-[#0284c7] shrink-0" />
-                  <div>
-                    <strong>PII Protection Active:</strong> All clinical records retrieved from the blockchain channel are stripped of names, contact numbers, and specific dates of birth using automated hashing algorithms before rendering.
-                  </div>
-                </div>
+            {HEATMAP_DATA.map((row) => (
+              <React.Fragment key={row.row}>
+                <div className="rlabel">{row.row}</div>
+                {row.cells.map((val, i) => (
+                  <div key={i} className="cell" style={{ background: `rgba(23, 77, 122, ${val})` }} title={`Value: ${val}`}></div>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">National Cases</span>
-                      <div className="w-8 h-8 bg-sky-50 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-4 h-4 text-[#0284c7]" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">{totalNationalCases}</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Active registered infections</p>
-                  </div>
+        {/* Right Col: Alerts */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">National Alerts</div>
+          </div>
+          <div className="alert-item">
+            <div className="alert-ic red">
+              <i dangerouslySetInnerHTML={{ __html: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>` }} />
+            </div>
+            <div className="txt">
+              <b>Outbreak alert</b> — Bo District, Lassa fever cluster
+              <div className="time">Just now</div>
+            </div>
+          </div>
+          
+          <div className="alert-item">
+            <div className="alert-ic amber">
+              <i dangerouslySetInnerHTML={{ __html: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>` }} />
+            </div>
+            <div className="txt">
+              <b>Vaccine shortage</b> — Kailahun, resupply ETA 5 days
+              <div className="time">2 hours ago</div>
+            </div>
+          </div>
 
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Growth Rate</span>
-                      <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-emerald-600" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">+{averageGrowth}%</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Monthly trend average</p>
-                  </div>
+          <div className="alert-item">
+            <div className="alert-ic blue">
+              <i dangerouslySetInnerHTML={{ __html: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>` }} />
+            </div>
+            <div className="txt">
+              <b>3 new facilities registered</b> — Port Loko District
+              <div className="time">5 hours ago</div>
+            </div>
+          </div>
 
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Districts</span>
-                      <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
-                        <MapPin className="w-4 h-4 text-purple-600" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">{MOCK_REGIONAL_STATS.length}</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Health monitoring posts</p>
-                  </div>
-
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ledger Health</span>
-                      <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                        <ShieldCheck className="w-4 h-4 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">100%</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Peers synchronized</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Column: Recharts disease cases chart */}
-                  <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm space-y-4">
-                    <h3 className="font-bold text-slate-900 text-sm">Disease Prevalence Trend Analysis</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={MOCK_DISEASE_STATS}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                          <XAxis dataKey="disease" stroke="#8C91A8" fontSize={11} tickLine={false} />
-                          <YAxis stroke="#8C91A8" fontSize={11} tickLine={false} axisLine={false} />
-                          <Tooltip cursor={{ fill: '#f1f5f9' }} />
-                          <Bar dataKey="cases" fill="#0284c7" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Disease table */}
-                  <div className="lg:col-span-1 bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm space-y-4">
-                    <h3 className="font-bold text-slate-900 text-sm">Prevalence Matrix</h3>
-                    <div className="space-y-3">
-                      {MOCK_DISEASE_STATS.map((d, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition">
-                          <div>
-                            <span className="text-sm font-semibold text-slate-800 block">{d.disease}</span>
-                            <span className="text-[10px] text-slate-400 font-bold">Region: SL National</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-sm font-bold text-slate-900 block">{d.cases} cases</span>
-                            <span className={`text-[10px] font-bold ${
-                              d.trend === 'up' ? 'text-rose-500' : 'text-emerald-500'
-                            }`}>
-                              {d.trend === 'up' ? '↑' : '↓'} {Math.abs(d.change)}%
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="alert-item">
+            <div className="alert-ic brand">
+              <i dangerouslySetInnerHTML={{ __html: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>` }} />
+            </div>
+            <div className="txt">
+              <b>Hyperledger Fabric sync complete</b> — 48 facilities
+              <div className="time">1 day ago</div>
             </div>
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   );
 }

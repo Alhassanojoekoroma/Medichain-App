@@ -1,241 +1,266 @@
 /**
- * src/theme/index.ts — MedChain Design System v1.0
- * 
- * Complete design token system for MediChain SL app
- * All screens should import from this file and use these tokens exclusively
- * 
- * Usage:
- * import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow } from '../theme';
+ * MediChain SL — Design Tokens
+ *
+ * Source of truth: medichain-app-screens.html CSS variables (exact match)
+ *
+ * Core palette — do not alter:
+ *   black          #0A0A0A
+ *   electric blue  #1E3AE0
+ *   blue-dark      #152B9E
+ *   blue-light     #C9D3FF
+ *   lime           #D4FF3F
+ *   white          #FFFFFF
+ *   grey-100       #F4F4F5
+ *   grey-300       #E7E7EA
+ *   text-secondary #8E8E93
+ *
+ * This file is the ONLY place where raw colour/size values should appear.
+ * Every component and screen must import from here — no hardcoded hex anywhere else.
  */
+
+// ─── Core Palette (exact HTML variables) ────────────────────────────────────
 
 export const Colors = {
-  // Primary — Core brand color
-  primary:       '#1F38F1',
-  primaryDark:   '#1228C8',
-  primaryLight:  '#E6EAFD',
-  primaryMid:    '#B5C4FB',
+  // Brand blues
+  blue:        '#1E3AE0',   // --blue
+  blueDark:    '#152B9E',   // --blue-dark
+  blueLight:   '#C9D3FF',   // --blue-light (text on blue cards)
 
-  // Accent — Lime green for CTAs (use sparingly on dark backgrounds only)
-  accent:        '#BFFF00',
-  accentLight:   '#F5FFB3',
+  // Lime (accent — blockchain verified, completed steps, lime CTA)
+  lime:        '#D4FF3F',   // --lime
+  limeDark:    '#a8cc1f',   // derived — for text on lime bg
 
-  // Success / Teal — Positive states, verifications
-  success:       '#1D9E75',
-  successDark:   '#0F6E56',
-  successLight:  '#E1F5EE',
-  successBorder: '#9FE1CB',
+  // Neutrals
+  black:       '#0A0A0A',   // --black
+  white:       '#FFFFFF',   // --white
+  grey100:     '#F4F4F5',   // --grey-100
+  grey300:     '#E7E7EA',   // --grey-300
+  textSecondary: '#8E8E93', // --text-secondary
 
-  // Warning / Amber — Caution, pending states
-  warning:       '#EF9F27',
-  warningDark:   '#854F0B',
-  warningLight:  '#FAEEDA',
-  warningBorder: '#F5D89F',
+  // ── Aliases used across the existing codebase ──────────────────────────
+  // These map legacy token names → new HTML-correct values so we don't
+  // have to touch every single import site immediately.
 
-  // Danger / Red — Errors, destructive actions, revoked states
-  danger:        '#E24B4A',
-  dangerDark:    '#A32D2D',
-  dangerLight:   '#FCEBEB',
-  dangerBorder:  '#F09595',
+  primary:      '#1E3AE0',  // = blue
+  primaryDark:  '#152B9E',  // = blueDark
+  primaryLight: '#C9D3FF',  // = blueLight
+  primaryMid:   '#C9D3FF',  // = blueLight
 
-  // Semantic surface tones
-  lavender:      '#E6E0F8',   // Blockchain, AI, advanced features
-  lavendarDark:  '#3C3489',
-  mint:          '#EAF7EB',   // Health, wellness, vitality
+  dark:         '#0A0A0A',  // = black
+  textBody:     '#0A0A0A',  // = black (body text)
+  textMuted:    '#8E8E93',  // = textSecondary
+  border:       '#E7E7EA',  // = grey-300
+  bg:           '#F4F4F5',  // = grey-100
+  canvas:       '#F4F4F5',  // = grey-100
+  white_alias:  '#FFFFFF',
 
-  // Neutrals — Grayscale foundation
-  neutral900:    '#1A1A1A',   // Primary text, headings, strong emphasis
-  neutral700:    '#374151',   // Dark body text
-  neutral600:    '#6B7280',   // Muted text, labels, placeholders, secondary content
-  neutral500:    '#9CA3AF',   // Placeholder, disabled text
-  neutral400:    '#B0B7C3',   // Subtle text, borders
-  neutral300:    '#D1D5DB',   // Light borders, dividers
-  neutral200:    '#E5E7EB',   // Borders, dividers, subtle separators
-  neutral100:    '#F3F4F6',   // Input backgrounds, ghost button bg, hover states
-  neutral50:     '#F9FAFB',   // Page/screen background, card containers
+  // Neutral scale (for backward compat)
+  neutral900:   '#0A0A0A',
+  neutral700:   '#3D4259',
+  neutral600:   '#5D6582',
+  neutral500:   '#8E8E93',
+  neutral400:   '#E7E7EA',
+  neutral300:   '#F4F4F5',
+  neutral200:   '#E7E7EA',
+  neutral100:   '#C9D3FF',
+  neutral50:    '#F4F4F5',
 
-  // Aliases for readability
-  white:         '#FFFFFF',
-  dark:          '#1A1A1A',
-  textBody:      '#374151',   // Slightly lighter than 900 for body copy
-  textMuted:     '#6B7280',
-  border:        '#E5E7EB',
-  bg:            '#F9FAFB',
-};
+  // Success / green aliases (now mapped to lime)
+  green:        '#D4FF3F',  // = lime (renamed — keeps old references working)
+  greenLight:   '#f5ffc7',  // lime tint for badge backgrounds
+  success:      '#D4FF3F',
+  successDark:  '#20260a',  // dark text on lime bg
+  successLight: '#f5ffc7',
+  successBorder:'#D4FF3F',
 
-/**
- * Font size scale — follows iOS/Material guidelines
- * Use these values exclusively; do not hard-code sizes
- */
+  // Warning / danger (kept from original — not in HTML ref but used in other screens)
+  orange:       '#FA6E3C',
+  orangeLight:  '#FEF0EB',
+  warning:      '#FA6E3C',
+  warningDark:  '#B45309',
+  warningLight: '#FFF7ED',
+  warningBorder:'#FED7AA',
+
+  danger:       '#DC2626',
+  dangerDark:   '#DC2626',
+  dangerLight:  '#FEF2F2',
+  dangerBorder: '#FECACA',
+
+  // Purple (blockchain/AI — kept for non-HTML screens)
+  purple:       '#8F76FF',
+  purpleLight:  '#EDE9FF',
+
+  // Accent aliases
+  accent:       '#1E3AE0',
+  accentLight:  '#C9D3FF',
+
+  // Chat gradient (Screen D header)
+  chatGradStart:'#274bf0',
+  chatGradEnd:  '#1226a0',
+
+  // Lavender (backward compat)
+  lavender:     '#EDE9FF',
+  lavendarDark: '#6644CC',
+  mint:         '#f5ffc7',
+} as const;
+
+// ─── Typography ─────────────────────────────────────────────────────────────
+// Font: system (-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica)
+
+export const FontFamily = {
+  base: 'System',
+} as const;
+
 export const FontSize = {
-  h1:        28,    // Large headings (screen titles)
-  h2:        22,    // Secondary headings (section headers)
-  h3:        18,    // Tertiary headings (card titles)
-  h4:        15,    // Quaternary headings (list item titles)
-  bodyLarge: 15,    // Large body text
-  body:      13,    // Standard body text (most common)
-  bodySmall: 12,    // Small body text, secondary info
-  caption:   11,    // Captions, hints, metadata
-  label:     10,    // Labels, badges, small UI text
-};
+  h1:        30,   // Screen A h2 / Screen D h1
+  h2:        24,
+  h3:        20,
+  h4:        16,
+  bodyLarge: 16,
+  body:      14,
+  bodySmall: 13,
+  caption:   12,
+  label:     11,
+  tiny:      10.5, // .step .lbl, .doc-tile .date
+} as const;
 
-/**
- * Font weight scale
- * CRITICAL: Maximum weight is 500 ('bold' in MedChain)
- * Never use 600, 700, or 'bold' (which usually means 700)
- * This is a key visual distinction of the design system
- */
 export const FontWeight = {
-  bold:     '500' as const,   // Used for headings, labels, emphasis (max weight)
-  medium:   '500' as const,   // Alias for bold (semantic clarity)
-  regular:  '400' as const,   // Default weight for body text
-};
+  black:   '800' as const,  // headings in HTML
+  bold:    '700' as const,
+  medium:  '600' as const,
+  regular: '400' as const,
+  light:   '400' as const,
+} as const;
 
-/**
- * Border radius scale — create visual hierarchy through rounded corners
- */
-export const Radius = {
-  sm:   12,      // Small elements, input fields
-  md:   16,      // Most cards, buttons, inputs
-  lg:   24,      // Larger cards, promoted elements
-  xl:   32,      // Extra large cards (elevated state)
-  pill: 999,     // Fully rounded (chips, badges, pill buttons)
-};
+export const LineHeight = {
+  h1:        36,
+  h2:        31,
+  h3:        26,
+  h4:        22,
+  bodyLarge: 26,
+  body:      22,
+  bodySmall: 20,
+  caption:   18,
+} as const;
 
-/**
- * Spacing scale — 4px base unit
- * Always use these values; never use arbitrary spacing
- * Ensures grid alignment and visual harmony
- */
+// ─── Spacing (base unit: 4 px) ───────────────────────────────────────────────
+
 export const Spacing = {
-  xs:   4,       // Minimal spacing (between icon + text in badge)
-  sm:   8,       // Small gap (between list items)
-  md:   12,      // Medium gap (card internal padding)
-  lg:   16,      // Large gap (screen horizontal padding, main gaps)
-  xl:   24,      // Extra large gap (section separation)
-  xxl:  32,      // Very large gap (screen sections)
-  xxxl: 48,      // Maximum gap (page top padding, major sections)
-};
+  xs:   4,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   24,
+  xxl:  32,
+  xxxl: 48,
+  xxxxl:64,
+} as const;
 
-/**
- * Shadow system — subtle depth without being heavy
- * Use Shadow.card for all cards; Shadow.strong for modals/overlays
- */
+// ─── Border Radius ───────────────────────────────────────────────────────────
+// Taken directly from HTML class values
+
+export const Radius = {
+  xs:   4,
+  sm:   8,
+  md:   10,   // .doc-thumb border-radius
+  lg:   16,   // .doc-card, .bubble
+  xl:   20,   // .quick-item, .doc-tile
+  xxl:  24,   // .sheet, .summary-card, .btn-primary, .input-bar
+  xxxl: 28,   // .quick-grid
+  pill: 100,
+  full: 9999,
+} as const;
+
+// ─── Shadow Scale ────────────────────────────────────────────────────────────
+
 export const Shadow = {
-  card: {
-    shadowColor:   '#1A1A1A',
+  sm: {
+    shadowColor:   '#0A0A0A',
     shadowOffset:  { width: 0, height: 1 },
-    shadowOpacity: 0.05,       // Very subtle
-    shadowRadius:  4,
-    elevation:     1,          // Android equivalent
+    shadowOpacity: 0.08,
+    shadowRadius:  3,
+    elevation:     1,
+  },
+  card: {
+    shadowColor:   '#0A0A0A',
+    shadowOffset:  { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius:  16,
+    elevation:     2,
+  },
+  lg: {
+    shadowColor:   '#0A0A0A',
+    shadowOffset:  { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius:  24,
+    elevation:     4,
   },
   strong: {
-    shadowColor:   '#1A1A1A',
-    shadowOffset:  { width: 0, height: 2 },
-    shadowOpacity: 0.08,       // Slightly more pronounced for dialogs
-    shadowRadius:  10,
-    elevation:     3,
+    shadowColor:   '#0A0A0A',
+    shadowOffset:  { width: 0, height: 20 },
+    shadowOpacity: 0.25,
+    shadowRadius:  50,
+    elevation:     8,
   },
-};
+  lime: {
+    shadowColor:   '#D4FF3F',
+    shadowOffset:  { width: 0, height: 8 },
+    shadowOpacity: 0.50,
+    shadowRadius:  20,
+    elevation:     4,
+  },
+} as const;
 
-/**
- * Component preset styles — reusable across the app
- */
+// ─── Component Tokens ────────────────────────────────────────────────────────
+
 export const Components = {
-  // Button heights
-  buttonHeight: 44,
-  buttonSmallHeight: 34,
-
-  // Input field height
-  inputHeight: 44,
-
-  // Top tab bar height
-  headerHeight: 56,
-
-  // Bottom tab bar height
-  tabBarHeight: 64,
-
-  // Card borders
-  cardBorder: {
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-  },
-
-  // Card base style
-  cardBase: {
+  buttonHeight:      56,   // .btn-primary height:56px
+  buttonSmallHeight: 36,
+  inputHeight:       52,   // .input-bar height:52px
+  headerHeight:      56,
+  tabBarHeight:      64,
+  cardBorder:        { borderWidth: 1, borderColor: Colors.border },
+  cardBase:          {
     backgroundColor: Colors.white,
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    borderRadius:    Radius.lg,
   },
-
-  // Input base style
-  inputBase: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    height: 44,
-    paddingHorizontal: Spacing.md,
-    fontSize: FontSize.body,
-    color: Colors.neutral900,
+  inputBase:         {
+    borderWidth:     1.5,
+    borderColor:     Colors.border,
+    borderRadius:    Radius.xxl,
+    height:          52,
+    paddingHorizontal: Spacing.xl,
+    fontSize:        FontSize.body,
+    color:           Colors.black,
   },
+  separator:         { height: 1, backgroundColor: Colors.border },
+} as const;
 
-  // List separator
-  separator: {
-    height: 0.5,
-    backgroundColor: Colors.border,
-  },
-};
+// ─── Badge Presets ───────────────────────────────────────────────────────────
 
-/**
- * Status badge presets — combine bg + text color pairs
- */
 export const BadgePresets = {
-  verified: {
-    backgroundColor: Colors.successLight,
-    color: Colors.successDark,
-  },
-  active: {
-    backgroundColor: Colors.successLight,
-    color: Colors.successDark,
-  },
-  pending: {
-    backgroundColor: Colors.warningLight,
-    color: Colors.warningDark,
-  },
-  warning: {
-    backgroundColor: Colors.warningLight,
-    color: Colors.warningDark,
-  },
-  revoked: {
-    backgroundColor: Colors.dangerLight,
-    color: Colors.dangerDark,
-  },
-  danger: {
-    backgroundColor: Colors.dangerLight,
-    color: Colors.dangerDark,
-  },
-  blockchain: {
-    backgroundColor: Colors.lavender,
-    color: Colors.lavendarDark,
-  },
-  primary: {
-    backgroundColor: Colors.primaryLight,
-    color: Colors.primaryDark,
-  },
-  onChain: {
-    backgroundColor: Colors.neutral900,
-    color: Colors.white,
-  },
-  expired: {
-    backgroundColor: Colors.neutral100,
-    color: Colors.neutral600,
-  },
-};
+  verified:    { backgroundColor: Colors.greenLight,  color: Colors.successDark },
+  active:      { backgroundColor: Colors.primaryLight, color: Colors.primaryDark },
+  pending:     { backgroundColor: Colors.warningLight, color: Colors.warningDark },
+  warning:     { backgroundColor: Colors.warningLight, color: Colors.warningDark },
+  revoked:     { backgroundColor: Colors.dangerLight,  color: Colors.dangerDark  },
+  danger:      { backgroundColor: Colors.dangerLight,  color: Colors.dangerDark  },
+  blockchain:  { backgroundColor: Colors.blueLight,    color: Colors.blueDark    },
+  primary:     { backgroundColor: Colors.blueLight,    color: Colors.blueDark    },
+  onChain:     { backgroundColor: Colors.black,        color: Colors.white       },
+  expired:     { backgroundColor: Colors.neutral200,   color: Colors.neutral600  },
+} as const;
+
+// ─── Default export (backward compat) ───────────────────────────────────────
 
 export default {
   Colors,
+  FontFamily,
   FontSize,
   FontWeight,
+  LineHeight,
   Radius,
   Spacing,
   Shadow,

@@ -1,112 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
-import { Sidebar } from '@/components/dashboard/sidebar';
-import { MobileMenuButton } from '@/components/dashboard/sidebar';
-import { Header } from '@/components/dashboard/header';
-import { MOCK_SYSTEM_HEALTH } from '@/data/mockData';
-import { ShieldCheck, HeartPulse, RefreshCw, Activity, Cpu, Database } from 'lucide-react';
+
+type Health = { status: string; dependencies: Record<string, string>; checkedAt: string };
+type Readiness = { assessment: { decision: string; verified: number; total: number; blockers: string[] } };
+type Metrics = { metrics: { requests: number; errors: number; p95Ms: number; errorRatePercent: number }; targets: { ordinaryP95Ms: number; errorRatePercent: number } };
 
 export default function AdminHealthMonitor() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [healthData, setHealthData] = useState(MOCK_SYSTEM_HEALTH);
-  const [checking, setChecking] = useState(false);
+  const [data, setData] = useState<{ health: Health; readiness: Readiness; metrics: Metrics } | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const load = useCallback(async () => {
+    try {
+      const responses = await Promise.all(['/api/operations/dependency-health', '/api/operations/readiness', '/api/operations/metrics'].map(url => fetch(url, { cache: 'no-store' })));
+      const bodies = await Promise.all(responses.map(response => response.json()));
+      if (responses.slice(1).some(response => !response.ok)) throw new Error('operations unavailable');
+      setData({ health: bodies[0], readiness: bodies[1], metrics: bodies[2] });
+      setState('ready');
+    } catch { setState('error'); }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
 
-  const handleRefreshDiagnostics = () => {
-    setChecking(true);
-    setTimeout(() => {
-      setHealthData(prev => prev.map(item => ({
-        ...item,
-        lastChecked: new Date().toISOString().replace('T', ' ').substring(0, 16)
-      })));
-      setChecking(false);
-      alert('Full diagnostic sequence completed on channels medical-records, pharmacy-records, national-analytics, system-administration.');
-    }, 1000);
-  };
-
-  return (
-    <ProtectedRoute allowedRoles={['admin']}>
-      <div className="min-h-screen bg-[#EAEEF2] admin-portal">
-        <div className="flex">
-          {/* Sidebar */}
-          <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
-
-          {/* Main Content */}
-          <div className="flex-1 min-w-0 lg:pl-[260px]">
-            <div className="px-3 sm:px-4 lg:px-6 max-w-[1600px] mx-auto">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <MobileMenuButton onClick={() => setSidebarOpen(true)} />
-                <div className="flex-1">
-                  <Header />
-                </div>
-              </div>
-
-              <div className="space-y-6 pb-8 text-left">
-                {/* Title */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-display">Hyperledger Network Node Health</h1>
-                    <p className="text-sm text-slate-500">
-                      Real-time status tracking of peer nodes, orderer, database engines, and decentralized IPFS clusters.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleRefreshDiagnostics}
-                    disabled={checking}
-                    className="flex items-center gap-2 bg-[#7c3aed] hover:bg-[#6228ca] text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
-                    Run Live Diagnostics
-                  </button>
-                </div>
-
-                {/* Health Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {healthData.map((node, i) => (
-                    <div key={i} className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm flex flex-col justify-between space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          {node.service.includes('Database') || node.service.includes('Postgre') ? (
-                            <Database className="w-5 h-5 text-slate-400" />
-                          ) : node.service.includes('API') || node.service.includes('Server') ? (
-                            <Cpu className="w-5 h-5 text-slate-400" />
-                          ) : (
-                            <Activity className="w-5 h-5 text-slate-400" />
-                          )}
-                          <h3 className="font-bold text-slate-900 text-sm">{node.service}</h3>
-                        </div>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                          node.status === 'Online' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                          node.status === 'Degraded' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                          'bg-rose-50 text-rose-700 border-rose-100'
-                        }`}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{
-                            backgroundColor: node.status === 'Online' ? '#10b981' :
-                                            node.status === 'Degraded' ? '#f59e0b' : '#ef4444'
-                          }} />
-                          {node.status}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
-                        <div>
-                          <span className="text-slate-400 block font-semibold">Uptime Score</span>
-                          <span className="font-bold text-slate-800">{node.uptime}%</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block font-semibold">Last Verified</span>
-                          <span className="font-semibold text-slate-700 truncate block">{node.lastChecked}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+  return <ProtectedRoute allowedRoles={['admin']}>
+    <main className="min-h-screen bg-[#EAEEF2] p-4 sm:p-8" aria-labelledby="operations-title">
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><h1 id="operations-title" className="text-2xl font-bold text-slate-950">Pilot operations and readiness</h1><p className="mt-1 text-slate-700">Measured service evidence. Pending gates are not approvals.</p></div>
+          <button onClick={() => { setState('loading'); void load(); }} disabled={state === 'loading'} className="rounded-lg bg-slate-950 px-4 py-2 font-semibold text-white disabled:opacity-60">{state === 'loading' ? 'Checking…' : 'Refresh evidence'}</button>
+        </div>
+        <div aria-live="polite" className="mt-6">
+          {state === 'loading' && <p role="status">Checking operational evidence…</p>}
+          {state === 'error' && <section role="alert" className="rounded-xl border border-red-300 bg-red-50 p-5"><h2 className="font-bold">Operational evidence unavailable</h2><p>No readiness decision changed. Check the approved operations channel and retry.</p></section>}
+          {state === 'ready' && data && <div className="space-y-5">
+            <section className="rounded-xl border bg-white p-5" aria-labelledby="release-title"><h2 id="release-title" className="font-bold">Release decision: {data.readiness.assessment.decision}</h2><p>{data.readiness.assessment.verified} of {data.readiness.assessment.total} required gates verified.</p><p className="mt-2 text-sm text-slate-600">{data.readiness.assessment.blockers.length} blockers remain. See the governed evidence register; blocker details are not exposed on shared displays.</p></section>
+            <section className="rounded-xl border bg-white p-5" aria-labelledby="dependency-title"><h2 id="dependency-title" className="font-bold">Dependencies</h2><dl className="mt-3 grid gap-3 sm:grid-cols-3">{Object.entries(data.health.dependencies).map(([name, value]) => <div key={name}><dt className="font-semibold capitalize">{name}</dt><dd>{value}</dd></div>)}</dl><p className="mt-3 text-sm">Last checked: <time dateTime={data.health.checkedAt}>{new Date(data.health.checkedAt).toLocaleString('en-SL')}</time></p></section>
+            <section className="rounded-xl border bg-white p-5" aria-labelledby="metrics-title"><h2 id="metrics-title" className="font-bold">Privacy-minimized API window</h2><dl className="mt-3 grid gap-3 sm:grid-cols-4"><div><dt>Requests</dt><dd className="font-bold">{data.metrics.metrics.requests}</dd></div><div><dt>Errors</dt><dd className="font-bold">{data.metrics.metrics.errors}</dd></div><div><dt>p95 latency</dt><dd className="font-bold">{data.metrics.metrics.p95Ms.toFixed(0)} ms</dd></div><div><dt>Error rate</dt><dd className="font-bold">{data.metrics.metrics.errorRatePercent}%</dd></div></dl></section>
+          </div>}
         </div>
       </div>
-    </ProtectedRoute>
-  );
+    </main>
+  </ProtectedRoute>;
 }

@@ -1,448 +1,349 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_APPOINTMENTS } from '@/data/mockData';
-import { useAuth } from '@/hooks/useAuth';
-import { 
-  Calendar as CalendarIcon, Video, MapPin, Clock, Search, Filter, 
-  CheckCircle2, XCircle, AlertCircle, HelpCircle, X, Plus, Calendar 
-} from 'lucide-react';
-import type { Appointment, AppointmentStatus } from '@/types';
-import { backendApi } from '@/services/backendApi';
+import { useState } from 'react';
 
+function Icon({ d, size = 16 }: { d: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
+  );
+}
+const I = {
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  chevD:    '<path d="M6 9l6 6 6-6"/>',
+  filter:   '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  plus:     '<path d="M12 5v14M5 12h14"/>',
+  phone:    '<path d="M22 16.9v2a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 1h2a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.7a2 2 0 0 1-.5 2.1L7.1 8.7a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.9 2.2z"/>',
+  more:     '<circle cx="12" cy="5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="19" r="1.3"/>',
+  chevL:    '<path d="M15 18l-6-6 6-6"/>',
+  chevR:    '<path d="M9 18l6-6-6-6"/>',
+  clock:    '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  check:    '<path d="M20 6L9 17l-5-5"/>',
+  x:        '<path d="M18 6L6 18M6 6l12 12"/>',
+};
+
+/* ── Doctor availability/schedule data ──────────────────────────────── */
+const DOCTORS = [
+  { id: 'd1', name: 'Dr. Amadu Williams',   role: 'General Surgeon',   avatar: 'AW' },
+  { id: 'd2', name: 'Dr. Isatu Kamara',     role: 'Anaesthesiologist', avatar: 'IK' },
+  { id: 'd3', name: 'Dr. Moses Fofanah',    role: 'Cardiologist',      avatar: 'MF' },
+  { id: 'd4', name: 'Dr. Bintu Koroma',     role: 'Gynaecologist',     avatar: 'BK' },
+];
+
+type BlockType = 'primary' | 'ward' | 'consent' | 'break';
+
+interface ScheduleBlock {
+  label: string;
+  type: BlockType;
+  start: number; // col index 0-5 for 7-12 half-hours
+  span: number;
+}
+
+const SCHEDULE: Record<string, ScheduleBlock[]> = {
+  d1: [
+    { label: 'Hip replacement — Fatima K.', type: 'primary', start: 0, span: 3 },
+    { label: 'Ward round', type: 'ward', start: 3, span: 2 },
+    { label: 'Consent sign', type: 'consent', start: 5, span: 1 },
+  ],
+  d2: [
+    { label: 'Pre-op anaesthesia', type: 'primary', start: 0, span: 2 },
+    { label: 'Break', type: 'break', start: 2, span: 1 },
+    { label: 'Cardiac bypass — Ibrahim B.', type: 'primary', start: 3, span: 3 },
+  ],
+  d3: [
+    { label: 'ECG review clinic', type: 'primary', start: 0, span: 2 },
+    { label: 'Consent', type: 'consent', start: 2, span: 1 },
+    { label: 'Ward round', type: 'ward', start: 3, span: 1 },
+    { label: 'Break', type: 'break', start: 4, span: 1 },
+    { label: 'Consult', type: 'primary', start: 5, span: 1 },
+  ],
+  d4: [
+    { label: 'Break', type: 'break', start: 0, span: 1 },
+    { label: 'Appendectomy — Aminata S.', type: 'primary', start: 1, span: 4 },
+    { label: 'Consent', type: 'consent', start: 5, span: 1 },
+  ],
+};
+
+const TIME_SLOTS = ['7:00', '7:30', '8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00', '11:30', '12:00'];
+const GANTT_COLS = ['7:00–7:30', '7:30–8:30', '8:30–9:30', '9:30–10:30', '10:30–11:00', '11:00–12:00'];
+
+const BLOCK_STYLE: Record<BlockType, string> = {
+  primary: 'gb-primary',
+  ward:    'gb-ward',
+  consent: 'gb-consent',
+  break:   'gb-break',
+};
+
+/* ── Appointment list ────────────────────────────────────────────────── */
+const ALL_APPOINTMENTS = [
+  { id: 'a1', name: 'Fatima Koroma',   type: 'Hip Replacement Surgery',     date: '22 Aug 2025', time: '09:00AM', doctor: 'Dr. Amadu Williams',  status: 'confirmed' },
+  { id: 'a2', name: 'Ibrahim Bangura', type: 'Cardiac Bypass',               date: '22 Aug 2025', time: '10:30AM', doctor: 'Dr. Isatu Kamara',    status: 'confirmed' },
+  { id: 'a3', name: 'Aminata Sesay',   type: 'Appendectomy',                 date: '22 Aug 2025', time: '12:00PM', doctor: 'Dr. Bintu Koroma',    status: 'confirmed' },
+  { id: 'a4', name: 'Mohamed Conteh',  type: 'Hernia Repair',                date: '22 Aug 2025', time: '14:00PM', doctor: 'Dr. Moses Fofanah',   status: 'confirmed' },
+  { id: 'a5', name: 'Mariatu Kamara',  type: 'Pre-op Consultation',          date: '22 Aug 2025', time: '15:30PM', doctor: 'Dr. Amadu Williams',  status: 'cancelled' },
+  { id: 'a6', name: 'Alhassan Koroma', type: 'ENT Consultation',             date: '23 Aug 2025', time: '08:00AM', doctor: 'Dr. Isatu Kamara',    status: 'pending' },
+  { id: 'a7', name: 'Adama Jalloh',   type: 'Orthopaedic Follow-up',        date: '23 Aug 2025', time: '10:00AM', doctor: 'Dr. Moses Fofanah',   status: 'confirmed' },
+  { id: 'a8', name: 'Sia Mansaray',   type: 'Antenatal Check',              date: '23 Aug 2025', time: '11:30AM', doctor: 'Dr. Bintu Koroma',    status: 'confirmed' },
+];
+
+const STATUS_BADGE: Record<string, string> = {
+  confirmed: 'badge-brand',
+  pending:   'badge-amber',
+  cancelled: 'badge-red',
+};
+const STATUS_LABEL: Record<string, string> = {
+  confirmed: 'Confirmed',
+  pending:   'Pending',
+  cancelled: 'Cancelled',
+};
+
+/* ── Avatar initials ─────────────────────────────────────────────────── */
+function InitialsAvatar({ name, size = 36 }: { name: string; size?: number }) {
+  const initials = name.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.3, flexShrink: 0,
+      background: 'var(--brand-light)', color: 'var(--brand)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontWeight: 800, fontSize: size * 0.36, fontFamily: 'var(--font-display)',
+    }}>
+      {initials}
+    </div>
+  );
+}
+
+/* ── Page ────────────────────────────────────────────────────────────── */
 export default function AppointmentsPage() {
-  useAuth(); // Require authentication
-  const router = useRouter();
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'today' | 'upcoming' | 'past'>('today');
-  const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS);
-  const [patients, setPatients] = useState<any[]>([]);
-
-  // Schedule Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('10:00');
-  const [endTime, setEndTime] = useState('10:30');
-  const [type, setType] = useState<'Virtual' | 'In-Person'>('In-Person');
-  const [notes, setNotes] = useState('');
-
-  const TODAY = new Date().toISOString().split('T')[0];
-
-  useEffect(() => {
-    backendApi.getAccessiblePatients()
-      .then(res => {
-        setPatients(res.patients || []);
-      })
-      .catch(err => {
-        console.error('Failed to load patients for schedule selector', err);
-      });
-  }, []);
-
-  // Helper to categorize appointment date relative to today
-  const getAppointmentTabCategory = (appDate: string) => {
-    if (appDate === TODAY) return 'today';
-    return appDate > TODAY ? 'upcoming' : 'past';
-  };
-
-  const getStatusIcon = (status: AppointmentStatus) => {
-    switch (status) {
-      case 'Completed':
-        return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
-      case 'Cancelled':
-        return <XCircle className="h-4 w-4 text-rose-500" />;
-      case 'No-Show':
-        return <AlertCircle className="h-4 w-4 text-amber-500" />;
-      case 'In Progress':
-        return <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />;
-      default:
-        return <Clock className="h-4 w-4 text-violet-500" />;
-    }
-  };
-
-  const getStatusBadgeClass = (status: AppointmentStatus) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'Cancelled':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      case 'No-Show':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'In Progress':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
-      default:
-        return 'bg-violet-50 text-violet-700 border-violet-200';
-    }
-  };
-
-  const handleScheduleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPatientId || !date || !startTime || !endTime) return;
-
-    const patient = patients.find(p => p.id === selectedPatientId);
-    const patientName = patient ? patient.name : 'Unknown Patient';
-    const patientInitials = (patientName || '')
-      .split(' ')
-      .map((n: string) => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase() || 'PT';
-
-    const newApp: Appointment = {
-      id: `APT-${Math.floor(100000 + Math.random() * 900000)}`,
-      patientId: selectedPatientId,
-      patientName,
-      patientInitials,
-      patientGender: 'Female', // default for mockup details
-      patientAge: 28, // default for mockup details
-      date,
-      startTime,
-      endTime,
-      status: 'Upcoming',
-      type,
-      category: 'Consultation',
-      videoCallRoomId: type === 'Virtual' ? `room-${Math.random().toString(36).substring(2, 8)}` : undefined,
-      notes: notes || undefined
-    };
-
-    setAppointments(prev => [newApp, ...prev]);
-    
-    // Reset form
-    setSelectedPatientId('');
-    setDate('');
-    setStartTime('10:00');
-    setEndTime('10:30');
-    setType('In-Person');
-    setNotes('');
-    setIsModalOpen(false);
-  };
-
-  const filteredAppointments = appointments.filter((app) => {
-    const tabMatch = getAppointmentTabCategory(app.date) === activeTab;
-    const nameMatch = (app.patientName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                      (app.id || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const statusMatch = statusFilter === 'all' || app.status === statusFilter;
-    return tabMatch && nameMatch && statusMatch;
-  });
+  const [view, setView] = useState<'list' | 'gantt'>('list');
+  const [selectedWeek] = useState('Aug 22–28, 2025');
 
   return (
-    <LayoutWrapper title="Appointments">
-      <div className="space-y-6">
-        {/* Header Summary */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Patient Appointments</h1>
-            <p className="text-sm text-slate-500">View and manage virtual and in-person patient consultations</p>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
-            >
-              <CalendarIcon className="h-4 w-4" />
-              Schedule Appointment
-            </button>
-          </div>
+    <div className="page-body" style={{ padding: '28px 32px' }}>
+
+      {/* Page header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Appointments</h1>
+          <p style={{ color: 'var(--gray-500)', fontSize: 13.5, marginTop: 4 }}>
+            Manage your schedule and patient appointments.
+          </p>
         </div>
-
-        {/* Filters and Tabs */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          {/* Tabs */}
-          <div className="flex border-b border-slate-100 pb-2 overflow-x-auto gap-2">
-            <button
-              onClick={() => setActiveTab('today')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${
-                activeTab === 'today'
-                  ? 'bg-brand-light text-brand'
-                  : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
-              }`}
-            >
-              Today&apos;s Appointments
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="view-toggle">
+            <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')} aria-label="List view" title="List view">
+              <Icon d="<path d='M4 6h16M4 12h16M4 18h16'/>" size={16} />
             </button>
-            <button
-              onClick={() => setActiveTab('upcoming')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${
-                activeTab === 'upcoming'
-                  ? 'bg-brand-light text-brand'
-                  : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
-              }`}
-            >
-              Upcoming
-            </button>
-            <button
-              onClick={() => setActiveTab('past')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${
-                activeTab === 'past'
-                  ? 'bg-brand-light text-brand'
-                  : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
-              }`}
-            >
-              Past Records
+            <button className={view === 'gantt' ? 'active' : ''} onClick={() => setView('gantt')} aria-label="Gantt view" title="Schedule view">
+              <Icon d="<rect x='3' y='3' width='7' height='7' rx='1.5'/><rect x='14' y='3' width='7' height='7' rx='1.5'/><rect x='3' y='14' width='7' height='7' rx='1.5'/><rect x='14' y='14' width='7' height='7' rx='1.5'/>" size={16} />
             </button>
           </div>
-
-          {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search patient name or ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
-              />
-            </div>
-            <div className="flex gap-2">
-              <div className="relative flex items-center">
-                <Filter className="absolute left-3 h-4 w-4 text-slate-400 pointer-events-none" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition appearance-none cursor-pointer text-slate-700"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="Upcoming">Upcoming</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                  <option value="No-Show">No-Show</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-          </div>
+          <button className="btn btn-outline">
+            <Icon d={I.filter} size={16} /> Filter
+          </button>
+          <button className="btn btn-outline">
+            <Icon d={I.calendar} size={16} /> {selectedWeek} <Icon d={I.chevD} size={14} />
+          </button>
+          <button className="btn btn-primary">
+            <Icon d={I.plus} size={16} /> New appointment
+          </button>
         </div>
-
-        {/* Appointment Grid/List */}
-        {filteredAppointments.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
-            <CalendarIcon className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-slate-800">No appointments found</h3>
-            <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-              There are no {activeTab} appointments matching your filters at this time.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {filteredAppointments.map((app) => (
-              <div
-                key={app.id}
-                className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4 hover:border-slate-300 transition"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-brand-light text-brand font-semibold text-sm flex items-center justify-center">
-                        {app.patientInitials}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 text-base">{app.patientName}</h3>
-                        <p className="text-xs text-slate-500">
-                          {app.patientGender}, {app.patientAge} yrs • ID: {app.patientId}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusBadgeClass(app.status)} flex items-center gap-1.5`}>
-                      {getStatusIcon(app.status)}
-                      {app.status}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-slate-400" />
-                      <span>
-                        {app.startTime} - {app.endTime}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-slate-400" />
-                      <span>{app.date}</span>
-                    </div>
-                    <div className="flex items-center gap-2 col-span-2">
-                      {app.type === 'Virtual' ? (
-                        <>
-                          <Video className="h-4 w-4 text-brand" />
-                          <span className="font-medium text-slate-700">Virtual Consultation (Telehealth)</span>
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="h-4 w-4 text-slate-500" />
-                          <span className="font-medium text-slate-700">In-Person • Connaught Hospital</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {app.notes && (
-                    <div className="mt-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs text-slate-600">
-                      <span className="font-semibold text-slate-700">Notes:</span> {app.notes}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-                  <button 
-                    onClick={() => router.push(`/patients/${app.patientId}`)}
-                    className="px-3.5 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-medium text-slate-700 transition"
-                  >
-                    View Profile
-                  </button>
-                  {app.type === 'Virtual' && app.status !== 'Completed' && app.status !== 'Cancelled' && (
-                    <a
-                      href={`/appointments/telehealth/${app.videoCallRoomId}`}
-                      className="px-3.5 py-1.5 bg-brand hover:bg-brand-dark text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Video className="h-3.5 w-3.5" />
-                      Join Call
-                    </a>
-                  )}
-                  <button 
-                    onClick={() => router.push(`/records/upload?patientId=${app.patientId}`)}
-                    className="px-3.5 py-1.5 bg-brand-light text-brand hover:bg-[#d8eddcf2] rounded-lg text-xs font-medium transition"
-                  >
-                    Record Diagnosis
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Schedule Appointment Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200 text-left">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-900 font-display flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-brand" /> Schedule Appointment
-              </h2>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-950 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
+      {/* ── LIST VIEW ── */}
+      {view === 'list' && (
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">
+              <span className="ic"><Icon d={I.calendar} size={16} /></span>
+              All appointments
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <span className="badge badge-green"><i className="dot" />{ALL_APPOINTMENTS.filter(a => a.status === 'confirmed').length} Confirmed</span>
+              <span className="badge badge-amber"><i className="dot" />{ALL_APPOINTMENTS.filter(a => a.status === 'pending').length} Pending</span>
+              <span className="badge badge-red"><i className="dot" />{ALL_APPOINTMENTS.filter(a => a.status === 'cancelled').length} Cancelled</span>
+            </div>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="dtable">
+              <thead>
+                <tr>
+                  <th><span className="sort">Patient <Icon d="<path d='M7 3v18M4 6l3-3 3 3M17 21V3M14 18l3 3 3-3'/>" size={12} /></span></th>
+                  <th>Appointment type</th>
+                  <th><span className="sort">Date</span></th>
+                  <th>Time</th>
+                  <th>Assigned physician</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ALL_APPOINTMENTS.map(appt => (
+                  <tr key={appt.id}>
+                    <td>
+                      <div className="cell-user">
+                        <InitialsAvatar name={appt.name} size={34} />
+                        {appt.name}
+                      </div>
+                    </td>
+                    <td style={{ color: 'var(--gray-500)' }}>{appt.type}</td>
+                    <td style={{ color: 'var(--gray-500)', fontVariantNumeric: 'tabular-nums' }}>{appt.date}</td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{appt.time}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <InitialsAvatar name={appt.doctor.replace('Dr. ', '')} size={28} />
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{appt.doctor}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge ${STATUS_BADGE[appt.status]}`}>
+                        <i className="dot" />{STATUS_LABEL[appt.status]}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {appt.status !== 'cancelled' && (
+                          <button className="icon-btn filled" style={{ width: 34, height: 34 }} aria-label={`Call ${appt.name}`} title={`Call ${appt.name}`}>
+                            <Icon d={I.phone} size={15} />
+                          </button>
+                        )}
+                        <button className="icon-btn ghost" style={{ width: 34, height: 34 }} aria-label="More options">
+                          <Icon d={I.more} size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Pagination */}
+          <div className="pagination">
+            <span>Showing 1–8 of 8 appointments</span>
+            <div className="page-controls">
+              <button className="icon-btn ghost" style={{ width: 34, height: 34 }} aria-label="Previous page">
+                <Icon d={I.chevL} size={14} />
+              </button>
+              <div className="page-box">Page <span style={{ background: 'var(--brand)', color: '#fff', padding: '2px 8px', borderRadius: 8, fontVariantNumeric: 'tabular-nums' }}>1</span> of 1</div>
+              <button className="icon-btn ghost" style={{ width: 34, height: 34 }} aria-label="Next page">
+                <Icon d={I.chevR} size={14} />
               </button>
             </div>
-
-            <form onSubmit={handleScheduleSubmit} className="space-y-4">
-              {/* Select Patient */}
-              <div>
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Select Patient *</label>
-                <select
-                  required
-                  value={selectedPatientId}
-                  onChange={e => setSelectedPatientId(e.target.value)}
-                  className="w-full border border-[#D8DCE8] bg-slate-50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700"
-                >
-                  <option value="">-- Choose Patient --</option>
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.id.substring(0,8)}...)</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Date */}
-              <div>
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Date *</label>
-                <input
-                  required
-                  type="date"
-                  min={TODAY}
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
-                />
-              </div>
-
-              {/* Time Slots */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#5D6582] mb-1">Start Time *</label>
-                  <input
-                    required
-                    type="time"
-                    value={startTime}
-                    onChange={e => setStartTime(e.target.value)}
-                    className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#5D6582] mb-1">End Time *</label>
-                  <input
-                    required
-                    type="time"
-                    value={endTime}
-                    onChange={e => setEndTime(e.target.value)}
-                    className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition"
-                  />
-                </div>
-              </div>
-
-              {/* Consultation Type */}
-              <div>
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Consultation Type *</label>
-                <div className="flex gap-4 mt-1">
-                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
-                    <input
-                      type="radio"
-                      name="type"
-                      checked={type === 'In-Person'}
-                      onChange={() => setType('In-Person')}
-                      className="accent-brand h-4 w-4"
-                    />
-                    In-Person
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
-                    <input
-                      type="radio"
-                      name="type"
-                      checked={type === 'Virtual'}
-                      onChange={() => setType('Virtual')}
-                      className="accent-brand h-4 w-4"
-                    />
-                    Virtual (Telehealth)
-                  </label>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Clinical Notes / Reason</label>
-                <textarea
-                  rows={2}
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Reason for consultation..."
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition resize-none"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-semibold transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-brand hover:bg-brand-dark text-white py-2.5 rounded-xl text-sm font-semibold transition shadow-sm"
-                >
-                  Schedule
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
-    </LayoutWrapper>
+
+      {/* ── GANTT / SCHEDULE VIEW ── */}
+      {view === 'gantt' && (
+        <div className="card" style={{ overflowX: 'auto' }}>
+          <div className="card-head">
+            <div className="card-title">
+              <span className="ic"><Icon d={I.clock} size={16} /></span>
+              Team schedule — {selectedWeek}
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              {[
+                { cls: 'gb-primary', label: 'Surgery / procedure' },
+                { cls: 'gb-ward',    label: 'Ward round' },
+                { cls: 'gb-consent', label: 'Consent' },
+                { cls: 'gb-break',   label: 'Break' },
+              ].map(({ cls, label }) => (
+                <span key={cls} className={`gantt-block ${cls}`} style={{ fontSize: 12 }}>
+                  <i />{label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <table className="gantt" style={{ minWidth: 700 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 200, paddingBottom: 12 }}>Physician</th>
+                {GANTT_COLS.map(col => (
+                  <th key={col}>{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {DOCTORS.map(doc => (
+                <tr key={doc.id}>
+                  <td>
+                    <div className="doc-cell">
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: 'var(--brand-light)', color: 'var(--brand)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, fontSize: 13,
+                      }}>
+                        {doc.avatar}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{doc.name}</div>
+                        <div className="role" style={{ fontSize: 11.5, color: 'var(--gray-500)' }}>{doc.role}</div>
+                      </div>
+                    </div>
+                  </td>
+                  {/* Render schedule using CSS grid within the row */}
+                  <td colSpan={GANTT_COLS.length} style={{ padding: '8px 6px', height: 62 }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${GANTT_COLS.length}, 1fr)`,
+                      gap: 4,
+                      height: 46,
+                    }}>
+                      {SCHEDULE[doc.id].map((block, bi) => {
+                        // Fill empty cells before block
+                        const emptyCells = bi === 0 ? block.start : 0;
+                        return (
+                          <>
+                            {bi === 0 && block.start > 0 && (
+                              <div key={`empty-${bi}`} style={{ gridColumn: `1 / span ${block.start}` }} />
+                            )}
+                            <div
+                              key={bi}
+                              className={`gantt-block ${BLOCK_STYLE[block.type]}`}
+                              style={{
+                                gridColumn: `${block.start + 1} / span ${block.span}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                fontSize: 11.5,
+                                overflow: 'hidden',
+                                padding: '6px 10px',
+                                height: 46,
+                              }}
+                              title={block.label}
+                            >
+                              <i />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {block.label}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Time axis */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '200px repeat(11, 1fr)',
+            padding: '8px 6px 0',
+            gap: 4,
+          }}>
+            <div />
+            {TIME_SLOTS.map(t => (
+              <div key={t} style={{ fontSize: 11, color: 'var(--gray-400)', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{t}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }

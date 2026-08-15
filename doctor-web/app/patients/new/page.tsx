@@ -73,10 +73,6 @@ function SuccessModal({ info, onClose }: { info: SuccessInfo; onClose: () => voi
                   {info.accessKey}
                 </span>
               </div>
-              <div>
-                <span className="text-xs text-slate-500 block font-semibold">TEMPORARY PASSWORD</span>
-                <span className="text-sm font-bold text-slate-800">password123</span>
-              </div>
             </div>
 
             <div className="flex flex-col items-center justify-center border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-4 print:border-none">
@@ -88,17 +84,15 @@ function SuccessModal({ info, onClose }: { info: SuccessInfo; onClose: () => voi
           </div>
 
           <div className="bg-slate-100/50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 print:hidden text-left">
-            <span className="font-semibold text-slate-700 block mb-1">Login Instructions for Patient:</span>
-            1. Download the PalmsChain SL mobile app.<br />
-            2. Log in using either email (<strong className="text-slate-800">{info.email || 'N/A'}</strong>) or phone (<strong className="text-slate-800">{info.phone}</strong>) and temporary password <strong className="text-slate-800">password123</strong>.<br />
-            3. They can scan/generate their access codes dynamically.
+            <span className="font-semibold text-slate-700 block mb-1">Patient onboarding is contained:</span>
+            Patient login and credential issuance remain disabled until the approved identity provider and recovery workflow are implemented.
           </div>
         </div>
 
         <div className="flex gap-3 print:hidden">
           <button
             onClick={handlePrint}
-            className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            className="flex-1 border border-[var(--gray-200)] hover:bg-[var(--primary-50)] text-[var(--gray-600)] py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors"
           >
             <Printer className="w-4 h-4" />
             Print Card
@@ -163,11 +157,11 @@ export default function NewPatientPage() {
         {/* Header */}
         <div className="flex items-center gap-3 pt-2">
           <button onClick={() => router.back()} className="p-2 hover:bg-brand-light rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5 text-[#5D6582]" />
+            <ArrowLeft className="w-5 h-5 text-[var(--gray-600)]" />
           </button>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#101326] font-display">Add New Patient</h1>
-            <p className="text-sm text-[#8C91A8]">Register a new patient on the blockchain</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--ink-900)] font-display">Add New Patient</h1>
+            <p className="text-sm text-[var(--gray-500)]">Register a new patient on the blockchain</p>
           </div>
         </div>
 
@@ -180,136 +174,136 @@ export default function NewPatientPage() {
 
         <form onSubmit={handleSave} className="space-y-4">
           {/* Demographics */}
-          <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-            <h2 className="font-semibold text-[#101326] mb-4 flex items-center gap-2 text-base">
+          <div className="bg-white rounded-2xl p-5 border border-[var(--gray-200)] shadow-sm">
+            <h2 className="font-semibold text-[var(--ink-900)] mb-4 flex items-center gap-2 text-base">
               <User className="w-4.5 h-4.5 text-brand" /> Patient Demographics
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Full Name *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Full Name *</label>
                 <input required value={form.name} onChange={e => set('name', e.target.value)}
                   placeholder="e.g. Aminata Koroma"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Date of Birth *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Date of Birth *</label>
                 <input required type="date" value={form.dob} onChange={e => set('dob', e.target.value)}
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Gender *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Gender *</label>
                 <select value={form.gender} onChange={e => set('gender', e.target.value)}
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand">
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand">
                   <option>Female</option><option>Male</option><option>Other</option>
                 </select>
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Blood Type *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Blood Type *</label>
                 <select value={form.bloodType} onChange={e => set('bloodType', e.target.value)}
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand">
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand">
                   {BLOOD_TYPES.map(bt => <option key={bt}>{bt}</option>)}
                 </select>
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Phone *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Phone *</label>
                 <input required value={form.phone} onChange={e => set('phone', e.target.value)}
                   placeholder="+232 76 123 456"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Email</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Email</label>
                 <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
                   placeholder="patient@email.com"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="sm:col-span-2 text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Address *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Address *</label>
                 <input required value={form.address} onChange={e => set('address', e.target.value)}
                   placeholder="e.g. 12 Wilkinson Road, Freetown"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
             </div>
           </div>
 
           {/* Medical info */}
-          <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-            <h2 className="font-semibold text-[#101326] mb-4 flex items-center gap-2 text-base">
-              <Pill className="w-4.5 h-4.5 text-[#8F76FF]" /> Medical Information
+          <div className="bg-white rounded-2xl p-5 border border-[var(--gray-200)] shadow-sm">
+            <h2 className="font-semibold text-[var(--ink-900)] mb-4 flex items-center gap-2 text-base">
+              <Pill className="w-4.5 h-4.5 text-[var(--purple-600)]" /> Medical Information
             </h2>
             <div className="space-y-4">
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Primary Condition *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Primary Condition *</label>
                 <input required value={form.condition} onChange={e => set('condition', e.target.value)}
                   placeholder="e.g. Hypertension, Type 2 Diabetes"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">
-                  Allergies <span className="text-[#8C91A8] font-normal">(comma-separated)</span>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">
+                  Allergies <span className="text-[var(--gray-500)] font-normal">(comma-separated)</span>
                 </label>
                 <input value={form.allergies} onChange={e => set('allergies', e.target.value)}
                   placeholder="e.g. Penicillin, Aspirin"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">
-                  Current Medications <span className="text-[#8C91A8] font-normal">(comma-separated)</span>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">
+                  Current Medications <span className="text-[var(--gray-500)] font-normal">(comma-separated)</span>
                 </label>
                 <input value={form.medications} onChange={e => set('medications', e.target.value)}
                   placeholder="e.g. Lisinopril 10mg, Amlodipine 5mg"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Clinical Notes</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Clinical Notes</label>
                 <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
                   rows={3} placeholder="Additional clinical notes..."
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none" />
               </div>
             </div>
           </div>
 
           {/* Emergency + Insurance */}
-          <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-            <h2 className="font-semibold text-[#101326] mb-4 flex items-center gap-2 text-base">
-              <AlertCircle className="w-4.5 h-4.5 text-[#E53E3E]" /> Emergency Contact & Insurance
+          <div className="bg-white rounded-2xl p-5 border border-[var(--gray-200)] shadow-sm">
+            <h2 className="font-semibold text-[var(--ink-900)] mb-4 flex items-center gap-2 text-base">
+              <AlertCircle className="w-4.5 h-4.5 text-[var(--red-600)]" /> Emergency Contact & Insurance
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Emergency Contact Name *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Emergency Contact Name *</label>
                 <input required value={form.emergencyContactName} onChange={e => set('emergencyContactName', e.target.value)}
                   placeholder="e.g. Ibrahim Koroma"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Emergency Contact Phone *</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Emergency Contact Phone *</label>
                 <input required value={form.emergencyContactPhone} onChange={e => set('emergencyContactPhone', e.target.value)}
                   placeholder="e.g. +232 76 987 654"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Insurance Provider</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Insurance Provider</label>
                 <input value={form.insuranceProvider} onChange={e => set('insuranceProvider', e.target.value)}
                   placeholder="e.g. NASSIT"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="text-left">
-                <label className="block text-xs font-semibold text-[#5D6582] mb-1">Insurance ID</label>
+                <label className="block text-xs font-semibold text-[var(--gray-600)] mb-1">Insurance ID</label>
                 <input value={form.insuranceId} onChange={e => set('insuranceId', e.target.value)}
                   placeholder="e.g. NAS-2291-AK"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
+                  className="w-full border border-[var(--gray-200)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
             </div>
           </div>
 
           {/* QR Access Permissions */}
-          <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-            <h2 className="font-semibold text-[#101326] mb-1 flex items-center gap-2 text-base">
+          <div className="bg-white rounded-2xl p-5 border border-[var(--gray-200)] shadow-sm">
+            <h2 className="font-semibold text-[var(--ink-900)] mb-1 flex items-center gap-2 text-base">
               <Shield className="w-4.5 h-4.5 text-brand" /> QR Public Access Permissions
             </h2>
-            <p className="text-xs text-[#8C91A8] mb-4 text-left">Choose which fields are visible on the public emergency QR card (no login required)</p>
+            <p className="text-xs text-[var(--gray-500)] mb-4 text-left">Choose which fields are visible on the public emergency QR card (no login required)</p>
             <div className="flex items-center gap-3 mb-3 text-left">
               <input type="checkbox" id="qrAccess" checked={form.qrPublicAccess} onChange={e => set('qrPublicAccess', e.target.checked)} className="accent-brand w-4 h-4 cursor-pointer" />
-              <label htmlFor="qrAccess" className="text-sm font-semibold text-[#101326] cursor-pointer">Enable public QR emergency card</label>
+              <label htmlFor="qrAccess" className="text-sm font-semibold text-[var(--ink-900)] cursor-pointer">Enable public QR emergency card</label>
             </div>
             {form.qrPublicAccess && (
               <div className="grid grid-cols-2 gap-2 ml-7 text-left">
@@ -317,7 +311,7 @@ export default function NewPatientPage() {
                   <div key={key} className="flex items-center gap-2">
                     <input type="checkbox" id={key} checked={form[key as keyof typeof form] as boolean}
                       onChange={e => set(key, e.target.checked)} className="accent-brand w-4 h-4 cursor-pointer" />
-                    <label htmlFor={key} className="text-sm text-[#5D6582] cursor-pointer font-medium">{label}</label>
+                    <label htmlFor={key} className="text-sm text-[var(--gray-600)] cursor-pointer font-medium">{label}</label>
                   </div>
                 ))}
               </div>
@@ -327,7 +321,7 @@ export default function NewPatientPage() {
           {/* Submit */}
           <div className="flex gap-3 pb-6">
             <button type="button" onClick={() => router.back()}
-              className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-3 rounded-xl text-sm font-semibold transition-colors">
+              className="flex-1 border border-[var(--gray-200)] hover:bg-[var(--primary-50)] text-[var(--gray-600)] py-3 rounded-xl text-sm font-semibold transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={saving}

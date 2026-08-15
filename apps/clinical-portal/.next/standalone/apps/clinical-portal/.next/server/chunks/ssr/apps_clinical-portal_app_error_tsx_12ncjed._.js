@@ -1,0 +1,3 @@
+module.exports=[39532,a=>{"use strict";var b=a.i(99248);a.s(["default",0,function({reset:a}){return(0,b.jsxs)("div",{className:"notice error",children:[(0,b.jsx)("h1",{children:"We could not load this view"}),(0,b.jsx)("p",{children:"No clinical action was completed."}),(0,b.jsx)("button",{className:"button",onClick:a,children:"Try again"})]})}])}];
+
+//# sourceMappingURL=apps_clinical-portal_app_error_tsx_12ncjed._.js.map

@@ -20,22 +20,17 @@ export type QueueEventType =
 export class OfflineQueue {
 
   static async enqueue(eventType: QueueEventType, payload: Record<string, unknown>): Promise<void> {
-    try {
-      await db.query(
-        `INSERT INTO sync_queue (event_type, payload) VALUES ($1, $2::jsonb)`,
-        [eventType, JSON.stringify(payload)]
-      );
-    } catch (err) {
-      // Non-fatal: log but never block the user action
-      console.error('[OfflineQueue] Failed to enqueue event:', err);
-    }
+    await db.query(
+      `INSERT INTO sync_queue (event_type, payload) VALUES ($1, $2::jsonb)`,
+      [eventType, JSON.stringify(payload)]
+    );
   }
 
   /** 
    * Process pending queue items. Called by cron or POST /api/audit/sync.
    * Returns counts for monitoring.
    */
-  static async drain(fabricSubmitFn: (eventType: string, payload: Record<string, unknown>) => Promise<string>): Promise<{ processed: number; failed: number }> {
+  static async drain(fabricSubmitFn: (eventType: string, payload: Record<string, unknown>, queueEventId: string) => Promise<string>): Promise<{ processed: number; failed: number }> {
     const pending = await db.query(
       `SELECT id, event_type, payload
          FROM sync_queue
@@ -49,7 +44,7 @@ export class OfflineQueue {
 
     for (const row of pending.rows) {
       try {
-        const txHash = await fabricSubmitFn(row.event_type, row.payload);
+        const txHash = await fabricSubmitFn(row.event_type, row.payload, String(row.id));
 
         await db.query(
           `UPDATE sync_queue SET synced_at = NOW(), payload = payload || $1::jsonb WHERE id = $2`,

@@ -6,6 +6,18 @@
   "exclude": [
     "node_modules",
     "doctor-web",
-    "backend"
+    "admin-web",
+    "government-web",
+    "nurse-web",
+    "staff-web",
+    "lab-web",
+    "pharmacy-web",
+    "src/screens/patient",
+    "backend",
+    "apps",
+    "services",
+    "packages",
+    "packages/palmchain-web-bff",
+    "packages/palmchain-web-client"
   ]
 }

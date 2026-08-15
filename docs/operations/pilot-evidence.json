@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "environment": "pilot-not-configured",
+  "criticalFindings": 0,
+  "highFindings": 0,
+  "gates": [
+    { "gate": "pilot-scope-approved", "status": "pending", "owner": "Ministry and pilot facility" },
+    { "gate": "legal-dpia-approved", "status": "pending", "owner": "Local counsel and privacy lead" },
+    { "gate": "ministry-approval", "status": "pending", "owner": "Ministry/DHCU/DPPI" },
+    { "gate": "clinical-safety-review", "status": "pending", "owner": "Clinical safety officer" },
+    { "gate": "independent-penetration-test", "status": "pending", "owner": "Independent security assessor" },
+    { "gate": "backup-restore-exercise", "status": "pending", "owner": "Operations" },
+    { "gate": "failover-exercise", "status": "pending", "owner": "Operations" },
+    { "gate": "incident-drill", "status": "pending", "owner": "Security and clinical safety" },
+    { "gate": "trained-users", "status": "pending", "owner": "Pilot facility training lead" },
+    { "gate": "support-roster", "status": "pending", "owner": "Service owner" },
+    { "gate": "monitoring-alerts", "status": "pending", "owner": "Operations" },
+    { "gate": "rollback-rehearsal", "status": "pending", "owner": "Release manager" },
+    { "gate": "migration-rehearsal", "status": "pending", "owner": "Data and clinical informatics" }
+  ]
+}

@@ -42,3 +42,9 @@ yarn-error.*
 .env
 backend/.env
 doctor-web/.env
+
+# generated identities and runtime credential stores
+**/priv_sk
+**/keystore/
+**/wallet/
+medichain-network/crypto-config/

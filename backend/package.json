@@ -4,12 +4,19 @@
   "description": "MediChain TypeScript Express API server",
   "main": "dist/index.js",
   "scripts": {
+    "prebuild": "npm --prefix ../packages/policy-engine run build && npm --prefix ../packages/outbox run build && npm --prefix ../services/file-pipeline run build",
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.js",
+    "check": "npm run typecheck && npm test"
   },
   "dependencies": {
+    "@medichain/policy-engine": "file:../packages/policy-engine",
+    "@medichain/outbox": "file:../packages/outbox",
+    "@medichain/file-pipeline": "file:../services/file-pipeline",
+    "@aws-sdk/client-s3": "3.1101.0",
     "@grpc/grpc-js": "^1.14.4",
     "@hyperledger/fabric-gateway": "^1.11.0",
     "bcrypt": "^6.0.0",
@@ -19,6 +26,7 @@
     "express-rate-limit": "^8.5.2",
     "express-validator": "^7.3.2",
     "helmet": "^8.2.0",
+    "jose": "^5.10.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
     "winston": "^3.19.0"

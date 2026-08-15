@@ -12,6 +12,7 @@ import { db } from '../config/db';
 import { OfflineQueue } from './OfflineQueue';
 import { FabricGateway } from './FabricGateway';
 import crypto from 'crypto';
+import { AnchorEventType, createLedgerAnchor } from '../domain/fabricGovernance';
 
 export interface AuditInput {
   patientId?: string;
@@ -81,22 +82,29 @@ export class AuditService {
       await FabricGateway.connect();
     }
 
-    const result = await OfflineQueue.drain(async (eventType, payload) => {
-      let txResult;
+    const result = await OfflineQueue.drain(async (eventType, payload, queueEventId) => {
+      const eventTypeMap: Record<string, AnchorEventType> = {
+        AUDIT_LOG: 'AUDIT',
+        CONSENT_GRANT: 'CONSENT_GRANTED',
+        CONSENT_REVOKE: 'CONSENT_REVOKED',
+        REVOCATION: 'CONSENT_REVOKED',
+        ACCESS_REQUEST_APPROVED: 'ACCESS_DECISION',
+      };
+      const anchorEventType = eventTypeMap[eventType];
+      if (!anchorEventType) throw new Error(`Unknown event type: ${eventType}`);
+
+      const eventId = String(payload.logId || payload.consentId || payload.requestId || queueEventId);
+      const anchor = createLedgerAnchor({
+        eventId,
+        eventType: anchorEventType,
+        sourcePayload: payload,
+        policyVersion: process.env.FABRIC_POLICY_VERSION || 'v1',
+        organization: process.env.FABRIC_ORGANIZATION || 'SandboxOrg',
+      }, process.env.FABRIC_ANCHOR_DIGEST_SECRET || process.env.JWT_SECRET || '');
+      const txResult = await FabricGateway.submitGovernedAnchor(anchor);
+
       switch (eventType) {
         case 'AUDIT_LOG':
-          // AddAuditLog(id, actor, actorRole, subject, action, details, status)
-          txResult = await FabricGateway.submitTx(
-            'audit',
-            'AddAuditLog',
-            String(payload.logId),
-            String(payload.actorId),
-            String(payload.actorRole),
-            String(payload.patientId || 'none'),
-            String(payload.accessType),
-            JSON.stringify({ isEmergency: payload.isEmergency }),
-            String(payload.outcome)
-          );
 
           // Update postgres access_logs table so it reflects synced status
           await db.query(
@@ -105,46 +113,8 @@ export class AuditService {
           );
           return txResult.txHash;
 
-        case 'CONSENT_GRANT':
-          // RegisterConsent(id, patientId, granteeType, granteeId, accessType, dataCategoriesJSON, expiresAt)
-          txResult = await FabricGateway.submitTx(
-            'consent',
-            'RegisterConsent',
-            String(payload.consentId),
-            String(payload.patientId),
-            String(payload.granteeType || 'doctor'),
-            String(payload.granteeId),
-            String(payload.accessType),
-            JSON.stringify(payload.dataCategories || ['all']),
-            String(payload.expiresAt || '')
-          );
-          return txResult.txHash;
-
-        case 'CONSENT_REVOKE':
-          // RevokeConsent(id, reason)
-          const target = payload.target as any;
-          if (target && target.consentId) {
-            txResult = await FabricGateway.submitTx(
-              'consent',
-              'RevokeConsent',
-              String(target.consentId),
-              String(payload.reason || 'Revoked by patient')
-            );
-            return txResult.txHash;
-          }
-          return 'skipped_blanket_revocation';
-
-        case 'ACCESS_REQUEST_APPROVED':
-          // ApproveAccessRequest(requestId)
-          txResult = await FabricGateway.submitTx(
-            'doctor',
-            'ApproveAccessRequest',
-            String(payload.requestId)
-          );
-          return txResult.txHash;
-
         default:
-          throw new Error(`Unknown event type: ${eventType}`);
+          return txResult.txHash;
       }
     });
 

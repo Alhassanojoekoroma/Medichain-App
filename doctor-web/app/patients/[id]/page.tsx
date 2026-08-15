@@ -1,829 +1,405 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import {
-  ArrowLeft, Phone, Mail, MapPin, AlertCircle, Pill, QrCode,
-  Calendar, FileText, Edit, Loader2, Lock, Send, CheckCircle2, X,
-} from 'lucide-react';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_PATIENTS, MOCK_RECORDS, MOCK_APPOINTMENTS } from '@/data/mockData';
-import { backendApi, BackendPatientDetail } from '@/services/backendApi';
-import type { Patient } from '@/types';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
-// ─── Access Request Modal ──────────────────────────────────────────────────────
+const I = {
+  phone: '<path d="M22 16.9v2a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 1h2a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.7a2 2 0 0 1-.5 2.1L7.1 8.7a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.9 2.2z"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  shield: '<path d="M12 2 20 5v6c0 5-3.4 9.2-8 11-4.6-1.8-8-6-8-11V5z"/><path d="m8.5 12 2.2 2.2 4.8-5"/>',
+  chevLeft: '<path d="M15 18l-6-6 6-6"/>',
+  alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  more: '<circle cx="12" cy="5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="19" r="1.3"/>',
+  sparkles: '<path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M5 14.5l.75 2.25L8 17.5l-2.25.75L5 20.5l-.75-2.25L2 17.5l2.25-.75z"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  download2: '<path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+};
 
-function AccessRequestModal({
-  patientId,
-  patientName,
-  onClose,
-  onSuccess,
-}: {
-  patientId: string;
-  patientName: string;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [reason, setReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reason.trim()) return;
-    setSubmitting(true);
-    setErr(null);
-    try {
-      await backendApi.requestPatientAccess({
-        patientId,
-        reason: reason.trim(),
-        categories: ['all'],
-      });
-      setSubmitted(true);
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 2000);
-    } catch (error: any) {
-      setErr(error.message || 'Failed to send access request. Please try again.');
-      setSubmitting(false);
-    }
-  };
-
+function Icon({ d, size = 16 }: { d: string; size?: number }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in-95 duration-200">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg hover:bg-[#EAEEF2] transition-colors"
-        >
-          <X className="w-4 h-4 text-[#8C91A8]" />
-        </button>
-
-        {submitted ? (
-          <div className="text-center py-6 space-y-3">
-            <CheckCircle2 className="w-12 h-12 text-brand mx-auto" />
-            <h3 className="text-lg font-bold text-[#101326]">Request Sent!</h3>
-            <p className="text-sm text-[#8C91A8]">
-              Your access request for <strong>{patientName}</strong> has been sent. The patient
-              will be notified on their MediChain app.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-[#EDE9FF] rounded-xl flex items-center justify-center">
-                <Lock className="w-5 h-5 text-[#8F76FF]" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[#101326]">Request Record Access</h3>
-                <p className="text-xs text-[#8C91A8]">Patient: {patientName}</p>
-              </div>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-xs text-amber-800">
-              You do not currently have consent to view this patient's full medical record. Submit a
-              request and the patient will approve or deny it via the MediChain patient app.
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[#5D6582] mb-1">
-                  Reason for Access Request <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g. Patient is presenting with chest pain and requires immediate medical history review..."
-                  className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
-                />
-              </div>
-
-              {err && (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  {err}
-                </p>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || !reason.trim()}
-                  className="flex-1 bg-brand hover:bg-brand-dark disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Send Request
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+const backendApi = {
+  getPatient: async (id: string) => {
+    return new Promise((resolve) => setTimeout(() => resolve({
+      id: '1456',
+      name: 'Fatima Koroma',
+      gender: 'Female',
+      dob: '12.02.1995',
+      location: 'Freetown, Sierra Leone',
+      lastSynced: 'Just now',
+      procedure: 'Hip replacement',
+      date: '28.08.2025',
+      doctor: 'Dr. Amadu Williams',
+      anaesthesiologist: 'Dr. John Davies',
+      status: 'In Progress'
+    }), 600));
+  }
+};
 
 export default function PatientDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
-
+  const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [accessDenied, setAccessDenied] = useState(false);
-  const [showAccessModal, setShowAccessModal] = useState(false);
-  const [backendData, setBackendData] = useState<BackendPatientDetail | null>(null);
-
-  // Dynamic roles & treatment state
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [showPrescribeModal, setShowPrescribeModal] = useState(false);
-  const [prescribeForm, setPrescribeForm] = useState({ title: '', treatmentType: 'medication', description: '' });
-  const [prescribing, setPrescribing] = useState(false);
-  const [prescribeError, setPrescribeError] = useState<string | null>(null);
-
-  // Fallback to mock data
-  const mockPatient = MOCK_PATIENTS.find((p) => p.id === id) as Patient | undefined;
-  const patientRecords = MOCK_RECORDS.filter((r) => r.patientId === id);
-  const patientAppointments = MOCK_APPOINTMENTS.filter((a) => a.patientId === id);
-
-  const fetchDetail = async () => {
-    setLoading(true);
-    try {
-      const data = await backendApi.getPatientDetail(id);
-      setBackendData(data);
-      setAccessDenied(false);
-    } catch (err: any) {
-      if (err.status === 403) {
-        setAccessDenied(true);
-      }
-      setBackendData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetchDetail();
+    backendApi.getPatient(id)
+      .then(data => {
+        setPatient(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, [id]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userStr = sessionStorage.getItem('mc_user');
-      if (userStr) {
-        try {
-          setCurrentUser(JSON.parse(userStr));
-        } catch (e) {}
-      }
-    }
-  }, []);
-
-  const handlePrescribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prescribeForm.title.trim()) return;
-    setPrescribing(true);
-    setPrescribeError(null);
-    try {
-      await backendApi.recordTreatment({
-        patientId: id,
-        treatmentType: prescribeForm.treatmentType,
-        title: prescribeForm.title.trim(),
-        description: prescribeForm.description.trim(),
-      });
-      await fetchDetail();
-      setShowPrescribeModal(false);
-      setPrescribeForm({ title: '', treatmentType: 'medication', description: '' });
-    } catch (err: any) {
-      setPrescribeError(err.message || 'Failed to record medication/treatment.');
-    } finally {
-      setPrescribing(false);
-    }
-  };
-
-  // Derive role from backend response (most accurate) or fall back to sessionStorage
-  const actorRole = backendData?.actorRole || currentUser?.role || 'doctor';
-  const isDoctor = actorRole === 'doctor' || actorRole === 'admin';
-  const isNurse  = actorRole === 'nurse';
-
-  // Loading state
   if (loading) {
     return (
-      <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-[#8C91A8]">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <p className="text-sm">Loading patient record from blockchain...</p>
-        </div>
-      </LayoutWrapper>
-    );
-  }
-
-  // Access denied — show overlay with request button
-  if (accessDenied) {
-    const patientName = mockPatient?.name || `Patient ${id}`;
-    const initials = (patientName || '').split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2).toUpperCase();
-
-    return (
-      <LayoutWrapper>
-        {showAccessModal && (
-          <AccessRequestModal
-            patientId={id}
-            patientName={patientName}
-            onClose={() => setShowAccessModal(false)}
-            onSuccess={() => {
-              setShowAccessModal(false);
-              router.push('/patients');
-            }}
-          />
-        )}
-
-        <div className="space-y-4 sm:space-y-6">
-          {/* Back + Header */}
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              onClick={() => router.push('/patients')}
-              className="p-2 hover:bg-brand-light rounded-xl transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-[#5D6582]" />
-            </button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#101326]">{patientName}</h1>
-              <p className="text-sm text-[#8C91A8]">Patient ID: {id}</p>
-            </div>
-          </div>
-
-          {/* Access Denied card */}
-          <div className="max-w-lg mx-auto">
-            <div className="bg-white rounded-2xl border border-[#D8DCE8] p-8 text-center space-y-6">
-              <div className="relative inline-flex">
-                <div className="w-20 h-20 rounded-full bg-[#EAEEF2] flex items-center justify-center font-bold text-2xl text-[#8C91A8]">
-                  {initials}
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
-                  <Lock className="w-4 h-4 text-white" />
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-bold text-[#101326]">Access Restricted</h2>
-                <p className="text-sm text-[#8C91A8] mt-2 max-w-xs mx-auto">
-                  You don't have consent to view <strong>{patientName}</strong>'s medical records.
-                  Request access and the patient will be notified.
-                </p>
-              </div>
-
-              <div className="bg-[#EAEEF2] rounded-xl p-4 text-sm text-[#5D6582] text-left space-y-2">
-                <p className="font-semibold text-[#101326] text-xs uppercase tracking-wider">
-                  How it works
-                </p>
-                <ol className="space-y-1 text-xs list-decimal list-inside">
-                  <li>Submit an access request with your clinical reason</li>
-                  <li>The patient receives a push notification on MediChain</li>
-                  <li>Once approved, you will have access to their records</li>
-                  <li>All access is logged on the Hyperledger Fabric blockchain</li>
-                </ol>
-              </div>
-
-              <button
-                id="request-access-btn"
-                onClick={() => setShowAccessModal(true)}
-                className="w-full bg-brand hover:bg-brand-dark text-white py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-              >
-                <Send className="w-4 h-4" />
-                Request Access to Records
-              </button>
-            </div>
-          </div>
-        </div>
-      </LayoutWrapper>
-    );
-  }
-
-  // Use backend data or fall back to mock
-  const patient = backendData
-    ? {
-        id: backendData.patient.id,
-        name: backendData.patient.fullName,
-        initials: (backendData.patient.fullName || '').split(' ').map((n) => n.charAt(0)).join('').slice(0, 2).toUpperCase(),
-        phone: backendData.patient.phone,
-        email: backendData.patient.email,
-        bloodType: backendData.patient.bloodType,
-        address: '',
-        status: 'Active',
-        allergies: backendData.patient.allergies.map((a) =>
-          typeof a === 'string' ? a : a.name
-        ),
-        medications: backendData.patient.medications.map((m) =>
-          typeof m === 'string' ? m : `${m.name}${m.dosage ? ` ${m.dosage}` : ''}`
-        ),
-        condition: (backendData.patient.chronicConditions || []).map((c: any) =>
-          typeof c === 'string' ? c : c.name
-        ).join(', ') || 'See records',
-        notes: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        age: backendData.patient.dob
-          ? new Date().getFullYear() - new Date(backendData.patient.dob).getFullYear()
-          : 0,
-        gender: 'Unknown',
-      }
-    : mockPatient;
-
-  if (!patient) {
-    return (
-      <LayoutWrapper>
-        <div className="text-center py-20">
-          <p className="text-xl font-bold text-[#101326]">Patient not found</p>
-          <button
-            onClick={() => router.push('/patients')}
-            className="mt-4 text-brand hover:underline text-sm"
-          >
-            ← Back to Patients
-          </button>
-        </div>
-      </LayoutWrapper>
-    );
-  }
-
-  // Use backend records or mock records
-  const records = backendData
-    ? backendData.records.map((r) => ({
-        id: r.id,
-        patientId: r.patient_id,
-        type: r.record_type,
-        description: r.title,
-        date: new Date(r.created_at).toLocaleDateString('en-GB', {
-          day: '2-digit', month: 'short', year: 'numeric',
-        }),
-        status: 'Synced',
-      }))
-    : patientRecords;
-
-  return (
-    <LayoutWrapper>
-      <div className="space-y-4 sm:space-y-6">
-        {/* Back + Header */}
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            onClick={() => router.push('/patients')}
-            className="p-2 hover:bg-brand-light rounded-xl transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-[#5D6582]" />
-          </button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#101326]">{patient.name}</h1>
-            <p className="text-sm text-[#8C91A8]">Patient ID: {patient.id}</p>
-          </div>
-          <div className="ml-auto flex gap-2">
-            {isDoctor && (
-              <button
-                onClick={() => setShowPrescribeModal(true)}
-                className="flex items-center gap-2 border border-[#8F76FF] text-[#8F76FF] hover:bg-[#EDE9FF] px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              >
-                <Pill className="w-4 h-4" />
-                <span className="hidden sm:inline">Prescribe</span>
-              </button>
-            )}
-            <button
-              onClick={() => router.push(`/public/patient-qr/${id}`)}
-              className="flex items-center gap-2 border border-[#D8DCE8] hover:border-brand px-3 py-2 rounded-xl text-sm font-medium text-[#5D6582] hover:text-brand transition-colors"
-            >
-              <QrCode className="w-4 h-4" />
-              <span className="hidden sm:inline">View QR</span>
-            </button>
-            {isDoctor && (
-              <button
-                onClick={() => alert('Edit patient demographics coming soon.')}
-                className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Nurse triage read-only notice */}
-        {isNurse && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-amber-900">Triage Read-Only Access (Nurse)</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                You are viewing this patient in triage mode. You can see allergies, medications, and treatment history.
-                Clinical diagnoses and full medical records are restricted to attending doctors only. All access is logged immutably on Hyperledger Fabric.
-              </p>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left: Demographics */}
-          <div className="lg:col-span-1 space-y-4">
-            {/* Profile card */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <div className="flex items-center gap-4 mb-4">
-                <div
-                  className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl ${
-                    (patient as any).status === 'Critical'
-                      ? 'bg-[#FEE2E2] text-[#E53E3E]'
-                      : 'bg-brand-light text-brand'
-                  }`}
-                >
-                  {patient.initials}
-                </div>
-                <div>
-                  <div className="font-bold text-[#101326] text-lg">{patient.name}</div>
-                  {(patient as any).age > 0 && (
-                    <div className="text-sm text-[#8C91A8]">
-                      {(patient as any).gender} • {(patient as any).age} years
-                    </div>
-                  )}
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-light text-brand">
-                    {(patient as any).status || 'Active'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-[#8C91A8]" />
-                  <span className="text-[#5D6582]">{patient.phone}</span>
-                </div>
-                {patient.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-[#8C91A8]" />
-                    <span className="text-[#5D6582]">{patient.email}</span>
-                  </div>
-                )}
-                {(patient as any).address && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-[#8C91A8] mt-0.5" />
-                    <span className="text-[#5D6582]">{(patient as any).address}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-[#D8DCE8] grid grid-cols-2 gap-3">
-                <div className="bg-[#EDE9FF] rounded-xl p-3 text-center">
-                  <div className="text-lg font-bold text-[#8F76FF]">{patient.bloodType}</div>
-                  <div className="text-xs text-[#8C91A8]">Blood Type</div>
-                </div>
-                {(patient as any).age > 0 && (
-                  <div className="bg-brand-light rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-brand">{(patient as any).age}</div>
-                    <div className="text-xs text-[#8C91A8]">Age</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Emergency Contact */}
-            {(patient as any).emergencyContactName && (
-              <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-                <h3 className="font-semibold text-[#101326] mb-3 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-[#E53E3E]" />
-                  Emergency Contact
-                </h3>
-                <p className="font-medium text-[#101326] text-sm">{(patient as any).emergencyContactName}</p>
-                <p className="text-sm text-[#5D6582]">{(patient as any).emergencyContactPhone}</p>
-              </div>
-            )}
-
-            {/* Insurance */}
-            {(patient as any).insuranceProvider && (
-              <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-                <h3 className="font-semibold text-[#101326] mb-2">Insurance</h3>
-                <p className="text-sm font-medium text-[#5D6582]">{(patient as any).insuranceProvider}</p>
-                <p className="text-xs text-[#8C91A8]">ID: {(patient as any).insuranceId}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Medical details */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Primary condition */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <h3 className="font-semibold text-[#101326] mb-3">Primary Condition</h3>
-              <p className="text-[#5D6582]">{(patient as any).condition}</p>
-              {(patient as any).notes && (
-                <div className="mt-3 p-3 bg-[#FFF3E6] border border-[#FDE8DC] rounded-xl">
-                  <p className="text-xs text-[#FA6E3C] font-medium mb-1">Clinical Note</p>
-                  <p className="text-sm text-[#5D6582]">{(patient as any).notes}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Allergies */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <h3 className="font-semibold text-[#101326] mb-3 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-[#FA6E3C]" />
-                Allergies
-              </h3>
-              {patient.allergies && patient.allergies.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {(patient.allergies as string[]).map((a) => (
-                    <span key={a} className="allergy-chip">
-                      {a}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-[#8C91A8]">No known allergies</p>
-              )}
-            </div>
-
-            {/* Treatments & Medication History */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-[#101326] flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-[#8F76FF]" />
-                  Treatments & Medication history
-                </h3>
-                {isDoctor && (
-                  <button
-                    onClick={() => setShowPrescribeModal(true)}
-                    className="text-xs text-brand hover:underline font-semibold"
-                  >
-                    + Issue Medication
-                  </button>
-                )}
-              </div>
-              <div className="space-y-3">
-                {backendData && backendData.treatments && backendData.treatments.length > 0 ? (
-                  backendData.treatments.map((t: any) => (
-                    <div key={t.id} className="p-3 bg-[#EDE9FF] rounded-xl border border-[#D8DCE8] space-y-1.5">
-                      <div className="flex items-start justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#8F76FF] bg-white px-2 py-0.5 rounded-lg border border-[#EDE9FF]">
-                          {t.treatment_type}
-                        </span>
-                        {t.ledger_tx_hash && (
-                          <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
-                            Synced to Ledger
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="font-semibold text-sm text-[#101326]">{t.title}</h4>
-                      {t.description && (
-                        <p className="text-xs text-[#5D6582] bg-white/70 p-2 rounded-lg italic">
-                          {t.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between text-[10px] text-[#8C91A8] pt-1">
-                        <span>Issued by: {t.doctor_name || 'Medical Practitioner'}</span>
-                        <span>{new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (patient.medications as string[]).length > 0 ? (
-                  (patient.medications as string[]).map((med, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-[#EDE9FF] rounded-xl">
-                      <div className="w-2 h-2 bg-[#8F76FF] rounded-full" />
-                      <span className="text-sm text-[#5D6582]">{med}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-[#8C91A8]">No medications or treatments recorded yet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Records */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-[#101326] flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-brand" />
-                  Medical Records ({records.length})
-                </h3>
-                {isDoctor && (
-                  <button
-                    onClick={() => router.push('/records/upload')}
-                    className="text-xs text-brand hover:underline font-medium"
-                  >
-                    + Upload
-                  </button>
-                )}
-              </div>
-              <div className="space-y-2">
-                {records.map((record: any) => (
-                  <div key={record.id} className="flex items-center gap-3 p-3 bg-[#EAEEF2] rounded-xl">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        record.status === 'Synced'
-                          ? 'bg-brand'
-                          : record.status === 'Pending'
-                          ? 'bg-[#FA6E3C]'
-                          : 'bg-[#8F76FF]'
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#101326]">{record.type || record.record_type}</p>
-                      <p className="text-xs text-[#8C91A8] truncate">{record.description || record.title}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-[#8C91A8]">{record.date}</p>
-                      <span className={`text-xs font-semibold ${record.status === 'Synced' ? 'text-brand' : 'text-[#FA6E3C]'}`}>
-                        {record.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {records.length === 0 && (
-                  <p className="text-sm text-[#8C91A8] text-center py-4">No records yet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Appointments */}
-            <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-[#101326] flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-brand" />
-                  Appointments ({patientAppointments.length})
-                </h3>
-                <button
-                  onClick={() => router.push('/appointments')}
-                  className="text-xs text-brand hover:underline font-medium"
-                >
-                  View all
-                </button>
-              </div>
-              <div className="space-y-2">
-                {patientAppointments.slice(0, 3).map((appt: any) => (
-                  <div key={appt.id} className="flex items-center gap-3 p-3 bg-[#EAEEF2] rounded-xl">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[#101326]">
-                        {appt.category} • {appt.type}
-                      </p>
-                      <p className="text-xs text-[#8C91A8]">
-                        {appt.date} {appt.startTime}–{appt.endTime}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        appt.status === 'Completed'
-                          ? 'bg-brand-light text-brand'
-                          : appt.status === 'In Progress'
-                          ? 'bg-[#FFF3E6] text-[#FA6E3C]'
-                          : appt.status === 'No-Show'
-                          ? 'bg-[#FEE2E2] text-[#E53E3E]'
-                          : 'bg-[#EDE9FF] text-[#8F76FF]'
-                      }`}
-                    >
-                      {appt.status}
-                    </span>
-                  </div>
-                ))}
-                {patientAppointments.length === 0 && (
-                  <p className="text-sm text-[#8C91A8] text-center py-4">No appointments</p>
-                )}
-              </div>
-            </div>
-          </div>
+      <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ animation: 'pulse 1.5s infinite', display: 'flex', gap: '20px', height: '80vh' }}>
+          <div style={{ width: '280px', background: 'var(--gray-200)', borderRadius: '12px' }}></div>
+          <div style={{ flex: 1, background: 'var(--gray-200)', borderRadius: '12px' }}></div>
+          <div style={{ width: '280px', background: 'var(--gray-200)', borderRadius: '12px' }}></div>
         </div>
       </div>
+    );
+  }
 
-      {showPrescribeModal && (
-        <PrescribeModal
-          onClose={() => setShowPrescribeModal(false)}
-          onSubmit={handlePrescribe}
-          form={prescribeForm}
-          setForm={setPrescribeForm}
-          submitting={prescribing}
-          error={prescribeError}
-        />
-      )}
-    </LayoutWrapper>
-  );
-}
+  if (error || !patient) {
+    return (
+      <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="mc-notice danger">Failed to load patient information.</div>
+      </div>
+    );
+  }
 
-function PrescribeModal({
-  onClose,
-  onSubmit,
-  form,
-  setForm,
-  submitting,
-  error,
-}: {
-  onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-  form: { title: string; treatmentType: string; description: string };
-  setForm: React.Dispatch<React.SetStateAction<{ title: string; treatmentType: string; description: string }>>;
-  submitting: boolean;
-  error: string | null;
-}) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in-95 duration-200">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg hover:bg-[#EAEEF2] transition-colors"
-        >
-          <X className="w-4 h-4 text-[#8C91A8]" />
-        </button>
+    <div style={{ padding: '24px', maxWidth: '1300px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+        <Link href="/patients">
+          <button className="btn btn-outline"><Icon d={I.chevLeft} /> Back</button>
+        </Link>
+        <h1 className="page-title" style={{ margin: 0 }}>Patient information</h1>
+      </div>
 
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 bg-[#EDE9FF] rounded-xl flex items-center justify-center">
-            <Pill className="w-5 h-5 text-[#8F76FF]" />
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: '20px', alignItems: 'start' }}>
+        
+        {/* LEFT COLUMN */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ height: '140px', background: 'var(--brand-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'white', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 800, boxShadow: 'var(--shadow-sm)' }}>
+                {patient.name.charAt(0)}
+              </div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div className="profile-name" style={{ textAlign: 'center', marginBottom: '12px' }}>
+                <div style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ink-900)' }}>{patient.name}</div>
+                <div className="idtag" style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '4px' }}>ID: {patient.id}</div>
+              </div>
+              
+              <div className="profile-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', marginBottom: '20px' }}>
+                <span className="chip" style={{ fontSize: '12px', padding: '2px 8px', background: 'var(--gray-100)', borderRadius: '4px', color: 'var(--gray-700)' }}>{patient.gender}</span>
+                <span className="chip" style={{ fontSize: '12px', padding: '2px 8px', background: 'var(--gray-100)', borderRadius: '4px', color: 'var(--gray-700)' }}>{patient.dob}</span>
+                <span className="chip" style={{ fontSize: '12px', padding: '2px 8px', background: 'var(--gray-100)', borderRadius: '4px', color: 'var(--gray-700)' }}>{patient.location}</span>
+              </div>
+
+              <div className="mc-chain-badge" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#F0FDF4', color: '#166534', padding: '8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500, marginBottom: '20px' }}>
+                <Icon d={I.shield} size={14} />
+                <span>Verified on-chain • {patient.lastSynced}</span>
+              </div>
+
+              <div className="profile-actions" style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}><Icon d={I.phone} /> Call</button>
+                <button className="btn btn-outline" style={{ padding: '0 12px' }}><Icon d={I.calendar} /></button>
+                <button className="icon-btn ghost" style={{ width: 36, height: 36, flexShrink: 0 }}><Icon d={I.more} /></button>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '20px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink-900)', marginBottom: '16px', margin: 0 }}>Planned procedure details</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+                  <div className="profile-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--gray-500)' }}>Planned procedure</span><span style={{ fontWeight: 500, color: 'var(--ink-900)', textAlign: 'right' }}>{patient.procedure}</span></div>
+                  <div className="profile-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--gray-500)' }}>Surgery date</span><span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{patient.date}</span></div>
+                  <div className="profile-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--gray-500)' }}>Attending physician</span><span style={{ fontWeight: 500, color: 'var(--ink-900)', textAlign: 'right' }}>{patient.doctor}</span></div>
+                  <div className="profile-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--gray-500)' }}>Anaesthesiologist</span><span style={{ fontWeight: 500, color: 'var(--ink-900)', textAlign: 'right' }}>{patient.anaesthesiologist}</span></div>
+                  <div className="profile-detail-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: 'var(--gray-500)' }}>Status</span><span className="badge badge-amber"><i className="dot" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'currentColor', marginRight: 4 }} />{patient.status}</span></div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-[#101326]">Record Patient Treatment</h3>
-            <p className="text-xs text-[#8C91A8]">Add a new prescription or clinical action</p>
+
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-head" style={{ padding: '16px', borderBottom: '1px solid var(--gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--gray-50)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '14px', color: 'var(--ink-900)' }}>
+                <div style={{ color: 'var(--red-600)' }}><Icon d={I.alert} size={16} /></div>
+                Important alerts
+              </div>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button className="icon-btn ghost" style={{ width: 28, height: 28 }}><Icon d={I.plus} size={14} /></button>
+                <button className="icon-btn ghost" style={{ width: 28, height: 28 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style={{ padding: '12px' }}>
+              <div className="alert-item" style={{ padding: '10px 12px', background: '#FEF2F2', borderLeft: '3px solid #DC2626', borderRadius: '4px', marginBottom: '8px', fontSize: '13px' }}>
+                <div style={{ fontWeight: 600, color: '#991B1B', marginBottom: '2px' }}>Blood thinner - Apixaban</div>
+                <div style={{ color: '#B91C1C' }}>Pause confirmed</div>
+              </div>
+              <div className="alert-item" style={{ padding: '10px 12px', background: '#FEF2F2', borderLeft: '3px solid #DC2626', borderRadius: '4px', marginBottom: '8px', fontSize: '13px' }}>
+                <div style={{ fontWeight: 600, color: '#991B1B', marginBottom: '2px' }}>DNR</div>
+                <div style={{ color: '#B91C1C' }}>Yes</div>
+              </div>
+              <div className="alert-item" style={{ padding: '10px 12px', background: '#EFF6FF', borderLeft: '3px solid #2563EB', borderRadius: '4px', fontSize: '13px' }}>
+                <div style={{ fontWeight: 600, color: '#1E40AF', marginBottom: '2px' }}>Lab tests</div>
+                <div style={{ color: '#1D4ED8' }}>Update Hb/INR</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-[#5D6582] mb-1">
-              Treatment Type <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={form.treatmentType}
-              onChange={(e) => setForm(f => ({ ...f, treatmentType: e.target.value }))}
-              className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
-            >
-              <option value="medication">Medication / Prescription</option>
-              <option value="procedure">Clinical Procedure / Surgery</option>
-              <option value="therapy">Therapy / Rehabilitation</option>
-              <option value="other">Other Treatment</option>
-            </select>
+        {/* CENTER COLUMN */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-head" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: 'var(--ink-900)' }}>Key clinical overview</h2>
+              <button className="icon-btn ghost" style={{ width: 32, height: 32 }}><Icon d={I.edit} size={16} /></button>
+            </div>
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '14px' }}>
+              <div className="kv-row" style={{ display: 'flex' }}><div style={{ width: '180px', color: 'var(--gray-500)' }}>Language</div><div style={{ flex: 1, fontWeight: 500, color: 'var(--ink-900)' }}>Krio, English</div></div>
+              <div className="kv-row" style={{ display: 'flex' }}><div style={{ width: '180px', color: 'var(--gray-500)' }}>Allergies</div><div style={{ flex: 1, fontWeight: 500, color: 'var(--red-600)' }}>Penicillin</div></div>
+              <div className="kv-row" style={{ display: 'flex' }}><div style={{ width: '180px', color: 'var(--gray-500)' }}>Pre-existing conditions</div><div style={{ flex: 1, fontWeight: 500, color: 'var(--ink-900)' }}>Hypertension, Type 2 Diabetes</div></div>
+              <div className="kv-row" style={{ display: 'flex' }}><div style={{ width: '180px', color: 'var(--gray-500)' }}>Medications</div><div style={{ flex: 1, fontWeight: 500, color: 'var(--ink-900)' }}>Lisinopril 10mg, Metformin 500mg, Apixaban 5mg</div></div>
+              <div className="kv-row" style={{ display: 'flex', alignItems: 'center' }}><div style={{ width: '180px', color: 'var(--gray-500)' }}>DNR/DNI</div><div style={{ flex: 1 }}><span className="badge badge-blue">Active</span></div></div>
+              <div className="kv-row" style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '180px', color: 'var(--gray-500)' }}>ASA classification</div>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="badge badge-red">ASA III</span>
+                  <span style={{ fontSize: '12px', color: 'var(--gray-400)' }}>Uploaded: 14.08.2025</span>
+                </div>
+              </div>
+              <div className="kv-row" style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '180px', color: 'var(--gray-500)' }}>ICU need</div>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, color: 'var(--ink-900)' }}>
+                  Required
+                  <span className="badge badge-amber">Confirmation pending</span>
+                </div>
+              </div>
+              <div className="kv-row" style={{ display: 'flex' }}><div style={{ width: '180px', color: 'var(--gray-500)' }}>Last lab date</div><div style={{ flex: 1, fontWeight: 500, color: 'var(--ink-900)' }}>15.08.2025</div></div>
+            </div>
+
+            {/* AI Assist panel */}
+            <div className="mc-ai-panel" style={{ margin: '0 20px 20px 20px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6366F1', fontWeight: 600, fontSize: '13px', marginBottom: '12px' }}>
+                <Icon d={I.sparkles} size={14} /> AI Assist suggested updates
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {['Chief complaint', 'Assessment', 'Plan'].map(field => (
+                  <div key={field} style={{ background: 'white', padding: '12px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div className="mc-ai-chip" style={{ fontSize: '11px', fontWeight: 600, color: '#4F46E5', background: '#EEF2FF', padding: '2px 6px', borderRadius: '4px' }}>{field}</div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="icon-btn ghost" style={{ width: 24, height: 24, color: 'var(--gray-400)' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a5 5 0 0 1 5 5v2m-7-9l-4-4-4 4"/></svg>
+                        </button>
+                        <button className="icon-btn ghost" style={{ width: 24, height: 24, color: '#16A34A', background: '#DCFCE7' }}><Icon d={I.check} size={14}/></button>
+                      </div>
+                    </div>
+                    <div style={{ color: 'var(--ink-900)' }}>Patient reports persistent hip pain radiating to the thigh, exacerbated by movement.</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-[#5D6582] mb-1">
-              Title / Medication Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Paracetamol 500mg or Appendectomy"
-              value={form.title}
-              onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
-              className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
-            />
-          </div>
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-head" style={{ padding: '16px 20px', borderBottom: '1px solid var(--gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: 'var(--ink-900)' }}>Patient journey</h2>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="icon-btn ghost" style={{ width: 32, height: 32 }}><Icon d={I.search} size={16} /></button>
+                <button className="icon-btn ghost" style={{ width: 32, height: 32 }}><Icon d={I.filter} size={16} /></button>
+                <button className="icon-btn ghost" style={{ width: 32, height: 32 }}><Icon d={I.edit} size={16} /></button>
+              </div>
+            </div>
+            <div style={{ padding: '24px 20px' }}>
+              
+              <div className="checklist-step" style={{ display: 'flex', gap: '16px', position: 'relative', paddingBottom: '24px' }}>
+                <div className="line" style={{ position: 'absolute', left: 9, top: 24, bottom: 0, width: 2, background: 'var(--brand)' }}></div>
+                <div className="step-dot done" style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--brand)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, flexShrink: 0, marginTop: 2 }}>
+                  <Icon d={I.check} size={12} />
+                </div>
+                <div className="step-body" style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div className="t" style={{ fontWeight: 600, color: 'var(--ink-900)', fontSize: '14px', marginBottom: '2px' }}>Intake</div>
+                    <div className="s" style={{ fontSize: '12px', color: 'var(--gray-500)' }}>4 of 4 tasks completed</div>
+                  </div>
+                  <span className="badge badge-green">Done</span>
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-[#5D6582] mb-1">
-              Instructions & Dosage Notes
-            </label>
-            <textarea
-              rows={3}
-              placeholder="e.g. Take 1 tablet twice daily after meals for 5 days."
-              value={form.description}
-              onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-              className="w-full border border-[#D8DCE8] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
-            />
-          </div>
+              <div className="checklist-step" style={{ display: 'flex', gap: '16px', position: 'relative', paddingBottom: '24px' }}>
+                <div className="line" style={{ position: 'absolute', left: 9, top: 24, bottom: 0, width: 2, background: 'var(--brand)' }}></div>
+                <div className="step-dot done" style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--brand)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, flexShrink: 0, marginTop: 2 }}>
+                  <Icon d={I.check} size={12} />
+                </div>
+                <div className="step-body" style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div className="t" style={{ fontWeight: 600, color: 'var(--ink-900)', fontSize: '14px', marginBottom: '2px' }}>Triage</div>
+                    <div className="s" style={{ fontSize: '12px', color: 'var(--gray-500)' }}>2 of 2 tasks completed</div>
+                  </div>
+                  <span className="badge badge-green">Done</span>
+                </div>
+              </div>
 
-          {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+              <div className="checklist-step" style={{ display: 'flex', gap: '16px', position: 'relative', paddingBottom: '24px' }}>
+                <div className="line" style={{ position: 'absolute', left: 9, top: 24, bottom: 0, width: 2, background: 'var(--brand)' }}></div>
+                <div className="step-dot done" style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--brand)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, flexShrink: 0, marginTop: 2 }}>
+                  <Icon d={I.check} size={12} />
+                </div>
+                <div className="step-body" style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div className="t" style={{ fontWeight: 600, color: 'var(--ink-900)', fontSize: '14px', marginBottom: '2px' }}>Consultation</div>
+                    <div className="s" style={{ fontSize: '12px', color: 'var(--gray-500)' }}>3 of 3 tasks completed</div>
+                  </div>
+                  <span className="badge badge-green">Done</span>
+                </div>
+              </div>
 
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] py-2.5 rounded-xl text-sm font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !form.title.trim()}
-              className="flex-1 bg-[#8F76FF] hover:bg-[#7b5eff] disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Record'
-              )}
-            </button>
+              <div className="checklist-step" style={{ display: 'flex', gap: '16px', position: 'relative', paddingBottom: '24px' }}>
+                <div className="line" style={{ position: 'absolute', left: 9, top: 24, bottom: 0, width: 2, background: 'var(--gray-200)' }}></div>
+                <div className="step-dot current" style={{ width: 20, height: 20, borderRadius: '50%', background: 'white', border: '2px solid var(--brand)', zIndex: 1, flexShrink: 0, marginTop: 2, position: 'relative' }}>
+                  <div style={{ position: 'absolute', inset: 3, background: 'var(--brand)', borderRadius: '50%' }}></div>
+                </div>
+                <div className="step-body" style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div className="t" style={{ fontWeight: 600, color: 'var(--brand)', fontSize: '14px', marginBottom: '2px' }}>Lab</div>
+                    <div className="s" style={{ fontSize: '12px', color: 'var(--gray-500)' }}>1 of 3 tasks completed</div>
+                  </div>
+                  <span className="badge badge-amber">In progress</span>
+                </div>
+              </div>
+
+              <div className="checklist-step" style={{ display: 'flex', gap: '16px', position: 'relative', paddingBottom: '24px' }}>
+                <div className="line" style={{ position: 'absolute', left: 9, top: 24, bottom: 0, width: 2, background: 'var(--gray-200)' }}></div>
+                <div className="step-dot pending" style={{ width: 20, height: 20, borderRadius: '50%', background: 'white', border: '2px solid var(--gray-300)', zIndex: 1, flexShrink: 0, marginTop: 2 }}></div>
+                <div className="step-body" style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.5 }}>
+                  <div>
+                    <div className="t" style={{ fontWeight: 600, color: 'var(--ink-900)', fontSize: '14px', marginBottom: '2px' }}>Pharmacy</div>
+                    <div className="s" style={{ fontSize: '12px', color: 'var(--gray-500)' }}>0 of 2 tasks completed</div>
+                  </div>
+                  <span className="badge badge-gray">Pending</span>
+                </div>
+              </div>
+
+              <div className="checklist-step" style={{ display: 'flex', gap: '16px', position: 'relative' }}>
+                <div className="step-dot pending" style={{ width: 20, height: 20, borderRadius: '50%', background: 'white', border: '2px solid var(--gray-300)', zIndex: 1, flexShrink: 0, marginTop: 2 }}></div>
+                <div className="step-body" style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.5 }}>
+                  <div>
+                    <div className="t" style={{ fontWeight: 600, color: 'var(--ink-900)', fontSize: '14px', marginBottom: '2px' }}>Discharge</div>
+                    <div className="s" style={{ fontSize: '12px', color: 'var(--gray-500)' }}>0 of 1 tasks completed</div>
+                  </div>
+                  <span className="badge badge-gray">Pending</span>
+                </div>
+              </div>
+
+            </div>
           </div>
-        </form>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-head" style={{ padding: '16px', borderBottom: '1px solid var(--gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--ink-900)' }}>Key documents</h2>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button className="icon-btn ghost" style={{ width: 28, height: 28 }}><Icon d={I.edit} size={14} /></button>
+                <button className="icon-btn ghost" style={{ width: 28, height: 28 }}><Icon d={I.plus} size={14} /></button>
+              </div>
+            </div>
+            
+            <div style={{ padding: '8px 0' }}>
+              <div className="doc-group-head" style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'var(--gray-50)' }}>
+                <span style={{ display: 'inline-block', width: '16px', fontSize: '9px' }}>▼</span> Consent & Legal
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="doc-item" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--gray-100)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="doc-ic blue" style={{ width: 32, height: 32, borderRadius: '6px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon d={I.file} size={16} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink-900)' }}>Consent form.txt</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.eye} size={14} /></button>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.download2} size={14} /></button>
+                  </div>
+                </div>
+                <div className="doc-item" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--gray-100)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="doc-ic red" style={{ width: 32, height: 32, borderRadius: '6px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon d={I.file} size={16} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink-900)' }}>Risk certification.pdf</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.eye} size={14} /></button>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.download2} size={14} /></button>
+                  </div>
+                </div>
+                <div className="doc-item" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="doc-ic blue" style={{ width: 32, height: 32, borderRadius: '6px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon d={I.file} size={16} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink-900)' }}>DNRForm.txt</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.eye} size={14} /></button>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.download2} size={14} /></button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="doc-group-head" style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'var(--gray-50)', borderTop: '1px solid var(--gray-200)' }}>
+                <span style={{ display: 'inline-block', width: '16px', fontSize: '9px' }}>▼</span> Diagnostics
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="doc-item" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--gray-100)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="doc-ic red" style={{ width: 32, height: 32, borderRadius: '6px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon d={I.file} size={16} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink-900)' }}>Labs12.05.pdf</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.eye} size={14} /></button>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.download2} size={14} /></button>
+                  </div>
+                </div>
+                <div className="doc-item" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="doc-ic blue" style={{ width: 32, height: 32, borderRadius: '6px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon d={I.file} size={16} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink-900)' }}>X-rayPelvis.txt</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.eye} size={14} /></button>
+                    <button className="icon-btn ghost" style={{ width: 28, height: 28, color: 'var(--gray-400)' }}><Icon d={I.download2} size={14} /></button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="doc-group-head" style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'var(--gray-50)', borderTop: '1px solid var(--gray-200)' }}>
+                <span style={{ display: 'inline-block', width: '16px', fontSize: '9px' }}>▶</span> Medication & Risk
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

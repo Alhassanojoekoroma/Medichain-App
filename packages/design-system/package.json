@@ -1,0 +1,23 @@
+{
+  "name": "@medichain/design-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mobile": "./src/mobile.ts",
+    "./web": "./src/web.tsx",
+    "./styles.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "build": "node scripts/generate-css.mjs && tsc --noEmit",
+    "test": "node scripts/generate-css.mjs --check"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "~5.9.2"
+  }
+}

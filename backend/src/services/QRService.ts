@@ -25,16 +25,19 @@ export class QRService {
    * Generate a NORMAL QR for routine doctor sharing.
    * 
    * @param patientId  — authenticated patient's UUID
-   * @param ttlSeconds — 0 = permanent (until revoked), otherwise time-limited
+   * @param ttlSeconds — bounded lifetime in seconds
    * @param isOneTime  — if true, invalidated after first successful scan
    */
   static async generateNormalQR(
     patientId: string,
-    ttlSeconds = 0,
+    ttlSeconds = 900,
     isOneTime = false
   ): Promise<GenerateQRResult> {
     const rawToken = TokenService.generateRawToken();
-    const payload = TokenService.buildQRPayload(rawToken, 'NORMAL', ttlSeconds || undefined);
+    if (ttlSeconds < 60 || ttlSeconds > 3600) {
+      throw new Error('Normal QR lifetime must be between 60 and 3600 seconds.');
+    }
+    const payload = TokenService.buildQRPayload(rawToken, 'NORMAL', ttlSeconds);
     const tokenHash = TokenService.hashToken(rawToken);
 
     const result = await db.query(
@@ -112,22 +115,19 @@ export class QRService {
     }
 
     const tokenHash = TokenService.hashToken(payload.token);
+    // Atomically claim a one-time token. Concurrent scans cannot both succeed.
     const result = await db.query(
-      `SELECT id, patient_id, is_revoked, is_one_time, used_at
-         FROM access_tokens
-        WHERE token_hash = $1 AND token_type = 'NORMAL'`,
+      `UPDATE access_tokens
+          SET used_at = CASE WHEN is_one_time THEN NOW() ELSE used_at END
+        WHERE token_hash = $1 AND token_type = 'NORMAL' AND is_revoked = FALSE
+          AND (expires_at IS NULL OR expires_at > NOW())
+          AND (is_one_time = FALSE OR used_at IS NULL)
+      RETURNING id, patient_id, is_one_time, used_at`,
       [tokenHash]
     );
 
-    if (result.rowCount === 0) throw new Error('TOKEN_NOT_FOUND');
+    if (result.rowCount === 0) throw new Error('TOKEN_INVALID_OR_ALREADY_USED');
     const row = result.rows[0];
-    if (row.is_revoked) throw new Error('TOKEN_REVOKED');
-    if (row.is_one_time && row.used_at) throw new Error('TOKEN_ALREADY_USED');
-
-    // Mark as used for one-time tokens
-    if (row.is_one_time) {
-      await db.query(`UPDATE access_tokens SET used_at = NOW() WHERE id = $1`, [row.id]);
-    }
 
     return row.patient_id;
   }

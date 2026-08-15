@@ -1,0 +1,2 @@
+'use client';
+export default function ErrorBoundary({ reset }: { error: Error & { digest?: string }; reset: () => void }) { return <section role="alert" aria-labelledby="page-error-title" className="min-h-screen grid place-items-center p-6"><div><h1 id="page-error-title" className="text-2xl font-bold">Clinical page unavailable</h1><p className="mt-2">No clinical action was confirmed. Check the patient and try again.</p><button className="mt-4 rounded bg-slate-900 px-4 py-2 text-white" onClick={reset}>Try again</button></div></section> }

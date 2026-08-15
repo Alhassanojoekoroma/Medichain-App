@@ -154,13 +154,12 @@ export default function SecurityScreen({ navigation }: any) {
 
           <Card style={styles.flatCard}>
             <CardBody>
-              <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('ChangePassword')}>
+              <View style={styles.settingItem}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.settingLabel}>Change Password</Text>
-                  <Text style={styles.settingDesc}>Update your account password</Text>
+                  <Text style={styles.settingLabel}>Password</Text>
+                  <Text style={styles.settingDesc}>Managed by the approved identity service</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={Colors.neutral400} />
-              </TouchableOpacity>
+              </View>
             </CardBody>
           </Card>
         </View>

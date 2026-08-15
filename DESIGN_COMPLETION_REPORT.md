@@ -1,5 +1,7 @@
 # ✅ MEDICHAIN APP - DESIGN SYSTEM APPLICATION COMPLETE
 
+> **Historical prototype document — not release evidence.** Phase 0 issued a FAIL/STOP SHIP decision and Phase 1 containment disables unsafe legacy, demo, AI, emergency and clinical paths. Do not use credentials or deployment instructions in this file. The controlling status is `docs/audit/07_Release_Decision.md`.
+
 ## 🎯 Mission Accomplished
 
 **User Request:** "Apply the design on the home screen to all the other screens... make sure that everything is clean organized... the navigation should be float and the color for moving from the navigation to another should be blue."

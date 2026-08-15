@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/dejen/OneDrive/Documents/Medichain%20App/apps/clinical-portal/app/not-found.tsx"],"sourcesContent":["export default function NotFound() { return <><h1>Page not found</h1><p className=\"lead\">Use Home, Find Patient, or Upload or Add Record.</p></>; }\n"],"names":["NotFound","className"],"mappings":";;;;;;AAAe,SAASA;IAAa,qBAAO;;0BAAE,4QAAC;0BAAG;;;;;;0BAAmB,4QAAC;gBAAEC,WAAU;0BAAO;;;;;;;;AAAyD"}}]
+}

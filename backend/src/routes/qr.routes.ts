@@ -6,6 +6,8 @@ import { Router, Response } from 'express';
 import { QRService } from '../services/QRService';
 import { requirePatient, AuthRequest } from '../middleware/auth.middleware';
 import { body, validationResult } from 'express-validator';
+import { disabledPendingSecurityReview } from '../middleware/containment.middleware';
+import { enforcePolicy } from '../middleware/authorization.middleware';
 
 const router = Router();
 
@@ -17,14 +19,15 @@ const router = Router();
 router.post(
   '/generate',
   requirePatient,
-  body('ttlSeconds').optional().isInt({ min: 0, max: 604800 }),
+  enforcePolicy({ resourceType: 'qr-token', action: 'create', patientIdFrom: 'actor' }),
+  body('ttlSeconds').optional().isInt({ min: 60, max: 3600 }),
   body('isOneTime').optional().isBoolean(),
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     try {
-      const { ttlSeconds = 0, isOneTime = false } = req.body;
+      const { ttlSeconds = 900, isOneTime = false } = req.body;
       const result = await QRService.generateNormalQR(req.patientId!, ttlSeconds, isOneTime);
       res.json({
         success: true,
@@ -43,7 +46,7 @@ router.post(
  * Generate/rotate the EMERGENCY bracelet QR for the authenticated patient.
  * Old emergency token is revoked automatically.
  */
-router.post('/emergency', requirePatient, async (req: AuthRequest, res: Response) => {
+router.post('/emergency', requirePatient, disabledPendingSecurityReview('Emergency QR issuance'), async (req: AuthRequest, res: Response) => {
   try {
     const result = await QRService.generateEmergencyQR(req.patientId!);
     res.json({
@@ -61,7 +64,7 @@ router.post('/emergency', requirePatient, async (req: AuthRequest, res: Response
  * DELETE /api/qr/token/:tokenId
  * Revoke a specific QR token by its DB ID.
  */
-router.delete('/token/:tokenId', requirePatient, async (req: AuthRequest, res: Response) => {
+router.delete('/token/:tokenId', requirePatient, enforcePolicy({ resourceType: 'qr-token', action: 'revoke', patientIdFrom: 'actor' }), async (req: AuthRequest, res: Response) => {
   try {
     const { db } = await import('../config/db');
     const r = await db.query(
@@ -80,7 +83,7 @@ router.delete('/token/:tokenId', requirePatient, async (req: AuthRequest, res: R
  * GET /api/qr/mine
  * List all active QR tokens for the authenticated patient.
  */
-router.get('/mine', requirePatient, async (req: AuthRequest, res: Response) => {
+router.get('/mine', requirePatient, enforcePolicy({ resourceType: 'qr-token', action: 'read', patientIdFrom: 'actor' }), async (req: AuthRequest, res: Response) => {
   try {
     const { db } = await import('../config/db');
     const result = await db.query(

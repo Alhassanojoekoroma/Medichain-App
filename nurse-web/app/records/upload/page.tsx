@@ -3,8 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_PATIENTS } from '@/data/mockData';
+import LayoutWrapper from '@/components/dashboard/layout-wrapper';
 import { backendApi } from '@/services/backendApi';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -38,9 +37,10 @@ export default function UploadRecordPage() {
   const [statusMessage, setStatusMessage] = useState('');
   const [createdRecordInfo, setCreatedRecordInfo] = useState<{
     hash: string;
-    ipfsCid: string;
-    txHash: string;
-    blockNumber: number;
+    ipfsCid?: string;
+    txHash?: string;
+    blockNumber?: number;
+    simulated?: boolean;
   } | null>(null);
 
   // Load patients and check for query param
@@ -91,15 +91,7 @@ export default function UploadRecordPage() {
         const scanRes = await backendApi.scanQR(parsedJson);
         targetPatientId = scanRes.patientId;
       } else {
-        // It's a raw token/UUID or mock ID.
-        // Let's resolve it. Let's see if it's one of the mock IDs P001-P008
-        if (/^P00[1-8]$/i.test(input)) {
-          // Map to UUID
-          const num = input.substring(3);
-          targetPatientId = `bb010000-0000-0000-0000-00000000000${num}`;
-        } else {
-          targetPatientId = input;
-        }
+        targetPatientId = input;
       }
 
       // Now fetch details to ensure we have access and to get the name
@@ -120,31 +112,23 @@ export default function UploadRecordPage() {
     }
   };
 
-  // Generate simple mock SHA-256 hash for demonstration
-  const generateMockHash = (fileName: string, fileSize: number) => {
-    const seed = fileName + fileSize + Date.now();
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      const char = seed.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash).toString(16).padStart(16, '0') + Math.abs(hash * 3).toString(16).padStart(16, '0');
-  };
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       setUploadedFile(file);
       setSyncStatus('hashing');
       setStatusMessage('Computing cryptographic hash (SHA-256)...');
       
-      setTimeout(() => {
-        const hash = generateMockHash(file.name, file.size);
-        setFileHash(hash);
+      try {
+        const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+        setFileHash(Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(''));
         setSyncStatus('idle');
         setStatusMessage('');
-      }, 1000);
+      } catch {
+        setFileHash('');
+        setSyncStatus('error');
+        setStatusMessage('The file could not be hashed. Choose the file again.');
+      }
     }
   }, []);
 
@@ -175,39 +159,23 @@ export default function UploadRecordPage() {
     e.preventDefault();
     if (!selectedPatientId || !uploadedFile || !fileHash) return;
 
-    // Start simulation progress bar
-    setSyncStatus('ipfs');
-    setStatusMessage('Uploading encrypted payload to IPFS...');
-    setSyncProgress(15);
+    setSyncStatus('fabric');
+    setStatusMessage('Submitting the record to the secure backend…');
+    setSyncProgress(25);
 
     try {
-      // IPFS Progress simulation
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSyncProgress(40);
-      setStatusMessage('Payload staged on IPFS (CID: QmXf8...h6ySv)');
-
-      // Fabric Anchoring Progress simulation
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSyncStatus('fabric');
-      setSyncProgress(65);
-      setStatusMessage('Invoking MediChain Hyperledger Fabric Smart Contract (cc_medical_records)...');
-
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSyncProgress(85);
-      setStatusMessage('Replicating transactions across channel peers (Connaught Hospital, COMAHS, MoHS)...');
-
-      // Actual backend anchoring
       const response = await backendApi.uploadRecord({
         patientId: selectedPatientId,
         recordType: recordType,
         title: uploadedFile.name,
-        description: description
+        description: description,
+        integrityHash: fileHash,
       });
 
       if (response.success) {
         setSyncProgress(100);
         setSyncStatus('success');
-        setStatusMessage('Medical Record successfully verified and anchored to Hyperledger Fabric channel!');
+        setStatusMessage('The backend accepted the medical record.');
         setCreatedRecordInfo({
           hash: response.record.hash,
           ipfsCid: response.record.ipfsCid,
@@ -225,7 +193,7 @@ export default function UploadRecordPage() {
   };
 
   return (
-    <LayoutWrapper title="Upload Medical Record">
+    <LayoutWrapper>
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Back Link */}
         <Link
@@ -240,8 +208,8 @@ export default function UploadRecordPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="border-b border-slate-100 bg-slate-50/50 p-5 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Anchor New Medical Record</h2>
-              <p className="text-xs text-slate-500">Immutable document pinning backed by Hyperledger Fabric &amp; IPFS</p>
+              <h2 className="text-lg font-bold text-slate-900">Register a medical record</h2>
+              <p className="text-xs text-slate-500">Hash the selected document and submit its record metadata to the secure backend.</p>
             </div>
             <Database className="h-5 w-5 text-brand" />
           </div>
@@ -254,30 +222,30 @@ export default function UploadRecordPage() {
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900">Record Anchored Successfully</h3>
+                <h3 className="text-xl font-bold text-slate-900">Record accepted</h3>
                 <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  The medical record has been securely uploaded, cryptographically hashed, and written onto the distributed ledger channel.
+                  The backend saved the record metadata and returned the verification details below.
                 </p>
               </div>
 
               {createdRecordInfo && (
                 <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-left font-mono text-xs space-y-3 max-w-lg mx-auto">
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                  {createdRecordInfo.ipfsCid && <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="font-semibold text-slate-600">IPFS Gateway CID</span>
                     <span className="text-brand select-all">{createdRecordInfo.ipfsCid.substring(0, 24)}...</span>
-                  </div>
+                  </div>}
                   <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="font-semibold text-slate-600">Document SHA-256</span>
                     <span className="text-slate-700 select-all">{createdRecordInfo.hash.substring(0, 24)}...</span>
                   </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                  {createdRecordInfo.txHash && <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="font-semibold text-slate-600">Transaction ID</span>
                     <span className="text-slate-700 select-all">{createdRecordInfo.txHash}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1">
+                  </div>}
+                  {createdRecordInfo.blockNumber !== undefined && <div className="flex justify-between items-center py-1">
                     <span className="font-semibold text-slate-600">Ledger Block Height</span>
                     <span className="text-emerald-700 font-bold">#{createdRecordInfo.blockNumber}</span>
-                  </div>
+                  </div>}
                 </div>
               )}
 
@@ -304,7 +272,7 @@ export default function UploadRecordPage() {
                 </Link>
               </div>
             </div>
-          ) : syncStatus !== 'idle' && syncStatus !== 'hashing' ? (
+          ) : syncStatus === 'fabric' || syncStatus === 'ipfs' ? (
             /* Sync Progression display */
             <div className="p-8 text-center space-y-6">
               <div className="h-14 w-14 bg-brand-light text-brand rounded-full flex items-center justify-center mx-auto border border-[#cbeed4] shadow-sm animate-pulse">
@@ -312,7 +280,7 @@ export default function UploadRecordPage() {
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-base font-bold text-slate-800">Ledger Synchronization In Progress</h3>
+                <h3 className="text-base font-bold text-slate-800">Submitting record</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">{statusMessage}</p>
               </div>
 
@@ -330,13 +298,14 @@ export default function UploadRecordPage() {
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 max-w-md mx-auto text-left text-xs text-amber-800 flex items-start gap-2">
                 <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
                 <span>
-                  <strong>Do not navigate away:</strong> Cryptographic signatures are currently being validated by MediChain Fabric Gateway peers.
+                  <strong>Keep this page open:</strong> the backend is validating consent and saving the record.
                 </span>
               </div>
             </div>
           ) : (
             /* Upload Form input */
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-5">
+              {syncStatus === 'error' && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">{statusMessage}</p>}
               
               {/* Patient selection & Token Resolution */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-4 rounded-xl border border-slate-200/60">
@@ -425,10 +394,10 @@ export default function UploadRecordPage() {
                 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    IPFS Encrypted Payload (File) *
+                    Document integrity
                   </label>
                   <div className="text-xs text-slate-500 leading-5">
-                    Records are automatically encrypted using AES-256 before being routed to off-chain IPFS nodes.
+                    The document is hashed in this browser. A managed encrypted document store must provide a CID before the file itself can be retained.
                   </div>
                 </div>
               </div>
@@ -539,3 +508,4 @@ export default function UploadRecordPage() {
     </LayoutWrapper>
   );
 }
+

@@ -4,7 +4,7 @@
  * Communicates with Next.js or direct Node.js Express server on port 5000.
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BASE_URL = '/api/backend';
 
 export interface BackendPatient {
   id: string;
@@ -35,33 +35,19 @@ export interface BackendPatientDetail {
 }
 
 function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
+  return {
     'Content-Type': 'application/json',
   };
-  if (typeof window !== 'undefined') {
-    const token = sessionStorage.getItem('mc_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
-  return headers;
 }
 
 /** Returns the currently logged-in user info from sessionStorage */
 export function getCurrentUser(): { id?: string; role?: string; fullName?: string } | null {
-  if (typeof window === 'undefined') return null;
-  const userStr = sessionStorage.getItem('mc_user');
-  if (!userStr) return null;
-  try {
-    return JSON.parse(userStr);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export const backendApi = {
   getAccessiblePatients: async (): Promise<{ patients: BackendPatient[] }> => {
-    const res = await fetch(`${BASE_URL}/api/access/patients`, {
+    const res = await fetch(`${BASE_URL}/access/patients`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) {
@@ -74,7 +60,7 @@ export const backendApi = {
   },
 
   getPatientDetail: async (patientId: string): Promise<BackendPatientDetail> => {
-    const res = await fetch(`${BASE_URL}/api/access/patient/${patientId}`, {
+    const res = await fetch(`${BASE_URL}/access/patient/${patientId}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) {
@@ -117,7 +103,7 @@ export const backendApi = {
       email: form.email,
     };
 
-    const res = await fetch(`${BASE_URL}/api/patients`, {
+    const res = await fetch(`${BASE_URL}/patients`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -138,7 +124,7 @@ export const backendApi = {
   },
 
   requestPatientAccess: async ({ patientId, reason, categories = ['all'] }: { patientId: string; reason: string; categories?: string[] }): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/api/access-requests`, {
+    const res = await fetch(`${BASE_URL}/access-requests`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -156,7 +142,7 @@ export const backendApi = {
   },
 
   getRecords: async (): Promise<{ records: any[] }> => {
-    const res = await fetch(`${BASE_URL}/api/records`, {
+    const res = await fetch(`${BASE_URL}/records`, {
       headers: getAuthHeaders(),
     });
 
@@ -183,15 +169,15 @@ export const backendApi = {
       status: 'Synced',
       hash: r.integrity_hash,
       ipfsCid: r.encrypted_cid,
-      txHash: r.ledger_tx_hash || '0x' + r.id.replace(/-/g, '').substring(0, 16),
-      blockNumber: 104200,
-      verified: true
+      txHash: r.ledger_tx_hash || undefined,
+      blockNumber: undefined,
+      verified: Boolean(r.ledger_tx_hash)
     }));
 
     return { records: adapted };
   },
 
-  uploadRecord: async (recordData: { patientId: string; recordType: string; title: string; description: string }): Promise<any> => {
+  uploadRecord: async (recordData: { patientId: string; recordType: string; title: string; description: string; integrityHash: string; encryptedCid?: string }): Promise<any> => {
     // Map frontend user-facing record types to backend enum: 'lab', 'prescription', 'imaging', 'note', 'referral'
     const typeMap: Record<string, string> = {
       'Lab Report': 'lab',
@@ -211,10 +197,12 @@ export const backendApi = {
       patientId: recordData.patientId,
       recordType: backendType,
       title: recordData.title,
+      integrityHash: recordData.integrityHash,
+      encryptedCid: recordData.encryptedCid,
       dataCategories: [backendType === 'prescription' ? 'prescriptions' : 'general']
     };
 
-    const res = await fetch(`${BASE_URL}/api/records`, {
+    const res = await fetch(`${BASE_URL}/records`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -231,14 +219,15 @@ export const backendApi = {
       record: {
         hash: data.record.integrityHash,
         ipfsCid: data.record.encryptedCid,
-        txHash: data.record.ledger_tx_hash || '0x' + data.record.id.replace(/-/g, '').substring(0, 16),
-        blockNumber: 104250
+        txHash: data.record.ledgerTxHash,
+        blockNumber: undefined,
+        simulated: data.record.simulated === true
       }
     };
   },
 
   scanQR: async (qrPayload: any): Promise<{ patientId: string; allowedCategories: string[] }> => {
-    const res = await fetch(`${BASE_URL}/api/access/scan`, {
+    const res = await fetch(`${BASE_URL}/access/scan`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ qrPayload }),
@@ -253,7 +242,7 @@ export const backendApi = {
   },
 
   forceSync: async (): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/api/audit/sync`, {
+    const res = await fetch(`${BASE_URL}/audit/sync`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
@@ -266,7 +255,7 @@ export const backendApi = {
 
   // ─── TREATMENTS ───
   getPatientTreatments: async (patientId: string): Promise<{ success: boolean; treatments: any[] }> => {
-    const res = await fetch(`${BASE_URL}/api/treatments/patient/${patientId}`, {
+    const res = await fetch(`${BASE_URL}/treatments/patient/${patientId}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) {
@@ -276,7 +265,7 @@ export const backendApi = {
   },
 
   recordTreatment: async (treatmentData: { patientId: string; treatmentType: string; title: string; description: string }): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/api/treatments`, {
+    const res = await fetch(`${BASE_URL}/treatments`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(treatmentData),
@@ -290,7 +279,7 @@ export const backendApi = {
 
   // ─── CONSENT ───
   grantClinicConsent: async (params: { clinicId: string; dataCategories?: string[]; ttlHours?: number; purpose?: string }): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/api/consent/clinic`, {
+    const res = await fetch(`${BASE_URL}/consent/clinic`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(params),
@@ -303,7 +292,7 @@ export const backendApi = {
   },
 
   grantRoleConsent: async (params: { role: string; dataCategories?: string[]; ttlHours?: number; purpose?: string }): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/api/consent/role`, {
+    const res = await fetch(`${BASE_URL}/consent/role`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(params),
@@ -316,7 +305,7 @@ export const backendApi = {
   },
 
   revokeConsent: async (consentId: string, reason?: string): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/api/consent/${consentId}`, {
+    const res = await fetch(`${BASE_URL}/consent/${consentId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
       body: JSON.stringify({ reason }),
@@ -329,7 +318,7 @@ export const backendApi = {
   },
 
   getMyConsents: async (): Promise<{ consents: any[] }> => {
-    const res = await fetch(`${BASE_URL}/api/consent/mine`, {
+    const res = await fetch(`${BASE_URL}/consent/mine`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch your consents.');
@@ -337,7 +326,7 @@ export const backendApi = {
   },
 
   getPatientAuditHistory: async (): Promise<{ history: any[] }> => {
-    const res = await fetch(`${BASE_URL}/api/audit/patient`, {
+    const res = await fetch(`${BASE_URL}/audit/patient`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch access history.');
@@ -345,7 +334,7 @@ export const backendApi = {
   },
 
   getLedgerAccessLogs: async (limit = 100): Promise<{ success: boolean; logs: any[] }> => {
-    const res = await fetch(`${BASE_URL}/api/audit?limit=${limit}`, {
+    const res = await fetch(`${BASE_URL}/audit?limit=${limit}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch ledger activity logs.');
@@ -353,7 +342,7 @@ export const backendApi = {
   },
 
   getClinicianConsents: async (): Promise<{ success: boolean; consents: any[] }> => {
-    const res = await fetch(`${BASE_URL}/api/consent`, {
+    const res = await fetch(`${BASE_URL}/consent`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch clinician consents.');
@@ -361,7 +350,7 @@ export const backendApi = {
   },
 
   resolveEmergencyQR: async (qrPayload: any): Promise<{ success: boolean; profile: any }> => {
-    const res = await fetch(`${BASE_URL}/api/access/emergency`, {
+    const res = await fetch(`${BASE_URL}/access/emergency`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

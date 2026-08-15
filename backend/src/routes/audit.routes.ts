@@ -6,6 +6,8 @@ import { Router, Response } from 'express';
 import { AuditService } from '../services/AuditService';
 import { requirePatient, requireDoctor, AuthRequest } from '../middleware/auth.middleware';
 import { db } from '../config/db';
+import { disabledPendingSecurityReview, syntheticSandboxOnly } from '../middleware/containment.middleware';
+import { parsePage } from '../contracts/http';
 
 const router = Router();
 
@@ -14,9 +16,9 @@ const router = Router();
  * Get access history for the logged-in doctor's clinic.
  * Requires Doctor JWT
  */
-router.get('/', requireDoctor, async (req: AuthRequest, res: Response) => {
+router.get('/', requireDoctor, syntheticSandboxOnly('Workforce audit listing'), async (req: AuthRequest, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 100;
+    const { limit } = parsePage(req.query, 50);
     // Query all access logs from database
     const result = await db.query(
       `SELECT al.id, al.patient_id, p.full_name AS patient_name, al.actor_id, al.actor_role,
@@ -67,7 +69,7 @@ router.get('/', requireDoctor, async (req: AuthRequest, res: Response) => {
  */
 router.get('/patient', requirePatient, async (req: AuthRequest, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 50;
+    const { limit } = parsePage(req.query, 50);
     const history = await AuditService.getPatientAccessHistory(req.patientId!, limit);
     res.json({ success: true, history });
   } catch (err: any) {
@@ -80,7 +82,7 @@ router.get('/patient', requirePatient, async (req: AuthRequest, res: Response) =
  * Manually trigger the offline queue to sync events to Hyperledger Fabric.
  * (Usually called by a background cron job)
  */
-router.post('/sync', async (req, res) => {
+router.post('/sync', disabledPendingSecurityReview('Manual audit-to-ledger synchronization'), async (req, res) => {
   try {
     const result = await AuditService.syncToLedger();
     res.json({ success: true, result });

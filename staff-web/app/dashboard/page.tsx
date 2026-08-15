@@ -1,196 +1,88 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardList, Package } from 'lucide-react';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
-import { Sidebar } from '@/components/dashboard/sidebar';
-import { MobileMenuButton } from '@/components/dashboard/sidebar';
+import { Sidebar, MobileMenuButton } from '@/components/dashboard/sidebar';
 import { Header } from '@/components/dashboard/header';
-import { MOCK_PRESCRIPTIONS, MOCK_DRUG_INVENTORY } from '@/data/mockData';
-import { ClipboardList, CheckCircle2, AlertTriangle, Package, Activity, Search, RefreshCw } from 'lucide-react';
+import { EMPTY_DRUG_INVENTORY, EMPTY_PRESCRIPTIONS } from '@/data/runtimeData';
 
 export default function StaffDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [prescriptions, setPrescriptions] = useState(MOCK_PRESCRIPTIONS);
-  const [inventory, setInventory] = useState(MOCK_DRUG_INVENTORY);
-  const [search, setSearch] = useState('');
-
-  const handleDispense = (id: string) => {
-    // Simulate committing to blockchain
-    setPrescriptions(prev => prev.map(rx => {
-      if (rx.id === id) {
-        return {
-          ...rx,
-          status: 'Dispensed',
-          fabricTxId: 'c' + Math.random().toString(16).substring(2, 65) + 'a',
-          fabricBlock: Math.floor(150 + Math.random() * 50)
-        };
-      }
-      return rx;
-    }));
-    alert(`Dispense committed! Prescription ${id} successfully signed and updated on medical-records channel.`);
-  };
-
-  const pendingRX = prescriptions.filter(rx => rx.status === 'Pending');
-  const lowStockCount = inventory.filter(i => i.status === 'Low Stock' || i.status === 'Out of Stock').length;
+  const router = useRouter();
+  const pending = EMPTY_PRESCRIPTIONS.filter((item) => item.status === 'Pending');
+  const dispensed = EMPTY_PRESCRIPTIONS.filter((item) => item.status === 'Dispensed');
+  const stockAlerts = EMPTY_DRUG_INVENTORY.filter((item) => item.status !== 'In Stock');
 
   return (
     <ProtectedRoute allowedRoles={['staff']}>
-      <div className="min-h-screen bg-[#EAEEF2] staff-portal">
-        <div className="flex">
-          {/* Sidebar */}
-          <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
-
-          {/* Main Content */}
-          <div className="flex-1 min-w-0 lg:pl-[260px]">
-            <div className="px-3 sm:px-4 lg:px-6 max-w-[1600px] mx-auto">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <MobileMenuButton onClick={() => setSidebarOpen(true)} />
-                <div className="flex-1">
-                  <Header />
+      <div className="min-h-screen bg-[var(--primary-50)] staff-portal">
+        <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
+        <div className="min-w-0 flex-1 lg:pl-[260px]">
+          <div className="mx-auto max-w-[1500px] px-3 sm:px-5">
+            <div className="flex items-center gap-2"><MobileMenuButton onClick={() => setSidebarOpen(true)} /><div className="flex-1"><Header /></div></div>
+            <main className="space-y-6 pb-8">
+              <section className="rounded-3xl bg-[var(--brand)] p-6 text-white sm:p-8">
+                <p className="text-sm text-white/75">Hospital pharmacy</p>
+                <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Dispense safely, then update stock</h1>
+                <p className="mt-2 max-w-2xl text-sm text-white/75">The pharmacy workflow is limited to the tasks staff need today.</p>
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <button type="button" onClick={() => router.push('/prescriptions')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-bold text-[var(--brand)]"><ClipboardList className="h-5 w-5" /> Open prescriptions</button>
+                  <button type="button" onClick={() => router.push('/inventory')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--brand-dark)] px-5 text-sm font-bold text-white"><Package className="h-5 w-5" /> Check medicine stock</button>
                 </div>
+              </section>
+
+              <div role="status" className="rounded-2xl border border-[var(--amber-100)] bg-[var(--amber-100)] p-4 text-sm text-[var(--amber-700)]"><strong>Live pharmacy data is not connected.</strong> No demonstration prescriptions or stock figures are shown. Connect the approved pharmacy service before dispensing.</div>
+
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[
+                  { label: 'Waiting', value: '—', icon: ClipboardList, colour: 'text-amber-700' },
+                  { label: 'Dispensed', value: '—', icon: CheckCircle2, colour: 'text-emerald-700' },
+                  { label: 'Stock alerts', value: '—', icon: AlertTriangle, colour: 'text-rose-700' },
+                  { label: 'Medicines tracked', value: '—', icon: Package, colour: 'text-blue-700' },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <item.icon className={`h-5 w-5 ${item.colour}`} />
+                    <p className="mt-4 text-2xl font-bold text-slate-950">{item.value}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">{item.label}</p>
+                  </div>
+                ))}
               </div>
 
-              <div className="space-y-6 pb-8">
-                {/* Title */}
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-display">Pharmacy Operations Dashboard</h1>
-                  <p className="text-sm text-slate-500">
-                    Verify prescriptions, manage medicine inventory, and log dispense transactions on Hyperledger Fabric.
-                  </p>
-                </div>
-
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Presc.</span>
-                      <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
-                        <ClipboardList className="w-4 h-4 text-[#d97706]" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">{pendingRX.length}</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Awaiting dispense</p>
+              <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                <section className="overflow-hidden rounded-2xl border border-[var(--gray-200)] bg-white" aria-labelledby="prescription-queue-title">
+                  <div className="flex items-center justify-between border-b border-[var(--gray-100)] p-5">
+                    <div><h2 id="prescription-queue-title" className="font-bold text-[var(--ink-900)]">Prescriptions waiting</h2><p className="text-xs text-[var(--gray-500)]">Open and dispense in two steps</p></div>
+                    <button type="button" onClick={() => router.push('/prescriptions')} className="text-sm font-bold text-[var(--amber-600)]">View all</button>
                   </div>
-
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Dispensed Total</span>
-                      <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">
-                      {prescriptions.filter(rx => rx.status === 'Dispensed').length}
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Ledger confirmed logs</p>
+                  <div className="divide-y divide-slate-100">
+                    {pending.map((item) => (
+                      <button type="button" key={item.id} onClick={() => router.push('/prescriptions')} className="flex min-h-20 w-full items-center gap-3 p-4 text-left hover:bg-slate-50">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><ClipboardList className="h-5 w-5" /></span>
+                        <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-slate-900">{item.drug}</span><span className="mt-1 block truncate text-xs text-slate-500">{item.dosage} · Qty {item.qty} · {item.id}</span></span>
+                        <ChevronRight className="h-5 w-5 text-slate-300" />
+                      </button>
+                    ))}
+                    {pending.length === 0 && <p className="p-5 text-sm text-slate-500">Prescription data source unavailable.</p>}
                   </div>
+                </section>
 
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Stock Alerts</span>
-                      <div className="w-8 h-8 bg-rose-50 rounded-lg flex items-center justify-center">
-                        <AlertTriangle className="w-4 h-4 text-rose-500" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">{lowStockCount}</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Low or out-of-stock items</p>
+                <section className="rounded-2xl border border-[var(--gray-200)] bg-white p-5" aria-labelledby="stock-alerts-title">
+                  <h2 id="stock-alerts-title" className="font-bold text-[var(--ink-900)]">Stock needing attention</h2>
+                  <p className="text-xs text-[var(--gray-500)]">Low and unavailable medicines</p>
+                  <div className="mt-4 space-y-3">
+                    {stockAlerts.map((item) => (
+                      <button type="button" key={item.name} onClick={() => router.push('/inventory')} className="flex min-h-14 w-full items-center justify-between rounded-xl bg-slate-50 px-3 text-left">
+                        <span><span className="block text-sm font-bold text-slate-900">{item.name}</span><span className="text-xs text-slate-500">{item.inStock} remaining</span></span>
+                        <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">{item.status}</span>
+                      </button>
+                    ))}
+                    {stockAlerts.length === 0 && <p className="text-sm text-slate-500">Stock data source unavailable.</p>}
                   </div>
-
-                  <div className="bg-white rounded-2xl p-5 border border-[#D8DCE8] shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fabric Sync</span>
-                      <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900">Active</div>
-                    <p className="text-[10px] text-slate-400 mt-1">Channel: pharmacy-records</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left: Pending Prescriptions Queue */}
-                  <div className="lg:col-span-2 space-y-4">
-                    <div className="bg-white rounded-2xl border border-[#D8DCE8] shadow-sm overflow-hidden">
-                      <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="font-bold text-slate-900 text-sm">Active Prescriptions Queue</h3>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                          <thead>
-                            <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
-                              <th className="py-3 px-4">Rx ID</th>
-                              <th className="py-3 px-4">Patient Name</th>
-                              <th className="py-3 px-4">Prescribed Drug</th>
-                              <th className="py-3 px-4">Dosage / Qty</th>
-                              <th className="py-3 px-4 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {pendingRX.map((rx) => (
-                              <tr key={rx.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="py-3.5 px-4 font-semibold text-[#d97706]">{rx.id}</td>
-                                <td className="py-3.5 px-4 text-slate-400 font-medium italic">Anonymized Patient</td>
-                                <td className="py-3.5 px-4 font-medium text-slate-900">{rx.drug}</td>
-                                <td className="py-3.5 px-4 text-slate-500">
-                                  {rx.dosage} • <span className="font-bold text-slate-600">Qty: {rx.qty}</span>
-                                </td>
-                                <td className="py-3.5 px-4 text-right">
-                                  <button
-                                    onClick={() => handleDispense(rx.id)}
-                                    className="px-3.5 py-1.5 bg-[#d97706] hover:bg-[#b45309] text-white text-xs font-bold rounded-xl transition shadow-sm"
-                                  >
-                                    Dispense
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {pendingRX.length === 0 && (
-                              <tr>
-                                <td colSpan={5} className="py-12 text-center text-slate-400">
-                                  <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
-                                  <p className="font-semibold text-sm">All Prescriptions Dispensed</p>
-                                  <p className="text-xs text-slate-400 mt-1">Pending queue is currently empty</p>
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Low Stock Alert checklist */}
-                  <div className="lg:col-span-1 space-y-4">
-                    <div className="bg-white rounded-2xl border border-[#D8DCE8] shadow-sm p-5 space-y-4">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                          <Package className="w-4 h-4 text-[#d97706]" />
-                          Low Stock Checklist
-                        </h3>
-                      </div>
-                      <div className="space-y-3">
-                        {inventory.map((item, idx) => (
-                          <div key={idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold text-slate-900 text-sm">{item.name}</p>
-                              <p className="text-[10px] text-slate-400 font-semibold">Stock: {item.inStock} / Threshold: {item.threshold}</p>
-                            </div>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                              item.status === 'Out of Stock' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                              item.status === 'Low Stock' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                              'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            }`}>
-                              {item.status}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                </section>
               </div>
-            </div>
+            </main>
           </div>
         </div>
       </div>

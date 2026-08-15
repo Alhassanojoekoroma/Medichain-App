@@ -83,38 +83,38 @@ export function Calendar({ onDateSelect }: CalendarProps) {
   const month = currentDate.getMonth();
   const days = generateCalendarDays(year, month, selectedDate);
 
-  const goToPreviousMonth = useCallback(() => {
+  const goToPreviousMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
-  }, [year, month]);
+  };
 
-  const goToNextMonth = useCallback(() => {
+  const goToNextMonth = () => {
     setCurrentDate(new Date(year, month + 1, 1));
-  }, [year, month]);
+  };
 
-  const handleDateClick = useCallback((date: Date) => {
+  const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setCurrentDate(new Date(date.getFullYear(), date.getMonth(), 1));
     onDateSelect?.(date);
-  }, [onDateSelect]);
+  };
 
   return (
-    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#D8DCE8]">
+    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[var(--gray-200)]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm sm:text-base font-semibold text-[#101326]">
+        <h3 className="text-sm sm:text-base font-semibold text-[var(--ink-900)]">
           {monthNames[month]} {year}
         </h3>
         <div className="flex items-center gap-1">
           <button 
             onClick={goToPreviousMonth}
-            className="w-7 h-7 sm:w-8 sm:h-8 hover:bg-[#EEF2FF] rounded-lg flex items-center justify-center transition-colors"
+            className="w-7 h-7 sm:w-8 sm:h-8 hover:bg-[var(--primary-100)] rounded-lg flex items-center justify-center transition-colors"
           >
-            <ChevronLeft className="w-4 h-4 text-[#5D6582]" />
+            <ChevronLeft className="w-4 h-4 text-[var(--gray-600)]" />
           </button>
           <button 
             onClick={goToNextMonth}
-            className="w-7 h-7 sm:w-8 sm:h-8 hover:bg-[#EEF2FF] rounded-lg flex items-center justify-center transition-colors"
+            className="w-7 h-7 sm:w-8 sm:h-8 hover:bg-[var(--primary-100)] rounded-lg flex items-center justify-center transition-colors"
           >
-            <ChevronRight className="w-4 h-4 text-[#5D6582]" />
+            <ChevronRight className="w-4 h-4 text-[var(--gray-600)]" />
           </button>
         </div>
       </div>
@@ -124,7 +124,7 @@ export function Calendar({ onDateSelect }: CalendarProps) {
         {daysOfWeek.map((day) => (
           <div
             key={day}
-            className="text-center text-[10px] sm:text-xs font-medium text-[#8C91A8] py-1 sm:py-2"
+            className="text-center text-[10px] sm:text-xs font-medium text-[var(--gray-500)] py-1 sm:py-2"
           >
             {day}
           </div>
@@ -141,10 +141,10 @@ export function Calendar({ onDateSelect }: CalendarProps) {
               aspect-square flex items-center justify-center text-xs sm:text-sm rounded-full transition-colors
               ${
                 day.isSelected
-                  ? "bg-[#2952FF] text-white font-medium"
+                  ? "bg-[var(--primary-600)] text-white font-medium"
                   : day.isCurrentMonth
-                  ? "text-[#101326] hover:bg-[#EEF2FF]"
-                  : "text-[#D8DCE8]"
+                  ? "text-[var(--ink-900)] hover:bg-[var(--primary-100)]"
+                  : "text-[var(--gray-300)]"
               }
             `}
           >

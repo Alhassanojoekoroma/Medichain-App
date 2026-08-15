@@ -93,9 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.success && result.doctor) {
       const authUser = result.doctor as AuthUser;
       setUserState(authUser);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('mc_user', JSON.stringify(authUser));
-      }
       redirectByRole(authUser.role, router);
       return { success: true };
     }

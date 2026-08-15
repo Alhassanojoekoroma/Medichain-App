@@ -32,6 +32,10 @@ export class ConsentService {
    * Returns the new consent policy ID.
    */
   static async grantConsent(input: GrantConsentInput): Promise<string> {
+    if (!['doctor', 'clinic'].includes(input.granteeType)) throw new Error('CONSENT_GRANTEE_TOO_BROAD');
+    if (!input.purpose || !['treatment', 'care-coordination'].includes(input.purpose)) throw new Error('CONSENT_PURPOSE_REQUIRED');
+    if (!input.ttlHours || input.ttlHours < 1 || input.ttlHours > 720) throw new Error('CONSENT_EXPIRY_REQUIRED');
+    if (!input.dataCategories.length || input.dataCategories.includes('all')) throw new Error('GRANULAR_CATEGORIES_REQUIRED');
     const expiresAt = input.ttlHours
       ? new Date(Date.now() + input.ttlHours * 3600 * 1000)
       : null;
@@ -60,6 +64,7 @@ export class ConsentService {
     await OfflineQueue.enqueue('CONSENT_GRANT', {
       consentId,
       patientId: input.patientId,
+      granteeType: input.granteeType,
       granteeId: input.granteeId,
       accessType: input.accessType,
       dataCategories: input.dataCategories,
@@ -157,26 +162,31 @@ export class ConsentService {
     clinicId: string | null,
     accessType: AccessType,
     requestedCategories: DataCategory[],
-    actorRole?: string
+    actorRole?: string,
+    purpose: 'treatment' | 'care-coordination' = 'treatment'
   ): Promise<{ allowed: boolean; consentId?: string; allowedCategories?: DataCategory[]; reason?: string }> {
 
-    // Check direct doctor consent, clinic consent, role-based consent, or emergency access
+    // Production consent is deliberately narrow: only the named clinician or
+    // facility can satisfy a normal treatment decision. Legacy role/purpose
+    // grants are not accepted because they are too broad to prove scope.
     const result = await db.query(
-      `SELECT id, data_categories, access_type, is_one_time, used_at, expires_at
+      `SELECT id, data_categories, access_type, purpose, grantee_type, grantee_id,
+              is_one_time, used_at, expires_at, is_revoked, revoked_at
          FROM consent_policies
         WHERE patient_id = $1
           AND is_revoked = FALSE
+          AND revoked_at IS NULL
           AND (expires_at IS NULL OR expires_at > NOW())
           AND (
             (grantee_type = 'doctor'  AND grantee_id = $2)
             OR (grantee_type = 'clinic' AND grantee_id = $3)
-            OR (grantee_type = 'role'  AND grantee_id = $5)
-            OR (grantee_type = 'purpose' AND grantee_id = 'emergency' AND $4 = 'emergency_read')
           )
           AND access_type = $4
+          AND purpose = $5
+          AND (is_one_time = FALSE OR used_at IS NULL)
         ORDER BY created_at DESC
         LIMIT 1`,
-      [patientId, doctorId, clinicId ?? '', accessType, actorRole ?? '']
+      [patientId, doctorId, clinicId ?? '', accessType, purpose]
     );
 
     if (result.rowCount === 0) {

@@ -76,7 +76,11 @@ export default function AccessLogPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    const load = async () => {
+      await fetchData();
+    };
+
+    void load();
   }, []);
 
   const handleRevokeConsent = async (consentId: string) => {

@@ -1,307 +1,201 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, Plus, Filter, ChevronRight, Loader2, RefreshCw, WifiOff } from 'lucide-react';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_PATIENTS } from '@/data/mockData';
-import { backendApi, BackendPatient } from '@/services/backendApi';
-import type { Patient, PatientStatus } from '@/types';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 
-// ─── Helper to adapt backend patient to UI shape ─────────────────────────────
+const I = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  sort:   '<path d="M7 3v18M4 6l3-3 3 3M17 21V3M14 18l3 3 3-3"/>',
+  grid:   '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  list:   '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  plus:   '<path d="M12 5v14M5 12h14"/>',
+  edit:   '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  trash:  '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  download: '<path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/>',
+};
 
-function adaptBackendPatient(bp: BackendPatient): Patient {
-  const names = (bp.name || '').split(' ');
-  const initials = names.map((n) => n.charAt(0)).join('').slice(0, 2).toUpperCase();
-  return {
-    id: bp.id,
-    name: bp.name,
-    initials,
-    age: bp.dateOfBirth ? new Date().getFullYear() - new Date(bp.dateOfBirth).getFullYear() : 0,
-    gender: 'Unknown' as any,
-    bloodType: (bp.bloodType || 'O+') as any,
-    phone: bp.phone,
-    email: bp.email,
-    address: '',
-    condition: 'See full record',
-    status: 'Active' as PatientStatus,
-    allergies: (bp.allergies || []).map((a: any) =>
-      typeof a === 'string' ? a : a.name
-    ),
-    medications: [],
-    lastVisit: new Date().toISOString(),
-    nextVisit: null,
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    notes: '',
-  } as unknown as Patient;
-}
-
-// ─── UI Components ────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: PatientStatus }) {
-  const styles: Record<PatientStatus, string> = {
-    Active: 'bg-brand-light text-brand',
-    Inactive: 'bg-[#EAEEF2] text-[#8C91A8]',
-    Critical: 'bg-[#FEE2E2] text-[#E53E3E]',
-  };
+function Icon({ d, size = 16 }: { d: string; size?: number }) {
   return (
-    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${styles[status]}`}>
-      {status}
-    </span>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
   );
 }
 
-function BloodTypeBadge({ type }: { type: string }) {
-  return (
-    <span className="text-xs font-bold bg-[#EDE9FF] text-[#8F76FF] px-2 py-0.5 rounded-full">
-      {type}
-    </span>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// Mock backend API
+const backendApi = {
+  getAccessiblePatients: async () => {
+    return new Promise((resolve) => setTimeout(() => resolve([
+      { id: '1001', name: 'Fatima Koroma', procedure: 'Hip replacement', status: 'Ready', date: '28.08.2025', doctor: 'Dr. Amadu Williams', tags: ['ASA II', 'ICU needed', 'High Risk'], tone: 'green' },
+      { id: '1002', name: 'Ibrahim Bangura', procedure: 'Cardiac Bypass', status: 'At-Risk', date: '01.09.2025', doctor: 'Dr. Isatu Kamara', tags: ['ASA IV', 'High Risk'], tone: 'red' },
+      { id: '1003', name: 'Aminata Sesay', procedure: 'Appendectomy', status: 'In Progress', date: '08.09.2025', doctor: 'Dr. Moses Fofanah', tags: ['ASA I'], tone: 'amber' },
+      { id: '1004', name: 'Mohamed Conteh', procedure: 'Hernia Repair', status: 'At-Risk', date: '09.09.2025', doctor: 'Dr. Bintu Koroma', tags: ['ASA II', 'ICU needed'], tone: 'red' },
+      { id: '1005', name: 'Kadiatu Jalloh', procedure: 'Cataract Surgery', status: 'Discharged', date: '15.08.2025', doctor: 'Dr. John Davies', tags: ['ASA II'], tone: 'ink' },
+      { id: '1006', name: 'Suleiman Turay', procedure: 'Knee Replacement', status: 'Ready', date: '10.09.2025', doctor: 'Dr. Amadu Williams', tags: ['ASA III', 'High Risk'], tone: 'green' },
+      { id: '1007', name: 'Zainab Mansaray', procedure: 'Gallbladder Removal', status: 'In Progress', date: '12.09.2025', doctor: 'Dr. Isatu Kamara', tags: ['ASA I'], tone: 'amber' },
+      { id: '1008', name: 'Abu Bakarr', procedure: 'Spinal Fusion', status: 'At-Risk', date: '20.09.2025', doctor: 'Dr. Moses Fofanah', tags: ['ASA IV', 'ICU needed'], tone: 'red' }
+    ]), 800));
+  }
+};
 
 export default function PatientsPage() {
-  const router = useRouter();
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<PatientStatus | 'All'>('All');
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingMock, setUsingMock] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPatients = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await backendApi.getAccessiblePatients();
-      if (data.patients && data.patients.length > 0) {
-        setPatients(data.patients.map(adaptBackendPatient));
-        setUsingMock(false);
-      } else {
-        // Backend returned empty — fall back to mock so the UI is never blank
-        setPatients(MOCK_PATIENTS);
-        setUsingMock(true);
-      }
-    } catch (err: any) {
-      // Can't reach backend (not running or no token) — use mock data
-      console.warn('[Patients] Backend unavailable, using mock data:', err.message);
-      setPatients(MOCK_PATIENTS);
-      setUsingMock(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetchPatients();
+    backendApi.getAccessiblePatients()
+      .then((data: any) => {
+        setPatients(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userStr = sessionStorage.getItem('mc_user');
-      if (userStr) {
-        try {
-          setCurrentUser(JSON.parse(userStr));
-        } catch (e) {}
-      }
-    }
-  }, []);
-
-  const filtered = patients.filter((p) => {
-    const matchSearch =
-      (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.condition && p.condition.toLowerCase().includes(search.toLowerCase())) ||
-      (p.id || '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'All' || p.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
-
   return (
-    <LayoutWrapper>
-      <div className="space-y-4 sm:space-y-6">
-        {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#101326]">Patients</h1>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-[#8C91A8]">
-                {loading ? 'Loading...' : `${patients.length} registered patients`}
-              </p>
-              {usingMock && !loading && (
-                <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <WifiOff className="w-3 h-3" />
-                  Demo data
-                </span>
-              )}
-            </div>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 className="page-title">All patients view</h1>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', left: '10px', color: 'var(--gray-500)', display: 'flex' }}><Icon d={I.search} size={14} /></div>
+            <input type="text" placeholder="Search patients..." style={{ paddingLeft: '32px', height: '36px', borderRadius: 'var(--r-md)', border: '1px solid var(--gray-300)', fontSize: '14px' }} />
           </div>
-          <div className="flex gap-2">
-            <button
-              id="refresh-patients-btn"
-              onClick={fetchPatients}
-              disabled={loading}
-              className="flex items-center gap-2 border border-[#D8DCE8] hover:bg-[#EAEEF2] text-[#5D6582] px-3 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            {currentUser?.role === 'doctor' && (
-              <button
-                id="add-patient-btn"
-                onClick={() => router.push('/patients/new')}
-                className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add New Patient
-              </button>
-            )}
+          <button className="btn btn-soft"><Icon d={I.filter} /> Filter</button>
+          <button className="btn btn-soft"><Icon d={I.sort} /> Sort</button>
+          <div className="view-toggle" style={{ display: 'flex', background: 'var(--gray-100)', borderRadius: 'var(--r-md)', padding: '2px' }}>
+            <button className={`icon-btn ghost ${view === 'list' ? 'active' : ''}`} style={{ background: view === 'list' ? 'white' : 'transparent', boxShadow: view === 'list' ? 'var(--shadow-sm)' : 'none' }} onClick={() => setView('list')}><Icon d={I.list} /></button>
+            <button className={`icon-btn ghost ${view === 'grid' ? 'active' : ''}`} style={{ background: view === 'grid' ? 'white' : 'transparent', boxShadow: view === 'grid' ? 'var(--shadow-sm)' : 'none' }} onClick={() => setView('grid')}><Icon d={I.grid} /></button>
           </div>
+          <button className="btn btn-outline"><Icon d={I.download} /> Export data</button>
+          <button className="btn btn-primary"><Icon d={I.plus} /> New patient</button>
         </div>
+      </div>
 
-        {/* Error banner */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-2xl p-4 border border-[#D8DCE8]">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C91A8]" />
-              <input
-                id="patient-search"
-                type="text"
-                placeholder="Search by name, condition or ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-[#D8DCE8] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#8C91A8]" />
-              {(['All', 'Active', 'Critical', 'Inactive'] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setFilterStatus(s)}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                    filterStatus === s
-                      ? 'bg-brand text-white'
-                      : 'bg-[#EAEEF2] text-[#5D6582] hover:bg-brand-light'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Loading state */}
-        {loading && (
-          <div className="flex items-center justify-center py-16 gap-3 text-[#8C91A8]">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Loading patients from backend...</span>
-          </div>
-        )}
-
-        {/* Patients grid */}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-            {filtered.map((patient) => (
-              <PatientCard
-                key={patient.id}
-                patient={patient}
-                onClick={() => router.push(`/patients/${patient.id}`)}
-              />
-            ))}
-            {filtered.length === 0 && (
-              <div className="col-span-full text-center py-16 text-[#8C91A8]">
-                <p className="text-lg font-medium">No patients found</p>
-                <p className="text-sm mt-1">Try adjusting your search or filter</p>
+      {loading && (
+        <div className={view === 'grid' ? "grid grid-4" : ""} style={{ gap: '16px' }}>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+            <div key={n} className="patient-card" style={{ opacity: 0.5, animation: 'pulse 1.5s infinite' }}>
+              <div style={{ height: '24px', background: 'var(--gray-200)', borderRadius: '4px', marginBottom: '16px' }}></div>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--gray-200)' }}></div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ height: '14px', width: '30%', background: 'var(--gray-200)', borderRadius: '4px' }}></div>
+                  <div style={{ height: '16px', width: '70%', background: 'var(--gray-200)', borderRadius: '4px' }}></div>
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-    </LayoutWrapper>
-  );
-}
-
-function PatientCard({ patient, onClick }: { patient: Patient; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="bg-white rounded-2xl p-4 sm:p-5 border border-[#D8DCE8] hover:border-brand hover:shadow-sm transition-all text-left w-full group"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm ${
-              patient.status === 'Critical' ? 'bg-[#FEE2E2] text-[#E53E3E]' : 'bg-brand-light text-brand'
-            }`}
-          >
-            {patient.initials}
-          </div>
-          <div>
-            <div className="font-semibold text-[#101326] text-sm">{patient.name}</div>
-            {patient.age > 0 ? (
-              <div className="text-xs text-[#8C91A8]">
-                {patient.gender} • {patient.age} yrs
-              </div>
-            ) : (
-              <div className="text-xs text-[#8C91A8]">{patient.phone}</div>
-            )}
-          </div>
-        </div>
-        <ChevronRight className="w-4 h-4 text-[#8C91A8] group-hover:text-brand transition-colors" />
-      </div>
-
-      <div className="flex items-center gap-2 mb-3">
-        <StatusBadge status={patient.status} />
-        <BloodTypeBadge type={patient.bloodType} />
-      </div>
-
-      <div className="text-xs text-[#5D6582] mb-2">
-        <span className="font-medium">Condition:</span> {patient.condition}
-      </div>
-
-      {patient.allergies && patient.allergies.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {patient.allergies.slice(0, 2).map((a) => (
-            <span key={a} className="allergy-chip">
-              {a}
-            </span>
+              <div style={{ height: '100px', background: 'var(--gray-200)', borderRadius: '4px' }}></div>
+            </div>
           ))}
-          {patient.allergies.length > 2 && (
-            <span className="text-xs text-[#8C91A8]">+{patient.allergies.length - 2} more</span>
-          )}
         </div>
       )}
 
-      {patient.lastVisit && (
-        <div className="text-xs text-[#8C91A8] mt-2 pt-2 border-t border-[#D8DCE8]">
-          Last visit:{' '}
-          {new Date(patient.lastVisit).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          })}
-          {patient.nextVisit && (
-            <span className="ml-2 text-brand">
-              • Next:{' '}
-              {new Date(patient.nextVisit).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-              })}
-            </span>
-          )}
+      {error && !loading && (
+        <div className="mc-notice danger">Failed to load patients. Please check your connection.</div>
+      )}
+
+      {!loading && !error && patients.length === 0 && (
+        <div className="mc-empty">
+          <div style={{ marginBottom: '12px', color: 'var(--gray-400)' }}><Icon d={I.search} size={48} /></div>
+          <h3>No patients found</h3>
+          <p>Get started by adding a new patient to the registry.</p>
         </div>
       )}
-    </button>
+
+      {!loading && !error && patients.length > 0 && view === 'grid' && (
+        <div className="grid grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          {patients.map(p => (
+            <Link href={`/patients/${p.id}`} key={p.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className="patient-card">
+                <div className="top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <input type="checkbox" style={{ width: 16, height: 16 }} onClick={(e) => e.stopPropagation()} />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="icon-btn ghost" style={{ width: 30, height: 30 }} onClick={(e) => e.preventDefault()}><Icon d={I.edit} size={13} /></button>
+                    <button className="icon-btn ghost" style={{ width: 30, height: 30 }} onClick={(e) => e.preventDefault()}><Icon d={I.trash} size={13} /></button>
+                  </div>
+                </div>
+                <div className="idrow" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
+                    {p.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="id" style={{ fontSize: '12px', color: 'var(--gray-500)', fontWeight: 500 }}>ID: {p.id}</div>
+                    <div className="name" style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink-900)' }}>{p.name}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', fontSize: '13px' }}>
+                  <div className="prow" style={{ display: 'flex', justifyContent: 'space-between' }}><span className="k" style={{ color: 'var(--gray-500)' }}>Procedure:</span><span className="v" style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{p.procedure}</span></div>
+                  <div className="prow" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="k" style={{ color: 'var(--gray-500)' }}>Status:</span>
+                    <span className={`badge badge-${p.tone}`}><i className="dot" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'currentColor', marginRight: 4 }} />{p.status}</span>
+                  </div>
+                  <div className="prow" style={{ display: 'flex', justifyContent: 'space-between' }}><span className="k" style={{ color: 'var(--gray-500)' }}>Procedure date:</span><span className="v" style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{p.date}</span></div>
+                  <div className="prow" style={{ display: 'flex', justifyContent: 'space-between' }}><span className="k" style={{ color: 'var(--gray-500)' }}>Assigned physician:</span><span className="v" style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{p.doctor}</span></div>
+                </div>
+                <div className="tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {p.tags.map((t: string) => <span key={t} className="chip" style={{ fontSize: '11px', padding: '2px 8px', background: 'var(--gray-100)', color: 'var(--gray-600)', borderRadius: '4px', fontWeight: 500 }}>#{t}</span>)}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && patients.length > 0 && view === 'list' && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="dtable" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--gray-200)', background: 'var(--gray-50)' }}>
+                <th style={{ padding: '12px 16px', width: '40px' }}><input type="checkbox" /></th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)' }}>Patient</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)' }}>Procedure</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)' }}>Status</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)' }}>Date</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)' }}>Physician</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)' }}>Tags</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--gray-600)', textAlign: 'right' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {patients.map(p => (
+                <tr key={p.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                  <td style={{ padding: '12px 16px' }}><input type="checkbox" /></td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <Link href={`/patients/${p.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>{p.name.charAt(0)}</div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--ink-900)' }}>{p.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gray-500)' }}>ID: {p.id}</div>
+                      </div>
+                    </Link>
+                  </td>
+                  <td style={{ padding: '12px 16px', color: 'var(--ink-900)', fontWeight: 500 }}>{p.procedure}</td>
+                  <td style={{ padding: '12px 16px' }}><span className={`badge badge-${p.tone}`}><i className="dot" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'currentColor', marginRight: 4 }} />{p.status}</span></td>
+                  <td style={{ padding: '12px 16px', color: 'var(--ink-900)' }}>{p.date}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--ink-900)' }}>{p.doctor}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      {p.tags.slice(0,2).map((t: string) => <span key={t} className="chip" style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--gray-100)', color: 'var(--gray-600)', borderRadius: '4px' }}>#{t}</span>)}
+                      {p.tags.length > 2 && <span className="chip" style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--gray-100)', color: 'var(--gray-600)', borderRadius: '4px' }}>+{p.tags.length - 2}</span>}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    <div style={{ display: 'inline-flex', gap: '4px' }}>
+                      <button className="icon-btn ghost" style={{ width: 28, height: 28 }}><Icon d={I.edit} size={14} /></button>
+                      <button className="icon-btn ghost" style={{ width: 28, height: 28 }}><Icon d={I.trash} size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }

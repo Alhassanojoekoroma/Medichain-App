@@ -6,10 +6,8 @@ import {
   ArrowLeft, Phone, Mail, MapPin, AlertCircle, Pill, QrCode,
   Calendar, FileText, Edit, Loader2, Lock, Send, CheckCircle2, X,
 } from 'lucide-react';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_PATIENTS, MOCK_RECORDS, MOCK_APPOINTMENTS } from '@/data/mockData';
+import LayoutWrapper from '@/components/dashboard/layout-wrapper';
 import { backendApi, BackendPatientDetail } from '@/services/backendApi';
-import type { Patient } from '@/types';
 
 // ─── Access Request Modal ──────────────────────────────────────────────────────
 
@@ -161,10 +159,7 @@ export default function PatientDetailPage() {
   const [prescribing, setPrescribing] = useState(false);
   const [prescribeError, setPrescribeError] = useState<string | null>(null);
 
-  // Fallback to mock data
-  const mockPatient = MOCK_PATIENTS.find((p) => p.id === id) as Patient | undefined;
-  const patientRecords = MOCK_RECORDS.filter((r) => r.patientId === id);
-  const patientAppointments = MOCK_APPOINTMENTS.filter((a) => a.patientId === id);
+  const patientAppointments: any[] = [];
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -238,7 +233,7 @@ export default function PatientDetailPage() {
 
   // Access denied — show overlay with request button
   if (accessDenied) {
-    const patientName = mockPatient?.name || `Patient ${id}`;
+    const patientName = `Patient ${id}`;
     const initials = (patientName || '').split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2).toUpperCase();
 
     return (
@@ -317,7 +312,6 @@ export default function PatientDetailPage() {
     );
   }
 
-  // Use backend data or fall back to mock
   const patient = backendData
     ? {
         id: backendData.patient.id,
@@ -345,7 +339,7 @@ export default function PatientDetailPage() {
           : 0,
         gender: 'Unknown',
       }
-    : mockPatient;
+    : null;
 
   if (!patient) {
     return (
@@ -363,7 +357,6 @@ export default function PatientDetailPage() {
     );
   }
 
-  // Use backend records or mock records
   const records = backendData
     ? backendData.records.map((r) => ({
         id: r.id,
@@ -375,7 +368,7 @@ export default function PatientDetailPage() {
         }),
         status: 'Synced',
       }))
-    : patientRecords;
+    : [];
 
   return (
     <LayoutWrapper>

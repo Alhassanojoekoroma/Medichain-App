@@ -1,0 +1,3 @@
+module.exports=[48158,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(40598);a.n(d("[project]/apps/clinical-portal/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},42196,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(40598);a.n(d("[project]/apps/clinical-portal/node_modules/next/dist/client/components/builtin/global-error.js"))},55672,a=>{"use strict";a.i(48158);var b=a.i(42196);a.n(b)},3476,a=>{a.n(a.i(55672))}];
+
+//# sourceMappingURL=1b-i_next_dist_client_components_builtin_global-error_0cfvufi.js.map

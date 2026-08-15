@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const sandboxPasswordLogin = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_IDENTITY_MODE !== 'managed';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +24,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EAEEF2] flex items-center justify-center p-4">
+    <div className="portal-center">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -31,25 +32,27 @@ export default function LoginPage() {
             <span className="text-white font-bold text-2xl">M</span>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#101326]">MediChain SL</h1>
-            <p className="text-sm text-[#8C91A8]">Doctor Web Portal</p>
+            <h1 className="text-2xl font-bold text-[var(--ink-900)]">MediChain SL</h1>
+            <p className="text-sm text-[var(--gray-500)]">Staff and Pharmacy Portal</p>
           </div>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl p-8 border border-[#D8DCE8] shadow-sm">
+        <div className="portal-card p-8 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <Shield className="w-5 h-5 text-brand" />
-            <h2 className="text-lg font-semibold text-[#101326]">Secure Sign In</h2>
+            <h2 className="text-lg font-semibold text-[var(--ink-900)]">Secure Sign In</h2>
           </div>
-          <p className="text-sm text-[#8C91A8] mb-6">
-            Authenticated via Hyperledger Fabric Certificate Authority.
-            Your identity is cryptographically verified on the blockchain.
+          <p className="text-sm text-[var(--gray-500)] mb-6">
+            {sandboxPasswordLogin
+              ? 'Synthetic sandbox credentials only. Never enter a real password.'
+              : 'Production sign-in is delegated to the approved managed identity provider with MFA and account recovery.'}
           </p>
 
+          {sandboxPasswordLogin ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-[#101326] mb-1.5">
+              <label htmlFor="username" className="block text-sm font-medium text-[var(--ink-900)] mb-1.5">
                 Fabric Enrollment ID
               </label>
               <input
@@ -58,13 +61,13 @@ export default function LoginPage() {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="e.g. doctor or your.email@hospital.sl"
-                className="w-full border border-[#D8DCE8] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
+                className="portal-field text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#101326] mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--ink-900)] mb-1.5">
                 Password / Enrollment Secret
               </label>
               <div className="relative">
@@ -74,13 +77,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Your enrollment secret"
-                  className="w-full border border-[#D8DCE8] rounded-xl px-4 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
+                  className="portal-field text-sm pr-11 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C91A8] hover:text-[#5D6582]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--gray-500)] hover:text-[var(--ink-700)]"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -97,7 +100,7 @@ export default function LoginPage() {
               id="login-submit"
               type="submit"
               disabled={loading}
-              className="w-full bg-brand hover:bg-brand-dark disabled:opacity-60 text-white rounded-xl py-2.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+              className="w-full portal-button btn-primary disabled:opacity-60"
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Enrolling with Fabric CA...</>
@@ -106,19 +109,15 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-6 pt-4 border-t border-[#D8DCE8]">
-            <div className="bg-brand-light rounded-xl p-3">
-              <p className="text-xs text-[#5D6582] text-center font-medium mb-1">🔐 Development Credentials</p>
-              <p className="text-xs text-[#8C91A8] text-center">
-                Username: <strong className="text-brand">doctor</strong> &nbsp;|&nbsp;
-                Password: <strong className="text-brand">medichain2026</strong>
-              </p>
+          ) : (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+              Managed identity is required but not configured for this build. PalmChain will not collect production passwords. Ask the identity administrator to complete the approved provider integration.
             </div>
-          </div>
+          )}
+
         </div>
 
-        <p className="text-center text-xs text-[#8C91A8] mt-6">
+        <p className="text-center text-xs text-[var(--gray-500)] mt-6">
           MediChain SL — Your Records. Your Control.<br />
           Built for Sierra Leone. Designed for the World.
         </p>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MediChain SL — Exact Screen Recreations</title>
+<style>
+  :root{
+    --blue:#1E3AE0;
+    --blue-dark:#152B9E;
+    --blue-light:#C9D3FF;
+    --lime:#D4FF3F;
+    --black:#0A0A0A;
+    --white:#FFFFFF;
+    --grey-100:#F4F4F5;
+    --grey-300:#E7E7EA;
+    --text-secondary:#8E8E93;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:#e8e8ec;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:40px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:36px;
+    align-items:flex-start;
+  }
+  .frame-label{font-size:12px; font-weight:600; color:#666; margin-bottom:8px; text-align:center;}
+  .frame-wrap{display:flex; flex-direction:column; align-items:center;}
+  .screen{
+    width:375px; height:812px; border-radius:44px; overflow:hidden;
+    position:relative; box-shadow:0 20px 50px rgba(0,0,0,.25); background:var(--white);
+  }
+
+  /* ---------- shared ---------- */
+  .doc-card{width:150px; background:var(--white); border:1px solid var(--grey-300); border-radius:16px; padding:8px; position:relative; box-shadow:0 6px 16px rgba(0,0,0,.06);}
+  .doc-thumb{height:100px; border-radius:10px; background:repeating-linear-gradient(#fff 0 3px,#eceff5 3px 6px),linear-gradient(#fafbfd,#fafbfd); border:1px solid #eef0f4; position:relative; overflow:hidden;}
+  .doc-thumb::before{content:""; position:absolute; top:8px; left:8px; right:40%; height:8px; background:#d7dcea; border-radius:3px;}
+  .doc-label{font-size:14px; font-weight:700; color:var(--black); margin-top:8px; line-height:1.2;}
+  .doc-expand{position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; background:var(--black); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,.3);}
+  .badge-check{width:72px; height:72px; background:var(--lime); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(212,255,63,.5); margin:0 auto 20px;}
+  .btn-primary{width:100%; height:56px; background:var(--black); color:var(--white); border:none; border-radius:24px; font-size:16px; font-weight:600; font-family:inherit;}
+  .icon-btn{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.15);}
+  .icon-btn.dark{background:var(--black);}
+  .avatar{width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#ffd1a9,#ff9d76); display:flex; align-items:center; justify-content:center; color:#7a3b1a; font-weight:700; font-size:16px; flex-shrink:0;}
+  .avatar.sm{width:32px; height:32px; font-size:12px;}
+  svg{display:block;}
+
+  /* ============ SCREEN A — Uploaded ============ */
+  #screenA{background:linear-gradient(160deg,#274bf0,#1226a0);}
+  #screenA .bg-chat{position:absolute; inset:0; filter:blur(6px); opacity:.9; padding:70px 24px 0; color:#fff;}
+  #screenA .bg-chat h1{font-size:30px; font-weight:800;}
+  #screenA .bg-pill{margin-top:40px; height:70px; border-radius:20px; background:rgba(255,255,255,.15);}
+  #screenA .sheet{position:absolute; left:0; right:0; bottom:0; height:78%; background:var(--white); border-radius:32px 32px 0 0; padding:36px 24px 28px;}
+  #screenA .sheet .handle{width:40px; height:5px; background:#e2e2e5; border-radius:3px; margin:0 auto 24px;}
+  #screenA h2{font-size:30px; font-weight:800; text-align:center; color:var(--black);}
+  #screenA .sub{font-size:13px; color:var(--text-secondary); text-align:center; margin:6px 0 24px;}
+  #screenA .docs-row{display:flex; gap:12px; justify-content:center; margin-bottom:28px;}
+
+  /* ============ SCREEN B — Record status (dark) ============ */
+  #screenB{background:var(--black); padding:60px 20px 0; color:#fff; overflow:hidden;}
+  #screenB h1{font-size:24px; font-weight:800;}
+  #screenB .sub{font-size:13px; color:#9a9aa0; margin-top:2px;}
+
+  /* corrected stepper: uniform dotted connector, dot sizes/colors per closeup */
+  .stepper{display:flex; align-items:flex-start; margin:28px 0 24px; position:relative;}
+  .stepper .track{position:absolute; top:5px; left:20px; right:20px; height:0; border-top:2px dotted #6a6a72; z-index:0;}
+  .step{flex:1; display:flex; flex-direction:column; align-items:center; position:relative; z-index:1;}
+  .step .dot{width:10px; height:10px; border-radius:50%; background:var(--black); border:2px solid #fff;}
+  .step.current .dot{width:20px; height:20px; background:var(--blue); border:3px solid #fff;}
+  .step.final .dot{width:20px; height:20px; background:var(--lime); border:3px solid var(--lime);}
+  .step .lbl{font-size:11px; color:#c7c7cc; text-align:center; margin-top:10px; line-height:1.3; max-width:70px; font-weight:500;}
+
+  .summary-card{background:var(--blue); border-radius:24px 24px 0 0; padding:20px;}
+  .summary-card .row{display:flex; align-items:center; gap:12px; margin-bottom:16px;}
+  .summary-card .name{font-size:18px; font-weight:700; color:#fff;}
+  .meta-row{display:flex; justify-content:space-between; font-size:13px; margin-top:6px;}
+  .meta-row .k{color:var(--blue-light);}
+  .meta-row .v{color:#fff; font-weight:600;}
+
+  .cost-row{display:flex; gap:0;}
+  .cost-card{flex:1; padding:18px; height:118px; display:flex; flex-direction:column; justify-content:space-between;}
+  .cost-card.pays{background:var(--black); border-radius:0 0 0 24px;}
+  .cost-card.owe{background:var(--lime); border-radius:0 0 24px 0;}
+  .cost-card .icon-circle{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .cost-card.pays .icon-circle{background:#1c1c22;}
+  .cost-card.owe .icon-circle{background:rgba(0,0,0,.08);}
+  .cost-card .lbl{font-size:12.5px; font-weight:500; margin-top:10px;}
+  .cost-card.pays .lbl{color:#c9c9cf;}
+  .cost-card.owe .lbl{color:#3a3f0f;}
+  .cost-card .amt{font-size:26px; font-weight:800; margin-top:2px;}
+  .cost-card.pays .amt{color:#fff;}
+  .cost-card.owe .amt{color:var(--black);}
+
+  .docs-block{background:#fff; border-radius:24px; margin-top:16px; padding:20px 20px 0; position:relative; height:220px; overflow:hidden;}
+  .sec-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .sec-header h3{font-size:17px; font-weight:700; color:var(--black);}
+  .sec-header .navs{display:flex; gap:8px;}
+  .navbtn{width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .navbtn.grey{background:var(--grey-100);}
+  .navbtn.dark{background:var(--black);}
+  .doc-tiles{display:flex; gap:10px;}
+  .doc-tile{flex:1; border-radius:20px 20px 0 0; padding:14px 14px 0; height:170px; position:relative; overflow:visible;}
+  .doc-tile.tile-dark{background:var(--black);}
+  .doc-tile.tile-grey{background:var(--grey-100);}
+  .doc-tile .date{font-size:10.5px; font-weight:500;}
+  .doc-tile.tile-dark .date{color:#8a8a90;}
+  .doc-tile.tile-grey .date{color:#a0a0a6;}
+  .doc-tile .lbl{font-size:13.5px; font-weight:700; margin-top:2px;}
+  .doc-tile.tile-dark .lbl{color:#fff;}
+  .doc-tile.tile-grey .lbl{color:var(--black);}
+  .doc-tile .thumb{position:absolute; left:10px; right:-4px; top:52px; height:90px; border-radius:8px 8px 0 0; box-shadow:0 -4px 10px rgba(0,0,0,.15); overflow:hidden;}
+  .doc-tile.tile-dark .thumb{background:repeating-linear-gradient(#fff 0 3px,#eceff5 3px 6px);}
+  .doc-tile.tile-grey .thumb{background:linear-gradient(#2f5fe0,#1b3aa8);}
+  .doc-tile.tile-grey .thumb::before{content:""; position:absolute; top:8px; left:8px; width:40px; height:6px; background:rgba(255,255,255,.7); border-radius:3px;}
+
+  /* ============ SCREEN C — standalone card ============ */
+  #screenC{background:var(--grey-100); display:flex; align-items:center; justify-content:center; padding:24px;}
+  #screenC .stack{width:100%;}
+
+  /* ============ SCREEN D — Provider chat ============ */
+  #screenD{background:var(--blue); display:flex; flex-direction:column;}
+  .chat-header{display:flex; align-items:center; justify-content:space-between; padding:56px 20px 16px;}
+  .chat-header h1{color:#fff; font-size:22px; font-weight:800; line-height:1.15;}
+  .chat-body{flex:1; padding:8px 20px; overflow-y:auto;}
+  .msg-row{display:flex; gap:8px; margin-bottom:16px; align-items:flex-end;}
+  .msg-row.out{justify-content:flex-end;}
+  .bubble{background:#fff; color:var(--black); font-size:14px; line-height:1.4; padding:14px 16px; border-radius:20px; max-width:75%;}
+  .msg-row.out .bubble{border-bottom-right-radius:4px;}
+  .msg-row.in .bubble{border-bottom-left-radius:4px;}
+  .msg-meta{font-size:10.5px; color:#dfe4ff; margin-top:4px;}
+  .msg-col{display:flex; flex-direction:column;}
+  .msg-row.out .msg-col{align-items:flex-end;}
+
+  .bottom-panel{background:var(--blue); padding:14px 16px 28px;}
+  .input-bar{background:transparent; border:1.5px solid rgba(255,255,255,.55); border-radius:28px; height:52px; display:flex; align-items:center; gap:12px; padding:0 8px 0 18px; margin-bottom:14px;}
+  .input-bar .divider{width:1px; height:22px; background:rgba(255,255,255,.4);}
+  .input-bar .ph{flex:1; color:rgba(255,255,255,.85); font-size:14px;}
+  .input-bar .send{width:38px; height:38px; border-radius:50%; background:var(--black); display:flex; align-items:center; justify-content:center;}
+  .quick-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; background:rgba(255,255,255,.14); border-radius:28px; padding:16px;}
+  .quick-item{background:#fff; border-radius:20px; padding:16px 8px 14px; display:flex; flex-direction:column; align-items:flex-start; gap:14px; min-height:110px;}
+  .quick-item.active{background:var(--black);}
+  .quick-item .lbl{font-size:11px; font-weight:600; color:var(--black); line-height:1.25;}
+  .quick-item.active .lbl{color:#fff;}
+
+  /* ============ SCREEN E — uploaded alt ============ */
+  #screenE{background:var(--black); display:flex; align-items:center; justify-content:center; padding:24px;}
+  #screenE .card{background:#fff; border-radius:32px; padding:32px 24px; width:100%;}
+
+  /* ============ SCREEN F — record verified chat ============ */
+  #screenF{background:#fff; display:flex; flex-direction:column;}
+  #screenF .chat-header h1{color:var(--black);}
+  #screenF .icon-btn.top{background:var(--grey-100);}
+  .mini-docs{display:flex; gap:6px; margin-top:8px;}
+  .mini-doc{width:60px; height:44px; border-radius:8px; background:#e3e6ee; border:1px solid #d7dbe6;}
+
+  /* ---- Record Verified card: fully fluid, scales with its own container width ---- */
+  .approved-card{
+    background:var(--blue);
+    border-radius:min(24px, 8cqw);
+    padding:5.5cqw 5.5cqw 6cqw;
+    color:#fff;
+    width:84%;
+    max-width:340px;
+    margin-left:auto;
+    position:relative;
+    container-type:inline-size;
+    container-name:approvedcard;
+  }
+  .approved-top{display:flex; align-items:center; gap:2.8cqw; margin-bottom:7.5cqw;}
+  .approved-top .tick{width:9cqw; height:9cqw; min-width:26px; min-height:26px; max-width:36px; max-height:36px; border-radius:50%; background:var(--black); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .approved-top .tick svg{width:52%; height:52%;}
+  .approved-top .tt{font-size:clamp(14px, 4.6cqw, 18px); font-weight:700;}
+  .approved-top .id{font-size:clamp(10px, 3.3cqw, 13px); color:#c9d3ff; display:block; margin-top:3px;}
+
+  .approved-mid{position:relative; width:100%; aspect-ratio:4/3; margin-bottom:6cqw;}
+  .est-circle{
+    width:50%; aspect-ratio:1/1; border-radius:50%;
+    background:repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 1.5px, transparent 1.5px 8px);
+    border:1.5px dashed rgba(255,255,255,.55);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:absolute; left:0; top:6%;
+  }
+  .est-circle .lbl{font-size:clamp(10px, 3.3cqw, 13px); color:#e9ecff; text-align:center; line-height:1.3; font-weight:500;}
+  .est-circle .amt{font-size:clamp(16px, 6.6cqw, 26px); font-weight:800; margin-top:2.5cqw;}
+  .est-circle .amt .unit{font-size:.62em; font-weight:700; margin-left:1px;}
+
+  /* scalloped sticker: finer 12-bump rosette, clearly separated from the circle */
+  .sticker-wrap{width:46%; aspect-ratio:1/1; position:absolute; right:0; top:0;}
+  .sticker-wrap .petal{position:absolute; width:26%; aspect-ratio:1/1; background:var(--lime); border-radius:50%; top:37%; left:37%; transform-origin:center;}
+  .sticker-wrap .core{position:absolute; width:80%; aspect-ratio:1/1; border-radius:50%; background:var(--lime); left:10%; top:10%; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(0,0,0,.22);}
+  .sticker-wrap .core .lbl{font-size:clamp(9px, 2.9cqw, 12px); font-weight:700; color:#20260a; text-align:center; line-height:1.25;}
+  .sticker-wrap .core .amt{font-size:clamp(14px, 5.2cqw, 20px); font-weight:800; color:var(--black); margin-top:2%;}
+  .sticker-wrap .core .amt .unit{font-size:.62em; font-weight:700; margin-left:1px;}
+
+  .est-pill{background:transparent; border:1.5px solid rgba(255,255,255,.55); border-radius:999px; min-height:46px; height:14.5cqw; max-height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 1.8cqw 0 5.2cqw;}
+  .est-pill .lbl{font-size:clamp(10px, 3.1cqw, 12.5px); color:#dfe4ff; font-weight:500;}
+  .est-pill .amt{font-size:clamp(15px, 5.4cqw, 21px); font-weight:800;}
+  .est-pill .amt .cur{font-size:.62em; font-weight:700; vertical-align:3px; margin-right:1px;}
+  .arrow-btn-outer{width:11.5cqw; height:11.5cqw; min-width:36px; min-height:36px; max-width:44px; max-height:44px; border-radius:50%; background:var(--black); display:flex; align-items:center; justify-content:center; margin-left:3cqw; flex-shrink:0;}
+  .arrow-btn-outer svg{width:40%; height:40%;}
+  .pill-row{display:flex; align-items:center;}
+
+  /* container-query fallback: browsers without cqw support still get sane fixed sizing */
+  @supports not (container-type: inline-size){
+    .approved-top .tick{width:26px; height:26px;}
+    .est-circle{width:135px; height:135px;}
+    .sticker-wrap{width:100px; height:100px;}
+    .est-pill{height:52px;}
+    .arrow-btn-outer{width:40px; height:40px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= SCREEN A ================= -->
+<div class="frame-wrap">
+  <div class="frame-label">A · Upload Success (sheet over chat)</div>
+  <div class="screen" id="screenA">
+    <div class="bg-chat">
+      <h1>Provider<br>Chat</h1>
+      <div class="bg-pill"></div>
+    </div>
+    <div class="sheet">
+      <div class="handle"></div>
+      <div class="badge-check">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#0A0A0A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h2>Uploaded</h2>
+      <div class="sub">Your medical records were securely uploaded to the blockchain</div>
+      <div class="docs-row">
+        <div class="doc-card">
+          <div class="doc-thumb"></div>
+          <div class="doc-label">Lab<br>Report</div>
+          <div class="doc-expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="doc-card">
+          <div class="doc-thumb"></div>
+          <div class="doc-label">Prescription</div>
+          <div class="doc-expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <button class="btn-primary">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN B ================= -->
+<div class="frame-wrap">
+  <div class="frame-label">B · Record Status / Secured</div>
+  <div class="screen" id="screenB">
+    <div class="icon-btn dark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div style="margin-top:20px;">
+      <h1>Hi, Jess!</h1>
+      <div class="sub">Your record has been secured on-chain</div>
+    </div>
+
+    <div class="stepper">
+      <div class="track"></div>
+      <div class="step"><div class="dot"></div><div class="lbl">Record<br>Initiated</div></div>
+      <div class="step"><div class="dot"></div><div class="lbl">Identity<br>Verified</div></div>
+      <div class="step current"><div class="dot"></div><div class="lbl">Documents<br>Uploaded</div></div>
+      <div class="step final"><div class="dot"></div><div class="lbl">Record<br>Secured</div></div>
+    </div>
+
+    <div class="summary-card">
+      <div class="row">
+        <div class="avatar">JW</div>
+        <div class="name">Jess Willing</div>
+      </div>
+      <div class="meta-row"><span class="k">Date of visit</span><span class="v">01/10/23</span></div>
+      <div class="meta-row"><span class="k">Record ID</span><span class="v">REC12345678</span></div>
+    </div>
+
+    <div class="cost-row">
+      <div class="cost-card pays">
+        <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6h13l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" stroke="#fff" stroke-width="1.6"/><path d="M17 15l1.5 1.5L21 14" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="lbl">Records verified</div><div class="amt">4</div></div>
+      </div>
+      <div class="cost-card owe">
+        <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0113.5-5.8M20 12a8 8 0 01-13.5 5.8" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round"/><path d="M17.5 4v3h-3M6.5 20v-3h3" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="lbl">Pending review</div><div class="amt">2</div></div>
+      </div>
+    </div>
+
+    <div class="docs-block">
+      <div class="sec-header">
+        <h3>Documents</h3>
+        <div class="navs">
+          <div class="navbtn grey"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="navbtn dark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="doc-tiles">
+        <div class="doc-tile tile-dark">
+          <div class="date">12 Feb 2023</div>
+          <div class="lbl">Lab Report</div>
+          <div class="thumb"></div>
+        </div>
+        <div class="doc-tile tile-grey">
+          <div class="date">10 Feb 2023</div>
+          <div class="lbl">ID Card</div>
+          <div class="thumb"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN C ================= -->
+<div class="frame-wrap">
+  <div class="frame-label">C · Summary Card (component)</div>
+  <div class="screen" id="screenC">
+    <div class="stack">
+      <div class="summary-card" style="border-radius:20px 20px 0 0;">
+        <div class="row">
+          <div class="avatar">JW</div>
+          <div class="name">Jess Willing</div>
+        </div>
+        <div class="meta-row"><span class="k">Date of visit</span><span class="v">01/10/23</span></div>
+        <div class="meta-row"><span class="k">Record ID</span><span class="v">REC12345678</span></div>
+      </div>
+      <div class="cost-row">
+        <div class="cost-card pays" style="border-radius:0 0 0 20px;">
+          <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6h13l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" stroke="#fff" stroke-width="1.6"/><path d="M17 15l1.5 1.5L21 14" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="lbl">Records verified</div><div class="amt">4</div></div>
+        </div>
+        <div class="cost-card owe" style="border-radius:0 0 20px 0;">
+          <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0113.5-5.8M20 12a8 8 0 01-13.5 5.8" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round"/><path d="M17.5 4v3h-3M6.5 20v-3h3" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="lbl">Pending review</div><div class="amt">2</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN D ================= -->
+<div class="frame-wrap">
+  <div class="frame-label">D · Provider Chat</div>
+  <div class="screen" id="screenD">
+    <div class="chat-header">
+      <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h1>Provider<br>Chat</h1>
+      <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="chat-body">
+      <div class="msg-row out">
+        <div class="msg-col">
+          <div class="bubble">Hi Dr. Kamara,<br>I'd like to add my new lab results to my medical record.</div>
+          <div class="msg-meta">1:14 pm</div>
+        </div>
+        <div class="avatar sm" style="background:linear-gradient(135deg,#d4ffab,#a8e063); color:#3a4a12;">JW</div>
+      </div>
+      <div class="msg-row in">
+        <div class="avatar sm" style="background:linear-gradient(135deg,#bcd2ff,#7fa3ff); color:#132a70;">DK</div>
+        <div class="msg-col">
+          <div class="bubble">Hi Jess,<br>Please attach the new documents so we can verify them</div>
+          <div class="msg-meta">1:15 pm</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-panel">
+      <div class="input-bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.6"/><path d="M9 10h.01M15 10h.01M8.5 14.5c1 1 2.2 1.5 3.5 1.5s2.5-.5 3.5-1.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div class="divider"></div>
+        <div class="ph">Type something…</div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="11" rx="3" stroke="#fff" stroke-width="1.6"/><path d="M6 11a6 6 0 0012 0M12 19v2" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div class="send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12l16-7-6 16-3-6-7-3z" fill="#fff"/></svg></div>
+      </div>
+      <div class="quick-grid">
+        <div class="quick-item active">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 4h11l4 4v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 11h8M8 15h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <div class="lbl">Attach new<br>lab report</div>
+        </div>
+        <div class="quick-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#0A0A0A" stroke-width="1.6"/><circle cx="8.5" cy="10.5" r="2" stroke="#0A0A0A" stroke-width="1.6"/><path d="M5.5 15.5c.6-1.5 1.8-2.3 3-2.3s2.4.8 3 2.3M13 9.5h5M13 12.5h5" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <div class="lbl">Attach your<br>ID Card</div>
+        </div>
+        <div class="quick-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke="#0A0A0A" stroke-width="1.6"/><rect x="9" y="2" width="6" height="3" rx="1" fill="#0A0A0A"/><path d="M8.5 12l2 2 4-4M8.5 17l2 2 4-4" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lbl">Attach new<br>prescription</div>
+        </div>
+        <div class="quick-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h13l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" stroke="#0A0A0A" stroke-width="1.6"/><path d="M17 15l1.5 1.5L21 14" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lbl">Attach insurance<br>card</div>
+        </div>
+        <div class="quick-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 4l9 5.5" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 9.5V19h14V9.5M9.5 19v-6h5v6" stroke="#0A0A0A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lbl">Attach hospital<br>records</div>
+        </div>
+        <div class="quick-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="12" height="14" rx="2" stroke="#0A0A0A" stroke-width="1.6"/><rect x="8" y="7" width="12" height="14" rx="2" fill="#fff" stroke="#0A0A0A" stroke-width="1.6"/></svg>
+          <div class="lbl">Attach consent<br>form</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN E ================= -->
+<div class="frame-wrap">
+  <div class="frame-label">E · Uploaded (standalone component)</div>
+  <div class="screen" id="screenE">
+    <div class="card">
+      <div class="badge-check"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#0A0A0A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2>Uploaded</h2>
+      <div class="sub">Your medical records were securely uploaded to the blockchain</div>
+      <div class="docs-row">
+        <div class="doc-card">
+          <div class="doc-thumb"></div>
+          <div class="doc-label">Lab<br>Report</div>
+          <div class="doc-expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="doc-card">
+          <div class="doc-thumb"></div>
+          <div class="doc-label">Prescription</div>
+          <div class="doc-expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCREEN F ================= -->
+<div class="frame-wrap">
+  <div class="frame-label">F · Record Verified Chat</div>
+  <div class="screen" id="screenF">
+    <div class="chat-header">
+      <div class="icon-btn top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0A0A0A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h1 style="font-size:19px;">Provider chat</h1>
+      <div class="icon-btn top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 4c0 8 6 14 14 14l1-4-5-2-2 2c-2-1-4-3-5-5l2-2-2-5z" stroke="#0A0A0A" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="chat-body">
+      <div class="msg-row out">
+        <div class="msg-col" style="max-width:78%;">
+          <div class="bubble" style="background:var(--grey-100);">
+            Hi Dr. Kamara. I've uploaded the documents we discussed — please review and add them to my record.
+            <div class="mini-docs"><div class="mini-doc"></div><div class="mini-doc"></div></div>
+          </div>
+          <div class="msg-meta" style="color:#9a9aa0;">10:14 AM ✓✓</div>
+        </div>
+      </div>
+
+      <div class="msg-row out" style="margin-top:8px;">
+        <div class="msg-col">
+          <div class="approved-card">
+            <div class="approved-top">
+              <div class="tick"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div><div class="tt">Record verified</div><span class="id">Block #132549057</span></div>
+            </div>
+            <div class="approved-mid">
+              <div class="est-circle"><div class="lbl">File<br>size</div><div class="amt">250MB</div></div>
+              <div class="sticker-wrap">
+                <div class="petal" style="transform:rotate(0deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(30deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(60deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(90deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(120deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(150deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(180deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(210deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(240deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(270deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(300deg) translate(0,-64%);"></div>
+                <div class="petal" style="transform:rotate(330deg) translate(0,-64%);"></div>
+                <div class="core"><div class="lbl">Confirmations</div><div class="amt">154</div></div>
+              </div>
+            </div>
+            <div class="pill-row">
+              <div class="est-pill" style="flex:1;">
+                <div><div class="lbl">Block height</div><div class="amt"><span class="cur">#</span>96,000</div></div>
+              </div>
+              <div class="arrow-btn-outer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </div>
+          </div>
+          <div class="msg-meta" style="color:#9a9aa0; text-align:right;">10:16 AM ✓✓</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-panel" style="background:#fff;">
+      <div class="input-bar" style="background:var(--grey-100); border:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#b5b5bb" stroke-width="1.6"/><path d="M9 10h.01M15 10h.01M8.5 14.5c1 1 2.2 1.5 3.5 1.5s2.5-.5 3.5-1.5" stroke="#b5b5bb" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div class="divider" style="background:#d8d8dc;"></div>
+        <div class="ph" style="color:#b5b5bb;">Type something…</div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="11" rx="3" stroke="#b5b5bb" stroke-width="1.6"/><path d="M6 11a6 6 0 0012 0M12 19v2" stroke="#b5b5bb" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div class="send" style="background:#d8d8dc;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12l16-7-6 16-3-6-7-3z" fill="#fff"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= RESPONSIVE PROOF ================= -->
+<div class="frame-wrap" style="width:100%;">
+  <div class="frame-label">Responsive check — same card, three container widths (220px / 320px / 460px)</div>
+  <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; background:var(--blue); padding:24px; border-radius:24px;">
+
+    <div style="width:220px;">
+      <div class="approved-card" style="width:100%; max-width:none;">
+        <div class="approved-top">
+          <div class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="tt">Record verified</div><span class="id">Block #132549057</span></div>
+        </div>
+        <div class="approved-mid">
+          <div class="est-circle"><div class="lbl">File<br>size</div><div class="amt">250MB</div></div>
+          <div class="sticker-wrap">
+            <div class="petal" style="transform:rotate(0deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(30deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(60deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(90deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(120deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(150deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(180deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(210deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(240deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(270deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(300deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(330deg) translate(0,-64%);"></div>
+            <div class="core"><div class="lbl">Confirmations</div><div class="amt">154</div></div>
+          </div>
+        </div>
+        <div class="pill-row">
+          <div class="est-pill" style="flex:1;"><div><div class="lbl">Block height</div><div class="amt"><span class="cur">#</span>96,000</div></div></div>
+          <div class="arrow-btn-outer"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:320px;">
+      <div class="approved-card" style="width:100%; max-width:none;">
+        <div class="approved-top">
+          <div class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="tt">Record verified</div><span class="id">Block #132549057</span></div>
+        </div>
+        <div class="approved-mid">
+          <div class="est-circle"><div class="lbl">File<br>size</div><div class="amt">250MB</div></div>
+          <div class="sticker-wrap">
+            <div class="petal" style="transform:rotate(0deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(30deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(60deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(90deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(120deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(150deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(180deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(210deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(240deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(270deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(300deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(330deg) translate(0,-64%);"></div>
+            <div class="core"><div class="lbl">Confirmations</div><div class="amt">154</div></div>
+          </div>
+        </div>
+        <div class="pill-row">
+          <div class="est-pill" style="flex:1;"><div><div class="lbl">Block height</div><div class="amt"><span class="cur">#</span>96,000</div></div></div>
+          <div class="arrow-btn-outer"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:460px;">
+      <div class="approved-card" style="width:100%; max-width:none;">
+        <div class="approved-top">
+          <div class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="tt">Record verified</div><span class="id">Block #132549057</span></div>
+        </div>
+        <div class="approved-mid">
+          <div class="est-circle"><div class="lbl">File<br>size</div><div class="amt">250MB</div></div>
+          <div class="sticker-wrap">
+            <div class="petal" style="transform:rotate(0deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(30deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(60deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(90deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(120deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(150deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(180deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(210deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(240deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(270deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(300deg) translate(0,-64%);"></div>
+            <div class="petal" style="transform:rotate(330deg) translate(0,-64%);"></div>
+            <div class="core"><div class="lbl">Confirmations</div><div class="amt">154</div></div>
+          </div>
+        </div>
+        <div class="pill-row">
+          <div class="est-pill" style="flex:1;"><div><div class="lbl">Block height</div><div class="amt"><span class="cur">#</span>96,000</div></div></div>
+          <div class="arrow-btn-outer"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

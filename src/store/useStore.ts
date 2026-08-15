@@ -4,69 +4,21 @@
  * Architecture:
  *  - Zustand holds in-memory state for fast UI reactivity.
  *  - Every write action ALSO persists to SQLite via DatabaseService.
- *  - On app startup, `loadFromDatabase()` replaces the default seed values
- *    with whatever is already saved in SQLite.
+ *  - On app startup, `loadFromDatabase()` loads only data that was actually
+ *    persisted for the signed-in patient.
  */
 import { create } from 'zustand';
+import { Platform } from 'react-native';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('useStore');
+const isWeb = Platform.OS === 'web';
 import { User, Medication, Record, Appointment, BlockchainLog, HealthMetric, Allergy, DoctorAccessRequest } from '../types';
 import {
   UserDB, MedicationDB, RecordDB, AppointmentDB,
-  BlockchainLogDB, HealthMetricDB, AllergyDB, isSeeded,
+  BlockchainLogDB, HealthMetricDB, AllergyDB, clearPatientData,
 } from '../services/database';
-
-// ─── Default Seed Data ──────────────────────────────────────────────────────
-// Used only on first install; SQLite takes over after that.
-
-const SEED_USER: User = {
-  id: '1',
-  name: 'Alex Johnson',
-  email: 'patient@medichain.sl',
-  phone: '+232 76 000 001',
-  bloodType: 'O+',
-  weight: '75 kg',
-  height: '180 cm',
-};
-
-const SEED_MEDICATIONS: Medication[] = [
-  { id: 'm1', name: 'Amoxicillin', dosage: '500mg', frequency: 'Twice daily', time: '08:00 AM', status: 'taken' },
-  { id: 'm2', name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', time: '09:30 AM', status: 'pending' },
-  { id: 'm3', name: 'Metformin', dosage: '850mg', frequency: 'With meals', time: '01:00 PM', status: 'pending' },
-];
-
-const SEED_RECORDS: Record[] = [
-  { id: 'r1', title: 'Annual Health Checkup', date: '2023-12-15', type: 'General', doctor: 'Dr. Wilson', hospital: 'General Hospital' },
-  { id: 'r2', title: 'Blood Test Report', date: '2024-01-20', type: 'Laboratory', doctor: 'Dr. Chen', hospital: 'City Lab' },
-];
-
-const SEED_APPOINTMENTS: Appointment[] = [
-  { id: 'a1', doctorName: 'Dr. Sarah Wilson', specialty: 'Cardiologist', date: '2024-05-10', time: '10:30 AM', status: 'upcoming' },
-  { id: 'a2', doctorName: 'Dr. Michael Chen', specialty: 'Dermatologist', date: '2024-05-15', time: '02:00 PM', status: 'upcoming' },
-];
-
-const SEED_BLOCKCHAIN_LOGS: BlockchainLog[] = [
-  { id: 'bl1', action: 'Identity Verified', timestamp: '2024-04-26 10:00', details: 'Node verified patient identity', txHash: '0x74a...8f2' },
-  { id: 'bl2', action: 'Record Encrypted', timestamp: '2024-04-26 10:15', details: 'Medical report encrypted with patient public key', txHash: '0x8b2...1c9' },
-];
-
-const SEED_HEALTH_METRICS: HealthMetric[] = [
-  { id: 'hm1', type: 'Glucose', value: 95, unit: 'mg/dL', date: '2024-04-20' },
-  { id: 'hm2', type: 'Glucose', value: 102, unit: 'mg/dL', date: '2024-04-21' },
-  { id: 'hm3', type: 'Glucose', value: 98, unit: 'mg/dL', date: '2024-04-22' },
-  { id: 'hm4', type: 'Glucose', value: 115, unit: 'mg/dL', date: '2024-04-23' },
-  { id: 'hm5', type: 'Glucose', value: 92, unit: 'mg/dL', date: '2024-04-24' },
-  { id: 'hm6', type: 'Glucose', value: 88, unit: 'mg/dL', date: '2024-04-25' },
-  { id: 'hm7', type: 'Glucose', value: 96, unit: 'mg/dL', date: '2024-04-26' },
-];
-
-const SEED_ALLERGIES: Allergy[] = [
-  { id: 'al1', type: 'Drug', name: 'Penicillin', severity: 'High', reaction: 'Hives, Swelling' },
-  { id: 'al2', type: 'Food', name: 'Peanuts', severity: 'Critical', reaction: 'Anaphylaxis' },
-  { id: 'al3', type: 'Environmental', name: 'Pollen', severity: 'Low', reaction: 'Sneezing, Itchy Eyes' },
-];
-
-const SEED_ACCESS_REQUESTS: DoctorAccessRequest[] = [
-  { id: 'req1', doctorId: 'doc1', doctorName: 'Dr. Aminata Diallo', hospital: 'Connaught Hospital', requestedAt: '2024-04-26 09:15', status: 'pending' }
-];
+import { PatientDataService } from '../services/patientDataService';
 
 // ─── Store Interface ────────────────────────────────────────────────────────
 
@@ -80,7 +32,8 @@ interface AppState {
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
   setAuthenticated: (value: boolean) => void;
-  logout: () => void;
+  activatePatient: (user: User, preserveExistingCache?: boolean) => Promise<void>;
+  logout: () => Promise<void>;
 
   // Health Data
   medications: Medication[];
@@ -90,9 +43,13 @@ interface AppState {
   healthMetrics: HealthMetric[];
   allergies: Allergy[];
   accessRequests: DoctorAccessRequest[];
+  syncStatus: 'idle' | 'syncing' | 'success' | 'error';
+  syncError: string | null;
+  lastSyncedAt: string | null;
 
   // Actions
   loadFromDatabase: () => Promise<void>;
+  syncPatientData: () => Promise<void>;
 
   addRecord: (record: Record) => Promise<void>;
   removeRecord: (id: string) => Promise<void>;
@@ -116,12 +73,6 @@ interface AppState {
   isScanning: boolean;
   setIsScanning: (value: boolean) => void;
 
-  // Rewards
-  tokens: number;
-  isDataSharingEnabled: boolean;
-  setSharingEnabled: (value: boolean) => void;
-  addTokens: (amount: number) => void;
-
   // Security
   isMfaEnabled: boolean;
   isBiometricsEnabled: boolean;
@@ -141,37 +92,74 @@ export const useStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   setUser: (user) => {
     set({ user });
-    if (user) UserDB.upsert(user).catch(console.error);
+    if (user && !isWeb) UserDB.upsert(user).catch((err) => logger.error('Failed to upsert user', err));
   },
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
-  logout: () => set({ user: null, isAuthenticated: false }),
+  activatePatient: async (user, preserveExistingCache = false) => {
+    const cachedUser = isWeb ? get().user : await UserDB.get();
+    const preserveCache = preserveExistingCache && cachedUser?.id === user.id;
+    if (!isWeb && !preserveCache) await clearPatientData();
 
-  // Health data (start with seed; loadFromDatabase() replaces on startup)
-  medications: SEED_MEDICATIONS,
-  records: SEED_RECORDS,
-  appointments: SEED_APPOINTMENTS,
-  blockchainLogs: SEED_BLOCKCHAIN_LOGS,
-  healthMetrics: SEED_HEALTH_METRICS,
-  allergies: SEED_ALLERGIES,
-  accessRequests: SEED_ACCESS_REQUESTS,
+    const activeUser: User = preserveCache && cachedUser ? {
+      ...cachedUser,
+      ...user,
+      name: user.name || cachedUser.name,
+      email: user.email || cachedUser.email,
+      phone: user.phone || cachedUser.phone,
+      bloodType: user.bloodType || cachedUser.bloodType,
+      weight: user.weight || cachedUser.weight,
+      height: user.height || cachedUser.height,
+    } : user;
+
+    if (!isWeb) await UserDB.replace(activeUser);
+    set({
+      user: activeUser,
+      isAuthenticated: true,
+      ...(preserveCache ? {} : {
+        medications: [], records: [], appointments: [], blockchainLogs: [],
+        healthMetrics: [], allergies: [], accessRequests: [],
+      }),
+      syncError: null,
+    });
+    await get().syncPatientData();
+  },
+  logout: async () => {
+    try {
+      if (!isWeb) await clearPatientData();
+    } catch (error) {
+      logger.error('Failed to clear local patient cache during sign-out', error);
+    } finally {
+      set({
+        user: null, isAuthenticated: false, medications: [], records: [],
+        appointments: [], blockchainLogs: [], healthMetrics: [], allergies: [],
+        accessRequests: [], syncStatus: 'idle', syncError: null, lastSyncedAt: null,
+      });
+    }
+  },
+
+  // Never invent patient information while the real data is loading.
+  medications: [],
+  records: [],
+  appointments: [],
+  blockchainLogs: [],
+  healthMetrics: [],
+  allergies: [],
+  accessRequests: [],
+  syncStatus: 'idle',
+  syncError: null,
+  lastSyncedAt: null,
 
   // ── DB Loader ──────────────────────────────────────────────────────────
   loadFromDatabase: async () => {
+    if (isWeb) {
+      set({
+        user: null, medications: [], records: [], appointments: [],
+        blockchainLogs: [], healthMetrics: [], allergies: [], isDbReady: true,
+      });
+      return;
+    }
     try {
-      const alreadySeeded = await isSeeded();
-
-      if (!alreadySeeded) {
-        // First run — seed the database with default data
-        await MedicationDB.seed(SEED_MEDICATIONS);
-        await RecordDB.seed(SEED_RECORDS);
-        await AppointmentDB.seed(SEED_APPOINTMENTS);
-        await BlockchainLogDB.seed(SEED_BLOCKCHAIN_LOGS);
-        await HealthMetricDB.seed(SEED_HEALTH_METRICS);
-        await AllergyDB.seed(SEED_ALLERGIES);
-        console.log('[DB] First run — seeded default data');
-      }
-
-      // Always load from DB into Zustand
+      // Load only persisted data into Zustand.
       const [meds, records, appts, logs, metrics, allergies, user] = await Promise.all([
         MedicationDB.getAll(),
         RecordDB.getAll(),
@@ -183,25 +171,58 @@ export const useStore = create<AppState>((set, get) => ({
       ]);
 
       set({
-        medications: meds,
-        records,
-        appointments: appts,
-        blockchainLogs: logs,
-        healthMetrics: metrics,
-        allergies,
+        medications: user ? meds : [],
+        records: user ? records : [],
+        appointments: user ? appts : [],
+        blockchainLogs: user ? logs : [],
+        healthMetrics: user ? metrics : [],
+        allergies: user ? allergies : [],
         user: user ?? null,
         isDbReady: true,
       });
 
-      console.log('[DB] Loaded all data from SQLite');
+      logger.info('[DB] Loaded all data from SQLite');
     } catch (err) {
-      console.error('[DB] Failed to load from database:', err);
-      // Graceful fallback: keep seed data, mark db ready so app still shows
-      set({ isDbReady: true });
+      logger.error('[DB] Failed to load from database:', err);
+      // Fail closed: a local database error must never reveal fictional data.
+      set({
+        medications: [], records: [], appointments: [], blockchainLogs: [],
+        healthMetrics: [], allergies: [], isDbReady: true,
+      });
     }
   },
 
   // ── Records ────────────────────────────────────────────────────────────
+  syncPatientData: async () => {
+    if (get().syncStatus === 'syncing') return;
+    set({ syncStatus: 'syncing', syncError: null });
+    try {
+      const snapshot = await PatientDataService.fetchSnapshot();
+      const currentUser = get().user;
+      if (currentUser && currentUser.id !== snapshot.user.id) throw new Error('PATIENT_IDENTITY_MISMATCH');
+      const user: User = {
+        ...snapshot.user,
+        weight: currentUser?.weight || '',
+        height: currentUser?.height || '',
+        avatar: currentUser?.avatar,
+      };
+      if (!isWeb) {
+        await RecordDB.replaceAll(snapshot.records);
+        await UserDB.replace(user);
+      }
+      const lastSyncedAt = new Date().toISOString();
+      set({ user, records: snapshot.records, syncStatus: 'success', syncError: null, lastSyncedAt });
+    } catch (error: any) {
+      logger.error('Patient data sync failed', error);
+      const message = error?.message === 'SYNC_TIMEOUT'
+        ? 'The connection timed out. Showing the last records saved on this device.'
+        : error?.message === 'SESSION_NOT_AUTHORIZED'
+          ? 'Your session could not be verified. Please sign in again.'
+          : 'Records could not be refreshed. Showing the last records saved on this device.';
+      set({ syncStatus: 'error', syncError: message });
+    }
+  },
+
   addRecord: async (record) => {
     await RecordDB.insert(record);
     set((state) => ({ records: [record, ...state.records] }));
@@ -268,11 +289,6 @@ export const useStore = create<AppState>((set, get) => ({
   // ── Settings (not persisted in DB — can add later) ─────────────────────
   isScanning: false,
   setIsScanning: (isScanning) => set({ isScanning }),
-
-  tokens: 1250,
-  isDataSharingEnabled: false,
-  setSharingEnabled: (isDataSharingEnabled) => set({ isDataSharingEnabled }),
-  addTokens: (amount) => set((state) => ({ tokens: state.tokens + amount })),
 
   isMfaEnabled: true,
   isBiometricsEnabled: true,

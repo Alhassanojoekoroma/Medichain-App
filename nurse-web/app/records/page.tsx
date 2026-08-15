@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_RECORDS } from '@/data/mockData';
+import LayoutWrapper from '@/components/dashboard/layout-wrapper';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   FileText, CheckCircle2, AlertTriangle, Clock, 
@@ -18,20 +17,21 @@ export default function RecordsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [records, setRecords] = useState<MedicalRecord[]>(MOCK_RECORDS);
+  const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [selectedPreviewRecord, setSelectedPreviewRecord] = useState<MedicalRecord | null>(null);
 
   const loadRecords = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await backendApi.getRecords();
-      if (res.records && res.records.length > 0) {
-        setRecords(res.records);
-      }
-    } catch (err) {
-      console.error('Failed to load records from backend, using mock fallback', err);
+      setRecords(res.records ?? []);
+    } catch (err: any) {
+      setRecords([]);
+      setLoadError(err?.message || 'Medical records are unavailable.');
     } finally {
       setLoading(false);
     }
@@ -134,7 +134,7 @@ CONFIDENTIAL - MEDICAL INFORMATION ONLY FOR AUTHORIZED PERSONNEL
   ];
 
   return (
-    <LayoutWrapper title="Medical Records">
+    <LayoutWrapper>
       <div className="space-y-6">
         {/* Header Summary */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -194,6 +194,7 @@ CONFIDENTIAL - MEDICAL INFORMATION ONLY FOR AUTHORIZED PERSONNEL
           </div>
         </div>
 
+        {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">{loadError} No substitute records have been shown.</div>}
         {/* Table list */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -410,3 +411,4 @@ CONFIDENTIAL - MEDICAL INFORMATION ONLY FOR AUTHORIZED PERSONNEL
     </LayoutWrapper>
   );
 }
+

@@ -1,34 +1,34 @@
-'use client';
-import { useState } from 'react';
-import { Sidebar, MobileMenuButton } from '@/components/dashboard/sidebar';
-import { Header } from '@/components/dashboard/header';
+'use client'
+import Navbar from './navbar'
+import { useEffect, useState } from 'react'
 
-interface LayoutWrapperProps {
-  children: React.ReactNode;
-  title?: string;
-}
-
-export function LayoutWrapper({ children }: LayoutWrapperProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
+export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
+  const [offline, setOffline] = useState(false)
+  
+  useEffect(() => {
+    const handleOffline = () => setOffline(true)
+    const handleOnline = () => setOffline(false)
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+    setOffline(!navigator.onLine)
+    return () => {
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [])
+  
   return (
-    <div className="min-h-screen bg-[#EAEEF2]">
-      <div className="flex">
-        <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
-        <div className="flex-1 min-w-0 lg:pl-[260px]">
-          <div className="px-3 sm:px-4 lg:px-6 max-w-[1600px] mx-auto">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <MobileMenuButton onClick={() => setSidebarOpen(true)} />
-              <div className="flex-1">
-                <Header />
-              </div>
-            </div>
-            <main className="pb-6 sm:pb-8">
-              {children}
-            </main>
-          </div>
+    <div className="page-shell">
+      {offline && (
+        <div className="mc-offline-bar">
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html: '<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>'}}/>
+          System is currently offline. Viewing cached data.
         </div>
-      </div>
+      )}
+      <Navbar />
+      <main className="page-body">
+        {children}
+      </main>
     </div>
-  );
+  )
 }

@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+const evidence = JSON.parse(fs.readFileSync(new URL('../docs/operations/pilot-evidence.json', import.meta.url), 'utf8'));
+const blockers = [];
+if (evidence.criticalFindings > 0) blockers.push('unresolved Critical findings');
+if (evidence.highFindings > 0) blockers.push('unresolved High findings');
+for (const item of evidence.gates) if (item.status !== 'verified' || !item.evidenceRef || !item.reviewedAt) blockers.push(`${item.gate}: ${item.status}`);
+const decision = blockers.length ? 'FAIL / STOP SHIP' : 'PASS';
+console.log(`PalmChain pilot release decision: ${decision}`);
+for (const blocker of blockers) console.log(`- ${blocker}`);
+if (blockers.length && !process.argv.includes('--report')) process.exit(1);

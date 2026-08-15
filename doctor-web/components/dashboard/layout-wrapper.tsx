@@ -1,34 +1,35 @@
 'use client';
-import { useState } from 'react';
-import { Sidebar, MobileMenuButton } from '@/components/dashboard/sidebar';
-import { Header } from '@/components/dashboard/header';
 
-interface LayoutWrapperProps {
-  children: React.ReactNode;
-  title?: string;
-}
+import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 
-export function LayoutWrapper({ children }: LayoutWrapperProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+/**
+ * LayoutWrapper — wraps all doctor-web pages.
+ * Used by page.tsx files that need the app shell without the root layout.
+ * Root layout already provides AuthGuard + AuthProvider.
+ * This wrapper provides the page shell chrome (offline banners, etc.).
+ */
+export function LayoutWrapper({ children, title }: { children: ReactNode; title?: string }) {
+  useEffect(() => {
+    const hideBanner = () => {
+      document.querySelector('.mc-offline-bar')?.setAttribute('style', 'display:none');
+    };
+    const showBanner = () => {
+      document.querySelector('.mc-offline-bar')?.removeAttribute('style');
+    };
+
+    window.addEventListener('online', hideBanner);
+    window.addEventListener('offline', showBanner);
+
+    return () => {
+      window.removeEventListener('online', hideBanner);
+      window.removeEventListener('offline', showBanner);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#EAEEF2]">
-      <div className="flex">
-        <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
-        <div className="flex-1 min-w-0 lg:pl-[260px]">
-          <div className="px-3 sm:px-4 lg:px-6 max-w-[1600px] mx-auto">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <MobileMenuButton onClick={() => setSidebarOpen(true)} />
-              <div className="flex-1">
-                <Header />
-              </div>
-            </div>
-            <main className="pb-6 sm:pb-8">
-              {children}
-            </main>
-          </div>
-        </div>
-      </div>
+    <div className="page-shell">
+      {children}
     </div>
   );
 }

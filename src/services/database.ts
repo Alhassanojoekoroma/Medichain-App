@@ -6,6 +6,7 @@
  * Zustand reads from here on startup and writes here on every mutation.
  */
 import * as SQLite from 'expo-sqlite';
+import Constants from 'expo-constants';
 import { User, Medication, Record, Appointment, BlockchainLog, HealthMetric, Allergy, DoctorAccessRequest } from '../types';
 
 let db: SQLite.SQLiteDatabase | null = null;
@@ -13,10 +14,14 @@ let db: SQLite.SQLiteDatabase | null = null;
 // ─── Initialise ────────────────────────────────────────────────────────────
 
 export async function initDatabase(): Promise<void> {
+  if (Constants.expoConfig?.extra?.dataClassification === 'real') {
+    throw new Error('Real patient data requires the approved encrypted database and managed device key profile.');
+  }
   db = await SQLite.openDatabaseAsync('medichain_v1.db');
 
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
+    PRAGMA secure_delete = ON;
 
     CREATE TABLE IF NOT EXISTS users (
       id          TEXT PRIMARY KEY,
@@ -148,6 +153,13 @@ export const UserDB = {
   async delete(id: string): Promise<void> {
     await getDb().runAsync('DELETE FROM users WHERE id = ?', [id]);
   },
+
+  async replace(user: User): Promise<void> {
+    await getDb().withTransactionAsync(async () => {
+      await getDb().runAsync('DELETE FROM users');
+      await UserDB.upsert(user);
+    });
+  },
 };
 
 // ─── Medications ────────────────────────────────────────────────────────────
@@ -207,10 +219,39 @@ export const RecordDB = {
     await getDb().runAsync('DELETE FROM records WHERE id = ?', [id]);
   },
 
+  async replaceAll(records: Record[]): Promise<void> {
+    await getDb().withTransactionAsync(async () => {
+      await getDb().runAsync('DELETE FROM fhir_resources');
+      await getDb().runAsync('DELETE FROM record_amendments');
+      await getDb().runAsync('DELETE FROM records');
+      for (const record of records) await RecordDB.insert(record);
+    });
+  },
+
   async seed(records: Record[]): Promise<void> {
     for (const r of records) await RecordDB.insert(r);
   },
 };
+
+/**
+ * Removes all locally cached patient information. This is used when accounts
+ * change and on sign-out so data from one patient can never be shown to the
+ * next patient using the device.
+ */
+export async function clearPatientData(): Promise<void> {
+  await getDb().withTransactionAsync(async () => {
+    await getDb().runAsync('DELETE FROM fhir_resources');
+    await getDb().runAsync('DELETE FROM record_amendments');
+    await getDb().runAsync('DELETE FROM doctor_access_requests');
+    await getDb().runAsync('DELETE FROM blockchain_logs');
+    await getDb().runAsync('DELETE FROM health_metrics');
+    await getDb().runAsync('DELETE FROM allergies');
+    await getDb().runAsync('DELETE FROM appointments');
+    await getDb().runAsync('DELETE FROM medications');
+    await getDb().runAsync('DELETE FROM records');
+    await getDb().runAsync('DELETE FROM users');
+  });
+}
 
 // ─── Appointments ──────────────────────────────────────────────────────────
 

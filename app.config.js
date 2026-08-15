@@ -1,15 +1,22 @@
 /**
  * app.config.js — replaces app.json
- * Reads environment variables and injects them as Expo constants.
- * Use: GEMINI_API_KEY=xxx npx expo start
+ * Reads non-secret environment variables and injects them as Expo constants.
+ * Secrets must never be included in an Expo client bundle.
  */
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+const isDeviceBuild = Boolean(process.env.EAS_BUILD_PROFILE || process.env.EAS_BUILD === 'true');
+
+if (isDeviceBuild && !/^https:\/\//i.test(apiBaseUrl)) {
+  throw new Error('Device builds require EXPO_PUBLIC_API_URL to be an externally reachable HTTPS endpoint.');
+}
+
 module.exports = {
   expo: {
     name: 'MediChain SL',
     slug: 'medichain-app',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: './assets/app-icon.png',
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
@@ -22,6 +29,7 @@ module.exports = {
       bundleIdentifier: 'com.medichain.patient',
     },
     android: {
+      allowBackup: false,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#000728',
@@ -44,10 +52,11 @@ module.exports = {
       ],
     ],
     extra: {
-      // Injected at build time from environment variables
-      geminiApiKey: process.env.GEMINI_API_KEY ?? '',
-      hyperledgerGatewayUrl: process.env.HYPERLEDGER_GATEWAY_URL ?? 'http://localhost:3001',
-      apiBaseUrl: process.env.API_BASE_URL ?? 'http://localhost:4000/api/v1',
+      apiBaseUrl,
+      dataClassification: process.env.EXPO_PUBLIC_DATA_CLASSIFICATION || 'synthetic',
+      eas: {
+        projectId: '1d5aa398-bfc2-422e-8ae5-0ff556a1f4d4',
+      },
     },
   },
 };

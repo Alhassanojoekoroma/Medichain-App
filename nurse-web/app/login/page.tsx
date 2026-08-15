@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const sandboxPasswordLogin = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_IDENTITY_MODE !== 'managed';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +33,7 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#101326]">MediChain SL</h1>
-            <p className="text-sm text-[#8C91A8]">Doctor Web Portal</p>
+            <p className="text-sm text-[#8C91A8]">Nurse Web Portal</p>
           </div>
         </div>
 
@@ -43,10 +44,12 @@ export default function LoginPage() {
             <h2 className="text-lg font-semibold text-[#101326]">Secure Sign In</h2>
           </div>
           <p className="text-sm text-[#8C91A8] mb-6">
-            Authenticated via Hyperledger Fabric Certificate Authority.
-            Your identity is cryptographically verified on the blockchain.
+            {sandboxPasswordLogin
+              ? 'Synthetic sandbox credentials only. Never enter a real password.'
+              : 'Production sign-in is delegated to the approved managed identity provider with MFA and account recovery.'}
           </p>
 
+          {sandboxPasswordLogin ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-[#101326] mb-1.5">
@@ -106,16 +109,12 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-6 pt-4 border-t border-[#D8DCE8]">
-            <div className="bg-brand-light rounded-xl p-3">
-              <p className="text-xs text-[#5D6582] text-center font-medium mb-1">🔐 Development Credentials</p>
-              <p className="text-xs text-[#8C91A8] text-center">
-                Username: <strong className="text-brand">doctor</strong> &nbsp;|&nbsp;
-                Password: <strong className="text-brand">medichain2026</strong>
-              </p>
+          ) : (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+              Managed identity is required but not configured for this build. PalmChain will not collect production passwords. Ask the identity administrator to complete the approved provider integration.
             </div>
-          </div>
+          )}
+
         </div>
 
         <p className="text-center text-xs text-[#8C91A8] mt-6">

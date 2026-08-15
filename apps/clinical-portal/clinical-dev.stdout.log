@@ -1,0 +1,9 @@
+
+> @medichain/clinical-portal@0.1.0 dev
+> next dev -p 3010
+
+▲ Next.js 16.2.12 (Turbopack)
+- Local:         http://localhost:3010
+- Network:       http://192.168.56.1:3010
+✓ Ready in 2.8s
+

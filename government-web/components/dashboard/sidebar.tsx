@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Bell, Settings, LogOut, ChevronUp, ChevronDown,
-  Lock, X, Menu, BarChart2, Map, ShieldAlert, FileSpreadsheet
+  LayoutDashboard, Settings, LogOut, ChevronUp, ChevronDown,
+  Lock, X, Menu, Map, FileSpreadsheet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LOGGED_IN_DOCTOR, MOCK_BLOCKCHAIN_STATUS, MOCK_NOTIFICATIONS } from '@/data/mockData';
 import { logoutDoctor } from '@/services/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -16,11 +16,9 @@ interface SidebarProps {
 }
 
 const mainNavItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/regional', icon: Map, label: 'Regional Stats' },
-  { href: '/drugs', icon: ShieldAlert, label: 'Drug Distribution' },
-  { href: '/disease-map', icon: BarChart2, label: 'Disease Map' },
-  { href: '/reports', icon: FileSpreadsheet, label: 'Reports Log' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'National Overview' },
+  { href: '/regional', icon: Map, label: 'Districts' },
+  { href: '/reports', icon: FileSpreadsheet, label: 'Reports' },
 ];
 
 const helpNavItems = [
@@ -30,21 +28,10 @@ const helpNavItems = [
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [mainMenuExpanded, setMainMenuExpanded] = useState(true);
   const [helpMenuExpanded, setHelpMenuExpanded] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const u = sessionStorage.getItem('mc_user');
-      if (u) { try { setCurrentUser(JSON.parse(u)); } catch {} }
-    }
-  }, []);
-
-  const displayName = currentUser?.name || 'Director Koroma';
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
+  const { user } = useAuth();
+  const displayName = user?.name || 'Signed-in ministry user';
 
   const handleLogout = async () => {
     await logoutDoctor();
@@ -177,17 +164,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
           <div className="rounded-2xl p-4 text-white" style={{ backgroundColor: accentColor }}>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <span className="text-white text-xs font-semibold">Fabric Network</span>
+              <div className="w-2 h-2 bg-white/70 rounded-full" />
+              <span className="text-white text-xs font-semibold">Aggregate reporting feed</span>
             </div>
             <p className="text-white/80 text-xs mb-1">
-              {MOCK_BLOCKCHAIN_STATUS.network}
+              Live status is not configured.
             </p>
             <p className="text-white/80 text-xs mb-3">
-              Channel: national-analytics
+              No demo connection is displayed.
             </p>
             <div className="w-full bg-black/20 text-white rounded-full py-2 px-3 text-xs font-medium text-center">
-              ✓ Ministry CA Enrolled
+              Backend verification required
             </div>
           </div>
         </div>

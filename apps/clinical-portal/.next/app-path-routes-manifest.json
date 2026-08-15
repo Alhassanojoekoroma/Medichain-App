@@ -1,0 +1,9 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/health/route": "/api/health",
+  "/find-patient/page": "/find-patient",
+  "/page": "/",
+  "/patients/[id]/page": "/patients/[id]",
+  "/upload/page": "/upload"
+}

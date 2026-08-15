@@ -1,0 +1,160 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PalmChain V2 API",
+    "version": "2.0.0-phase10",
+    "description": "Security-first Phase 2-10 contract with fail-closed pilot readiness and privacy-minimized operational evidence."
+  },
+  "servers": [{ "url": "/api" }],
+  "components": {
+    "securitySchemes": {
+      "oidc": { "type": "openIdConnect", "openIdConnectUrl": "https://identity-owner.example/.well-known/openid-configuration" }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "correlationId": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "SyncCommand": {
+        "type": "object",
+        "required": ["id", "type", "resourceId", "baseVersion", "issuedAt", "payload"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "type": { "enum": ["CONSENT_UPDATE", "QR_REVOKE", "PROFILE_UPDATE"] },
+          "resourceId": { "type": "string", "maxLength": 200 },
+          "baseVersion": { "type": "integer", "minimum": 0 },
+          "issuedAt": { "type": "string", "format": "date-time" },
+          "payload": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "security": [{ "oidc": [] }],
+  "paths": {
+    "/platform/sessions/current": {
+      "get": { "operationId": "getCurrentSession", "responses": { "200": { "description": "Actor and server-authoritative token, idle, and absolute deadlines" }, "401": { "description": "Unauthorized" } } }
+    },
+    "/platform/sessions/renew-sandbox": {
+      "post": { "operationId": "renewSyntheticSandboxSession", "description": "Synthetic-sandbox credential rotation only. Managed deployments use the approved identity-provider SDK.", "responses": { "200": { "description": "Short-lived credential rotated without moving auth_time" }, "401": { "description": "Session expired" }, "404": { "description": "Unavailable outside synthetic sandbox" }, "429": { "description": "Rate limited" } } }
+    },
+    "/platform/sessions/logout": {
+      "post": { "operationId": "logoutSession", "responses": { "204": { "description": "Session revoked" }, "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } } }
+    },
+    "/platform/break-glass": {
+      "post": { "operationId": "openBreakGlass", "responses": { "201": { "description": "Time-boxed emergency access created" }, "400": { "description": "Invalid request" }, "403": { "description": "Denied" } } }
+    },
+    "/platform/health-id/issue": {
+      "post": { "operationId": "issueHealthId", "responses": { "201": { "description": "Identifier issued and shown once" }, "409": { "description": "Active identifier already exists" } } }
+    },
+    "/platform/health-id/lost": {
+      "post": { "operationId": "replaceLostHealthId", "responses": { "201": { "description": "Lost identifier revoked and replaced" }, "404": { "description": "No active identifier" } } }
+    },
+    "/platform/sync/commands": {
+      "post": {
+        "operationId": "submitOfflineCommand",
+        "parameters": [{ "in": "header", "name": "Idempotency-Key", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncCommand" } } } },
+        "responses": { "202": { "description": "Accepted after reauthorization" }, "200": { "description": "Duplicate" }, "409": { "description": "Version conflict" }, "403": { "description": "Denied" } }
+      }
+    },
+    "/platform/fhir/metadata": {
+      "get": { "security": [], "operationId": "getFhirCapability", "responses": { "200": { "description": "FHIR R4 CapabilityStatement" } } }
+    },
+    "/platform/fhir/$validate": {
+      "post": { "operationId": "validateFhirResource", "responses": { "200": { "description": "Valid" }, "422": { "description": "OperationOutcome" } } }
+    },
+    "/clinical/patients/match": {
+      "post": { "operationId": "matchClinicalPatient", "responses": { "200": { "description": "Unique match" }, "404": { "description": "No match" }, "409": { "description": "Ambiguous match" } } }
+    },
+    "/clinical/patients/{patientId}/summary": {
+      "get": { "operationId": "getClinicianSummary", "parameters": [{ "in": "path", "name": "patientId", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Role-scoped clinical summary" }, "403": { "description": "Denied" } } }
+    },
+    "/clinical/encounters": {
+      "post": { "operationId": "createClinicalEncounter", "responses": { "201": { "description": "Encounter created" }, "403": { "description": "Denied" } } }
+    },
+    "/clinical/encounters/{encounterId}/notes": {
+      "post": { "operationId": "signClinicalNote", "parameters": [{ "in": "path", "name": "encounterId", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "201": { "description": "Signed note appended" }, "403": { "description": "Denied" } } }
+    },
+    "/clinical/notes/{noteId}/corrections": {
+      "post": { "operationId": "correctClinicalNote", "parameters": [{ "in": "path", "name": "noteId", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "201": { "description": "Correction appended with provenance" }, "409": { "description": "Correction rejected" } } }
+    },
+    "/clinical/labs": {
+      "post": { "operationId": "orderLaboratoryTest", "responses": { "201": { "description": "Laboratory order created" }, "403": { "description": "Denied" } } }
+    },
+    "/clinical/labs/{id}/transition": {
+      "post": { "operationId": "transitionLaboratoryOrder", "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Role-authorized transition" }, "409": { "description": "Invalid or replayed transition" } } }
+    },
+    "/clinical/prescriptions/{id}/dispense": {
+      "post": { "operationId": "dispensePrescription", "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Idempotent dispensing event" }, "409": { "description": "Over-dispense or invalid state" } } }
+    },
+    "/clinical/referrals": {
+      "post": { "operationId": "createReferral", "responses": { "201": { "description": "Referral created" }, "400": { "description": "Invalid referral" } } }
+    },
+    "/clinical/appointments": {
+      "post": { "operationId": "scheduleReferralAppointment", "responses": { "201": { "description": "Appointment booked" }, "409": { "description": "Referral not ready" } } }
+    },
+    "/clinical/downtime/reconcile": {
+      "post": { "operationId": "reconcileClinicalDowntimeCommand", "responses": { "202": { "description": "Command accepted" }, "200": { "description": "Duplicate command" }, "409": { "description": "Version conflict" } } }
+    },
+    "/clinical/patients/{patientId}/fhir": {
+      "get": { "operationId": "exportPatientFhirBundle", "parameters": [{ "in": "path", "name": "patientId", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "FHIR R4 collection Bundle" }, "403": { "description": "Denied" } } }
+    },
+    "/clinical/fhir/import": {
+      "post": { "operationId": "importValidatedFhirBundle", "responses": { "202": { "description": "Validated bundle accepted for sandbox processing" }, "422": { "description": "FHIR OperationOutcome" } } }
+    },
+    "/ai/model-register": {
+      "get": { "operationId": "getAiModelRegister", "responses": { "200": { "description": "Approved evaluation model register" }, "503": { "description": "Kill switch active" } } }
+    },
+    "/ai/drafts": {
+      "post": { "operationId": "createAiDocumentationDraft", "responses": { "201": { "description": "Untrusted draft created for human review" }, "422": { "description": "Input quarantined" }, "429": { "description": "Quota exceeded" } } }
+    },
+    "/ai/drafts/{id}/review": {
+      "post": { "operationId": "reviewAiDocumentationDraft", "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Human review recorded" }, "409": { "description": "Review rejected" } } }
+    },
+    "/intelligence/indicators": {
+      "get": { "operationId": "getApprovedIndicatorCatalog", "responses": { "200": { "description": "Aggregate-only indicator catalog" }, "403": { "description": "Denied" } } }
+    },
+    "/intelligence/aggregates": {
+      "get": { "operationId": "getAggregateFeed", "responses": { "200": { "description": "Suppressed aggregate feed and health" } } },
+      "post": { "operationId": "submitAggregateIndicator", "responses": { "202": { "description": "Aggregate accepted" }, "422": { "description": "Row-level or invalid input rejected" } } }
+    },
+    "/intelligence/signals/{id}/review": {
+      "post": { "operationId": "reviewIntelligenceSignal", "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Human review recorded" }, "409": { "description": "Review conflict" } } }
+    },
+    "/intelligence/exports/{id}/decision": {
+      "post": { "operationId": "decideAggregateExport", "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Separate approval decision recorded" }, "409": { "description": "Separation-of-duties violation" } } }
+    },
+    "/operations/readiness": {
+      "get": { "operationId": "getPilotReadiness", "responses": { "200": { "description": "Fail-closed evidence assessment" }, "403": { "description": "Operations administrator required" } } }
+    },
+    "/operations/metrics": {
+      "get": { "operationId": "getPrivacyMinimizedMetrics", "responses": { "200": { "description": "Bounded process-window metrics" }, "403": { "description": "Operations administrator required" } } }
+    },
+    "/operations/dependency-health": {
+      "get": { "operationId": "getDependencyHealth", "responses": { "200": { "description": "Required dependencies available" }, "503": { "description": "Required dependency unavailable" } } }
+    },
+    "/qr/generate": {
+      "post": { "operationId": "generateScopedQr", "responses": { "200": { "description": "Short-lived QR reference" }, "403": { "description": "Denied" } } }
+    },
+    "/qr/token/{tokenId}": {
+      "delete": { "operationId": "revokeQr", "parameters": [{ "in": "path", "name": "tokenId", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "Revoked" }, "404": { "description": "Not found" } } }
+    },
+    "/consent": {
+      "post": { "operationId": "grantConsent", "responses": { "200": { "description": "Granular, purpose-bound consent" }, "400": { "description": "Invalid or over-broad consent" } } }
+    }
+  }
+}

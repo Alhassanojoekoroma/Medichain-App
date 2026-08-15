@@ -1,331 +1,264 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, Alert,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import QRCode from 'react-native-qrcode-svg';
-import { QRServiceClient } from '../services/qrService';
 import { Colors, FontSize, FontWeight, Radius, Spacing, Shadow } from '../theme';
-import { Card, CardBody, Badge, Button, Toast } from '../components';
+import { useStore } from '../store/useStore';
+
+type Scope = 'all' | 'recent' | 'single';
 
 export default function QRGenerateScreen({ navigation }: any) {
-  const insets = useSafeAreaInsets();
-  const toastRef = useRef<any>(null);
-  const [activeTab, setActiveTab] = useState<'NORMAL' | 'EMERGENCY'>('NORMAL');
-  const [qrPayload, setQrPayload] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [qrTokenId, setQrTokenId] = useState<string | null>(null);
+  const insets      = useSafeAreaInsets();
+  const { user }    = useStore();
+  const [scope, setScope]         = useState<Scope>('all');
+  const [secondsLeft, setSeconds] = useState(300);
+  const [token, setToken]         = useState(`MC-${Math.floor(1000 + Math.random() * 9000)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const generateQR = async () => {
-    setIsLoading(true);
-    setQrPayload(null);
-    setQrTokenId(null);
-    try {
-      if (activeTab === 'NORMAL') {
-        const result = await QRServiceClient.generateNormalQR(3600, true);
-        setQrPayload(JSON.stringify(result.qrPayload));
-        setQrTokenId(result.tokenId);
-      } else {
-        const result = await QRServiceClient.generateEmergencyQR();
-        setQrPayload(JSON.stringify(result.qrPayload));
-        setQrTokenId(result.tokenId);
-      }
-    } catch (error) {
-      toastRef.current?.show({
-        message: 'Failed to generate secure QR code.',
-        type: 'error',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const expired = secondsLeft <= 0;
+  const critical = secondsLeft <= 60 && !expired;
+
+  useEffect(() => {
+    if (expired) return;
+    intervalRef.current = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [expired, token]);
+
+  const regenerate = () => {
+    setToken(`MC-${Math.floor(1000 + Math.random() * 9000)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`);
+    setSeconds(300);
   };
 
-  const revokeCurrentToken = async () => {
-    if (!qrTokenId) return;
-    try {
-      await QRServiceClient.revokeToken(qrTokenId);
-      toastRef.current?.show({
-        message: 'QR Code has been revoked successfully.',
-        type: 'success',
-      });
-      setQrPayload(null);
-      setQrTokenId(null);
-    } catch (error) {
-      toastRef.current?.show({
-        message: 'Failed to revoke token.',
-        type: 'error',
-      });
-    }
+  const revoke = () => {
+    Alert.alert('Revoke access', 'This will immediately invalidate the current QR code.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Revoke now', style: 'destructive', onPress: () => setSeconds(0) },
+    ]);
   };
 
-  React.useEffect(() => {
-    generateQR();
-  }, [activeTab]);
+  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  const qrPayload = JSON.stringify({ patientId: user?.id, token, scope, exp: Date.now() + secondsLeft * 1000 });
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={styles.screen}>
+      <StatusBar style="dark" />
 
-      {/* ═══ HEADER ═══ */}
-      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={Colors.white} />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
+          <Ionicons name="arrow-back" size={22} color={Colors.dark} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Secure Access QR</Text>
-        <View style={{ width: 44 }} />
+        <Text style={styles.headerTitle}>Share Health ID</Text>
+        <View style={{ width: 22 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Let doctors scan this code to access your medical records.</Text>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* ═══ TABS ═══ */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'NORMAL' && styles.activeTab]}
-            onPress={() => setActiveTab('NORMAL')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabText, activeTab === 'NORMAL' && styles.activeTabText]}>Doctor Visit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'EMERGENCY' && styles.emergencyTab]}
-            onPress={() => setActiveTab('EMERGENCY')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabText, activeTab === 'EMERGENCY' ? styles.activeEmergencyTabText : styles.inactiveEmergencyTabText]}>Emergency</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ═══ QR CARD ═══ */}
-        <Card style={styles.qrCard}>
-          <CardBody>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.loadingText}>Generating secure token...</Text>
-              </View>
-            ) : qrPayload ? (
-              <View style={styles.qrWrapper}>
-                <QRCode
-                  value={qrPayload}
-                  size={220}
-                  color={activeTab === 'EMERGENCY' ? Colors.danger : Colors.primary}
-                  backgroundColor="white"
-                />
-                
-                {activeTab === 'NORMAL' ? (
-                  <View style={[styles.infoBadge, styles.successBadge]}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color={Colors.successDark} />
-                    <Text style={[styles.infoText, { color: Colors.successDark }]}>Expires in 1 Hour • One-time use</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.infoBadge, styles.dangerBadge]}>
-                    <MaterialCommunityIcons name="alert-decagram-outline" size={16} color={Colors.dangerDark} />
-                    <Text style={[styles.infoText, { color: Colors.dangerDark }]}>Bracelet QR • Read Only • Critical Data</Text>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>No active secure token</Text>
-              </View>
-            )}
-
-            {!isLoading && qrPayload && (
-              <View style={styles.actionButtons}>
-                <Button
-                  label="Refresh QR"
-                  variant="outline"
-                  size="normal"
-                  onPress={generateQR}
-                  style={styles.actionBtn}
-                  icon={<MaterialCommunityIcons name="refresh" size={18} color={Colors.primary} />}
-                />
-                {activeTab === 'NORMAL' && (
-                  <Button
-                    label="Revoke Now"
-                    variant="danger"
-                    size="normal"
-                    onPress={revokeCurrentToken}
-                    style={styles.actionBtn}
-                    icon={<MaterialCommunityIcons name="shield-off" size={18} color={Colors.dangerDark} />}
-                  />
-                )}
-              </View>
-            )}
-          </CardBody>
-        </Card>
-
-        {/* ═══ BLOCKCHAIN NOTE ═══ */}
-        <View style={styles.securityNote}>
-          <MaterialCommunityIcons name="link-variant" size={24} color={Colors.neutral600} />
-          <View style={styles.noteText}>
-            <Text style={styles.noteTitle}>Blockchain Secured</Text>
-            <Text style={styles.noteDesc}>
-              This QR code contains no personal data. It acts as a secure cryptographic key that verifies your consent on the Hyperledger Fabric network.
-            </Text>
+        {/* Patient identity card */}
+        <View style={styles.identityCard}>
+          <View style={styles.identityLeft}>
+            <Text style={styles.identityLabel}>PATIENT</Text>
+            <Text style={styles.identityName}>{user?.name ?? 'Aminata Kamara'}</Text>
+            <Text style={styles.identityId}>ID: {user?.id ?? 'PT-001'}</Text>
+          </View>
+          <View style={styles.bloodBadge}>
+            <Text style={styles.bloodLabel}>BLOOD</Text>
+            <Text style={styles.bloodType}>{user?.bloodType ?? 'O+'}</Text>
           </View>
         </View>
+
+        {/* QR code */}
+        <View style={styles.qrContainer}>
+          {expired ? (
+            <TouchableOpacity style={styles.expiredOverlay} onPress={regenerate}>
+              <Ionicons name="refresh" size={32} color={Colors.textMuted} />
+              <Text style={styles.expiredText}>Expired — tap to generate new key</Text>
+            </TouchableOpacity>
+          ) : (
+            <QRCode
+              value={qrPayload}
+              size={240}
+              color={Colors.dark}
+              backgroundColor={Colors.white}
+            />
+          )}
+        </View>
+
+        {/* Access key + timer */}
+        <View style={styles.accessKeyRow}>
+          <View style={styles.accessKey}>
+            <Text style={styles.accessKeyLabel}>ACCESS KEY</Text>
+            <Text style={styles.accessKeyValue}>{token}</Text>
+          </View>
+          <View style={[styles.timer, critical && styles.timerCritical]}>
+            <Ionicons name="time" size={14} color={critical ? Colors.danger : Colors.textMuted} />
+            <Text style={[styles.timerText, critical && styles.timerTextCritical]}>{fmt(secondsLeft)}</Text>
+          </View>
+        </View>
+
+        {/* Scope selector */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>SHARE SCOPE</Text>
+          {([
+            { value: 'all',    label: 'Share all records',          icon: 'albums' },
+            { value: 'recent', label: 'Share records from last 30 days', icon: 'calendar' },
+            { value: 'single', label: 'Share specific record',      icon: 'document-text' },
+          ] as { value: Scope; label: string; icon: string }[]).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.scopeRow, scope === opt.value && styles.scopeRowActive]}
+              onPress={() => setScope(opt.value)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: scope === opt.value }}
+            >
+              <Ionicons name={opt.icon as any} size={18} color={scope === opt.value ? Colors.primary : Colors.textMuted} />
+              <Text style={[styles.scopeLabel, scope === opt.value && styles.scopeLabelActive]}>{opt.label}</Text>
+              <View style={[styles.radioOuter, scope === opt.value && styles.radioOuterActive]}>
+                {scope === opt.value && <View style={styles.radioInner} />}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Warning notice */}
+        <View style={styles.notice}>
+          <Ionicons name="information-circle" size={16} color={Colors.orange} />
+          <Text style={styles.noticeText}>Single use — expires after one scan or 5 minutes</Text>
+        </View>
+
+        {/* Actions */}
+        <TouchableOpacity style={styles.primaryBtn} onPress={regenerate}
+          accessibilityRole="button" accessibilityLabel="Generate new key">
+          <Ionicons name="refresh" size={18} color={Colors.white} />
+          <Text style={styles.primaryBtnText}>Generate new key</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.revokeBtn} onPress={revoke}
+          accessibilityRole="button" accessibilityLabel="Revoke access now">
+          <Ionicons name="close-circle" size={18} color={Colors.danger} />
+          <Text style={styles.revokeBtnText}>Revoke access now</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
-      <Toast ref={toastRef} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
+  screen: { flex: 1, backgroundColor: Colors.bg },
+
   header: {
+    flexDirection:    'row',
+    alignItems:       'center',
+    justifyContent:   'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical:   Spacing.md,
+    backgroundColor:  Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  headerTitle: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.dark },
+
+  scroll:  { flex: 1 },
+  content: { padding: Spacing.xl, gap: Spacing.lg, alignItems: 'center' },
+
+  identityCard: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    width:           '100%',
     backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomLeftRadius: Radius.lg,
-    borderBottomRightRadius: Radius.lg,
+    borderRadius:    Radius.xl,
+    padding:         Spacing.xl,
+    justifyContent:  'space-between',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: FontSize.h2,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    letterSpacing: -0.5,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
-  },
-  subtitle: {
-    fontSize: FontSize.body,
-    color: Colors.neutral600,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-    lineHeight: 20,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.neutral100,
-    borderRadius: Radius.md,
-    padding: Spacing.xs,
-    marginBottom: Spacing.xl,
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    borderRadius: Radius.sm,
-  },
-  activeTab: {
+  identityLeft: {},
+  identityLabel: { fontSize: FontSize.label, color: 'rgba(255,255,255,0.65)', letterSpacing: 0.6 },
+  identityName:  { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.white, marginTop: 4 },
+  identityId:    { fontSize: FontSize.caption, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+  bloodBadge:    { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: Radius.lg, padding: Spacing.md },
+  bloodLabel: { fontSize: FontSize.label, color: 'rgba(255,255,255,0.65)', letterSpacing: 0.4 },
+  bloodType:  { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Colors.white, marginTop: 2 },
+
+  qrContainer: {
+    width:           280,
+    height:          280,
     backgroundColor: Colors.white,
-    ...Shadow.card,
-    borderWidth: 0.5,
-    borderColor: Colors.border,
+    borderRadius:    Radius.xl,
+    alignItems:      'center',
+    justifyContent:  'center',
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    ...Shadow.strong,
   },
-  emergencyTab: {
-    backgroundColor: Colors.danger,
-  },
-  tabText: {
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral600,
-  },
-  activeTabText: {
-    color: Colors.primary,
-  },
-  activeEmergencyTabText: {
-    color: Colors.white,
-  },
-  inactiveEmergencyTabText: {
-    color: Colors.neutral600,
-  },
-  qrCard: {
+  expiredOverlay: { alignItems: 'center', gap: Spacing.md },
+  expiredText:    { fontSize: FontSize.body, color: Colors.textMuted, textAlign: 'center' },
+
+  accessKeyRow: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: Spacing.md },
+  accessKey: {
+    flex:            1,
     backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    marginBottom: Spacing.xl,
+    borderRadius:    Radius.md,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         Spacing.md,
   },
-  loadingContainer: {
-    height: 250,
-    justifyContent: 'center',
-    alignItems: 'center',
+  accessKeyLabel: { fontSize: FontSize.label, color: Colors.textMuted, letterSpacing: 0.4, marginBottom: 3 },
+  accessKeyValue: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.dark,
+    fontFamily: 'monospace' as any },
+
+  timer: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             4,
+    backgroundColor: Colors.bg,
+    borderRadius:    Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical:  Spacing.md,
   },
-  loadingText: {
-    marginTop: Spacing.md,
-    color: Colors.neutral600,
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.medium,
+  timerCritical:     { backgroundColor: Colors.dangerLight },
+  timerText:         { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.dark },
+  timerTextCritical: { color: Colors.danger },
+
+  card: {
+    width:           '100%',
+    backgroundColor: Colors.white,
+    borderRadius:    Radius.lg,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         Spacing.lg,
   },
-  qrWrapper: {
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-  },
-  infoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.pill,
-    marginTop: Spacing.xl,
-    borderWidth: 1,
-    gap: Spacing.sm,
-  },
-  successBadge: {
-    backgroundColor: Colors.successLight,
-    borderColor: Colors.successBorder,
-  },
-  dangerBadge: {
-    backgroundColor: Colors.dangerLight,
-    borderColor: Colors.dangerBorder,
-  },
-  infoText: {
-    fontSize: FontSize.bodySmall,
-    fontWeight: FontWeight.bold,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: Spacing.md,
-    marginTop: Spacing.xl,
-  },
-  actionBtn: {
-    flex: 1,
-  },
-  securityNote: {
-    flexDirection: 'row',
-    backgroundColor: Colors.neutral100,
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-  },
-  noteText: {
-    marginLeft: Spacing.lg,
-    flex: 1,
-  },
-  noteTitle: {
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    fontSize: FontSize.body,
-    marginBottom: Spacing.xs,
-  },
-  noteDesc: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral600,
-    lineHeight: 18,
-    fontWeight: FontWeight.regular,
-  },
+  cardLabel: { fontSize: FontSize.label, fontWeight: FontWeight.medium, color: Colors.textMuted,
+    letterSpacing: 0.6, marginBottom: Spacing.md },
+
+  scopeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    paddingVertical: Spacing.md, borderRadius: Radius.md, paddingHorizontal: Spacing.sm },
+  scopeRowActive: { backgroundColor: Colors.primaryLight },
+  scopeLabel:     { flex: 1, fontSize: FontSize.body, color: Colors.textBody },
+  scopeLabelActive:{ color: Colors.primary, fontWeight: FontWeight.medium },
+  radioOuter: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: Colors.border,
+    alignItems: 'center', justifyContent: 'center' },
+  radioOuterActive:{ borderColor: Colors.primary },
+  radioInner:      { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
+
+  notice: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, width: '100%',
+    backgroundColor: Colors.orangeLight, borderRadius: Radius.md, padding: Spacing.md },
+  noticeText: { flex: 1, fontSize: FontSize.bodySmall, color: Colors.warningDark, lineHeight: 18 },
+
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.md, backgroundColor: Colors.primary, borderRadius: Radius.pill,
+    paddingVertical: 14, width: '100%' },
+  primaryBtnText: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.white },
+
+  revokeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.md, borderWidth: 1.5, borderColor: Colors.danger, borderRadius: Radius.pill,
+    paddingVertical: 14, width: '100%' },
+  revokeBtnText: { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.danger },
 });

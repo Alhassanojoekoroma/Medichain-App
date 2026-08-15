@@ -14,51 +14,51 @@ function EmergencyProfileContent() {
   const searchParams = useSearchParams();
   const tokenStr = searchParams.get('token');
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const tokenError = tokenStr ? null : 'No emergency access token provided in URL.';
+  const [loading, setLoading] = useState<boolean>(!tokenError);
+  const [error, setError] = useState<string | null>(tokenError);
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (!tokenStr) {
-      setError('No emergency access token provided in URL.');
-      setLoading(false);
-      return;
-    }
+    if (!tokenStr) return;
 
-    let parsedPayload: any = null;
-    try {
-      parsedPayload = JSON.parse(decodeURIComponent(tokenStr));
-    } catch {
+    const loadProfile = async () => {
+      let parsedPayload: any = null;
+
       try {
-        parsedPayload = JSON.parse(tokenStr);
-      } catch (e) {
-        setError('The emergency access token is malformed.');
+        parsedPayload = JSON.parse(decodeURIComponent(tokenStr));
+      } catch {
+        try {
+          parsedPayload = JSON.parse(tokenStr);
+        } catch {
+          setError('The emergency access token is malformed.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (!parsedPayload || parsedPayload.type !== 'EMERGENCY') {
+        setError('Invalid token type. Expected EMERGENCY access token.');
         setLoading(false);
         return;
       }
-    }
 
-    if (!parsedPayload || parsedPayload.type !== 'EMERGENCY') {
-      setError('Invalid token type. Expected EMERGENCY access token.');
-      setLoading(false);
-      return;
-    }
-
-    backendApi.resolveEmergencyQR(parsedPayload)
-      .then((res) => {
+      try {
+        const res = await backendApi.resolveEmergencyQR(parsedPayload);
         if (res.success && res.profile) {
           setProfile(res.profile);
         } else {
           setError('Could not verify access token.');
         }
-      })
-      .catch((err) => {
+      } catch (err: any) {
         console.error(err);
         setError(err.message || 'Verification key has been revoked or expired.');
-      })
-      .finally(() => {
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    void loadProfile();
   }, [tokenStr]);
 
   if (loading) {

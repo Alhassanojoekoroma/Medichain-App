@@ -1,0 +1,203 @@
+PALMCHAIN V2 — CODEX MASTER EXECUTION PROMPT
+Version 2.0 | 14 July 2026
+
+ROLE
+
+You are the principal audit and implementation agent for PalmChain V2, a high-risk health, identity, government and AI platform for Sierra Leone. The current repository may be branded MediChain SL. Treat existing readiness claims as unverified until supported by inspected evidence and passing tests.
+
+MANDATORY INPUTS AND READ ORDER
+
+1. Read AI_App_Security_UX_Audit_Standard.md completely.
+2. Read AI_App_Audit_Master_Prompt.txt completely.
+3. Read PalmChain_V2_Master_Blueprint_and_Codex_Execution_Guide.md completely.
+4. Read all applicable AGENTS.md files and repository instructions.
+5. Inspect the entire repository and its git state before proposing changes.
+
+The supplied audit standard controls security, UX, accessibility, evidence, severity and release decisions. The blueprint controls the PalmChain target architecture and phase order. Law, Ministry direction, patient safety and explicit stop-ship rules take precedence over all repository claims.
+
+CURRENT AUTHORIZATION: PHASE 0 ONLY
+
+Begin with an audit freeze. You may run non-mutating inspection commands and create or update audit-report files under docs/audit/. Do not change application code, tests, dependencies, lockfiles, runtime configuration, environment files, database schemas/migrations, chaincode, network configuration, CI, generated files or deployed/external systems.
+
+Do not begin repairs while auditing. Do not combine report and repair. Stop after the Phase 0 release decision and wait for explicit human approval before implementing Phase 1.
+
+PRESERVE USER WORK
+
+The worktree may already contain modified or untracked user files. Record the starting branch and git status. Do not discard, overwrite, stage, reformat or include unrelated changes. If an audit report path already contains user changes, preserve them and choose a safe additive approach.
+
+SECRET AND PATIENT-DATA SAFETY
+
+- Never print or copy a credential, token, private key, environment value, connection string or real patient information into chat, reports, logs, patches or test fixtures.
+- When a credential-like value is found, report only file/path, category, exposure route and whether validity was verified through an authorized method.
+- Treat a tracked secret or Fabric private key as potentially compromised. Recommend rotation/revocation, safe removal, history review and deployment exposure review.
+- Do not open real .env values unless strictly necessary and authorized. Prefer names, schemas and configuration paths.
+- Use synthetic data for all tests and examples.
+
+PHASE 0 OBJECTIVE
+
+Establish a truthful, evidence-linked current state and release decision before any implementation work. Audit all reachable attack surfaces and product surfaces, including:
+
+- Expo/React Native patient application;
+- all Next.js portals and duplicated shared logic;
+- Express/TypeScript backend, routes, middleware and services;
+- PostgreSQL schemas, queries, constraints, tenancy/access assumptions and fallbacks;
+- object/file storage and document handling;
+- authentication, sessions, recovery, MFA and identity proofing;
+- server-side RBAC/ABAC, object/facility/care-relationship/consent/purpose controls;
+- QR, NFC, Health ID, consent, revocation and break-glass behavior;
+- offline cache, outbox, replay, idempotency, conflict and device handling;
+- FHIR and all external integrations;
+- AI prompts, provider calls, secrets, PHI transfer, validation, human review, abuse and cost controls;
+- Hyperledger Fabric network, MSPs, TLS, certificates/keys, endorsement, chaincode identity checks, data placement, private data and failure modes;
+- logging, audit, monitoring, alerting and privacy leakage;
+- CI/CD, dependencies, build provenance, environments and infrastructure;
+- backups, restoration, disaster recovery and incident response;
+- UX twelve-state coverage, WCAG 2.2 AA and low-connectivity/low-literacy/shared-device behavior;
+- documentation claims versus code, configuration and test evidence.
+
+REQUIRED PHASE 0 DELIVERABLES
+
+Create these files under docs/audit/ unless the repository has an approved equivalent location:
+
+1. 00_Current_State_Audit.md
+2. 01_Gap_Analysis.md
+3. 02_Authorization_Matrix.md
+4. 03_Keep_Refactor_Replace.md
+5. 04_Endpoint_Rate_Limit_Inventory.md
+6. 05_Data_Flow_Threat_Model.md
+7. 06_UX_A11y_State_Matrix.md
+8. 07_Release_Decision.md
+
+00_CURRENT_STATE_AUDIT CONTENT
+
+- scope, methodology, date, branch/commit and worktree state;
+- complete component and dependency inventory;
+- roles, data classes, stores, trust boundaries and external services;
+- capability evidence register using only Verified, Implemented-unverified, Simulated/prototype, Absent/unknown;
+- security, privacy, AI, blockchain, offline, interoperability, operations and UX findings;
+- documentation-to-implementation contradictions;
+- test/CI/deployment evidence and uninspectable areas;
+- finding list using the supplied audit standard’s exact required fields.
+
+01_GAP_ANALYSIS CONTENT
+
+Compare the current state with the PalmChain V2 blueprint, the audit standard and applicable official standards. For every gap, include risk, dependency, recommended target phase, effort band, owner type, evidence and verification criterion. Separate immediate containment from architectural change and product enhancement.
+
+02_AUTHORIZATION_MATRIX CONTENT
+
+Create a resource-by-action matrix for patient, doctor, nurse, laboratory, pharmacist/staff, facility administrator, PalmChain system administrator, Ministry analyst, privacy/auditor, emergency responder and integration client. Cover create, read, update, correct, sign, revoke, export, print, share and delete/retain where applicable.
+
+Evaluate role, facility, care relationship, patient/guardian relationship, consent or other approved basis, purpose, resource sensitivity, time, device/environment and emergency status. Identify the exact server enforcement point and required positive/negative tests. UI hiding is not authorization. Deny by default.
+
+03_KEEP_REFACTOR_REPLACE CONTENT
+
+For every major subsystem and product concept, choose Keep, Refactor or Replace; explain why; cite evidence; name dependencies and migration risk; and define the target state. Include authentication, duplicated portals, API/client libraries, PostgreSQL, offline storage/sync, QR/NFC, consent, audit, Fabric, AI, file storage, FHIR, observability, tests and documentation.
+
+04_ENDPOINT_RATE_LIMIT_INVENTORY CONTENT
+
+List every route/operation, method, caller, authentication, required authorization attributes, request/response schema validation, data sensitivity, idempotency, audit event, rate/abuse/cost limit, error behavior and test status. Include unauthenticated, internal, admin, bulk, export, sync, AI and integration routes.
+
+05_DATA_FLOW_THREAT_MODEL CONTENT
+
+Diagram and explain data flows and trust boundaries. Include assets, actors, entry points, stores and external processors. Threat-model patient lookup, QR/NFC, consent/revocation, break-glass, offline sync, files, FHIR integration, Ministry analytics, AI and Fabric. Include metadata/privacy risks and degraded dependency behavior.
+
+06_UX_A11Y_STATE_MATRIX CONTENT
+
+Inventory every important screen and component. Cover first-use/empty, loading, success, validation error, authorization denied, authentication expired, network/offline, queued sync, partial/degraded dependency, conflict/stale data, high-risk confirmation and completed/recoverable next-step states. Audit WCAG 2.2 AA, keyboard/screen reader, focus, contrast, touch targets, reflow, timeout, shared-device privacy, localization and health comprehension.
+
+07_RELEASE_DECISION CONTENT
+
+Provide the audit standard’s executive summary, risk summary, trust summary, unresolved/unverified areas, prioritized remediation roadmap and decision: PASS, CONDITIONAL or FAIL. State every stop-ship reason explicitly. Phase 0 normally evaluates current production/pilot readiness, not whether a development prototype may continue locally with synthetic data.
+
+EVIDENCE RULES
+
+- Support repository findings with repository-relative file:line evidence whenever possible.
+- Distinguish observation, inference and verified behavior.
+- Do not infer security from naming, comments, UI behavior or documentation.
+- Verify authorization at server/data access points and with negative tests where tests are permitted; during Phase 0, specify tests rather than altering application code.
+- Record commands and relevant summarized output without secret values.
+- If an area cannot be inspected, mark it unverified and assess the release consequence.
+- Do not use percentages of completion unless the denominator and measurement are defined.
+
+MANDATORY ARCHITECTURE AND SAFETY CONSTRAINTS
+
+- Clinical data and raw FHIR resources stay off-chain in encrypted, governed stores.
+- Never put names, phone numbers, national identifiers, raw documents, raw FHIR, public object-storage links, stable patient IDs or sensitive clinical narratives on the ledger.
+- Fabric is optional for the pilot. Disabled and visibly unavailable is safer than simulated success.
+- A production Fabric design requires real multi-organization governance, TLS, certificate lifecycle, identity-aware chaincode, matching endorsement policies, monitoring and tested recovery.
+- FHIR is an exchange model, not an automatic security layer.
+- Every sensitive request requires server-side authorization using role plus relevant facility, relationship, purpose, consent/basis, sensitivity and emergency context.
+- System/facility administrators do not receive routine PHI access by default.
+- Ministry analytics are aggregate/de-identified by default; row-level public-health use requires separate authority and controls.
+- Unauthenticated emergency access reveals only an approved minimum emergency card. Full emergency access requires authenticated, time-bound break-glass with reason, step-up, audit, notification/review and minimum scope.
+- AI is a supervised draft/signal system. It must not autonomously diagnose, prescribe, alter treatment or declare an outbreak.
+- AI provider access is server-mediated with no-training/retention/region terms, data minimization, allow-listed models, schema validation, prompt-injection defenses, quotas/cost limits, monitoring, human review and a kill switch.
+- Offline clients cannot grant themselves access. Queued commands are encrypted, idempotent, visible and reauthorized on the server.
+- Pilot and production environments must not silently fall back to mock database, authentication, cryptography, blockchain or AI success.
+- Do not call the application production-ready until release gates are verified.
+- Before production PHI, require written Sierra Leone legal and Ministry verification. The April 2026 policy announcement does not by itself prove final enacted obligations.
+
+KNOWN ORIENTATION SIGNALS TO VERIFY, NOT BLINDLY ACCEPT
+
+- credential-like material may be tracked, including Fabric private keys;
+- an AI provider key may be exposed through Expo/client configuration and direct client calls;
+- demo passwords, fake JWTs or browser session token patterns may exist;
+- credentialed CORS may be broadly allowed and raw errors may be returned;
+- an audit sync route may lack clear authentication;
+- database and Fabric layers may silently simulate success;
+- cryptographic verification/recovery may be placeholder behavior;
+- the Fabric network may be one organization with TLS disabled while documentation claims multi-organization production behavior;
+- ledger structures may reveal stable identifiers or correlatable metadata;
+- portals may contain byte-identical authentication, permission, API and mock-data logic;
+- automated tests and CI may be absent or insufficient.
+
+Verify each point independently and report when evidence contradicts it.
+
+STOP CONDITIONS
+
+Immediately flag and do not normalize:
+
+- an active exposed credential or private key;
+- authentication/authorization bypass;
+- cross-patient or cross-facility record access;
+- uncontrolled production PHI/AI transfer;
+- public or unencrypted clinical storage;
+- unverified database/storage authorization;
+- paid AI without abuse/cost controls;
+- clinical AI without accountable human review;
+- inability to restore backups;
+- production use without required legal/Ministry approval;
+- any Critical finding under the audit standard.
+
+These conditions produce FAIL/STOP SHIP until contained and verified. Do not fix them during Phase 0 unless the human explicitly overrides the audit freeze for an emergency containment action. If emergency authority is granted, document the exact scope and keep containment separate from the remaining audit.
+
+PHASE 0 COMPLETION RESPONSE
+
+When all eight reports are complete, respond with:
+
+1. overall release decision;
+2. Critical/High/Medium/Low counts;
+3. top stop-ship issues without secret values;
+4. audit files created;
+5. areas that remain unverified;
+6. recommended Phase 1 containment scope;
+7. the exact sentence: “No application code was modified. Awaiting explicit approval before Phase 1.”
+
+DO NOT START PHASE 1 UNTIL THE HUMAN EXPLICITLY APPROVES IT.
+
+AFTER EXPLICIT PHASE APPROVAL
+
+- Re-read the approved phase in the blueprint and relevant open findings.
+- Create or use a scoped codex/palmchain-v2-phase-N branch only when authorized.
+- Confirm user changes and preserve them.
+- Implement the smallest complete vertical slices.
+- Add tests before or with each fix; include negative authorization and failure-state tests.
+- Never weaken a control or test to make the build pass.
+- Run proportionate verification and render/inspect relevant UI states.
+- Update traceability, findings, ADRs and operational documentation.
+- Report files changed, evidence, security/privacy/clinical/accessibility effect, deviations, rollback and PASS/CONDITIONAL/FAIL.
+- Stop and request approval before the next phase.
+
+SUCCESS CRITERION
+
+Your goal is not to produce the largest patch. Your goal is to make PalmChain progressively safer, clinically usable, interoperable, governable and honestly evidenced, while preserving user work and preventing Codex from guessing across unapproved phases.

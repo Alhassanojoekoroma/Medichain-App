@@ -1,301 +1,190 @@
-/**
- * Sync Service - Manages data synchronization between patient mobile app,
- * doctor web app, and Hyperledger Fabric blockchain
- */
-
-import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
+import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+export type PatientCommandType = 'CONSENT_UPDATE' | 'QR_REVOKE' | 'PROFILE_UPDATE';
+export type QueueState = 'queued' | 'conflict' | 'denied';
 
 export interface SyncQueueItem {
   id: string;
-  type: 'record' | 'consent' | 'access' | 'audit';
-  payload: any;
-  createdAt: number;
-  synced: boolean;
+  type: PatientCommandType;
+  resourceId: string;
+  patientId: string;
+  baseVersion: number;
+  issuedAt: string;
+  payload: Record<string, unknown>;
+  state: QueueState;
+  serverVersion?: number;
+  denialCode?: string;
 }
 
-interface SyncStatus {
+export interface SyncStatus {
   pending: number;
   synced: number;
   failed: number;
+  conflicts: number;
   lastSync?: number;
 }
 
+const INDEX_KEY = 'palmchain_outbox_index_v2';
+const ITEM_PREFIX = 'palmchain_outbox_v2_';
+const MAX_COMMANDS = 20;
+const MAX_SERIALIZED_BYTES = 1800;
+
+function apiBaseUrl(): string {
+  const value = Constants.expoConfig?.extra?.apiBaseUrl;
+  if (typeof value !== 'string' || !/^https?:\/\//.test(value)) throw new Error('API_URL_NOT_CONFIGURED');
+  return value.replace(/\/$/, '');
+}
+
+async function readIndex(): Promise<string[]> {
+  const raw = await SecureStore.getItemAsync(INDEX_KEY);
+  if (!raw) return [];
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed) || parsed.some(id => typeof id !== 'string')) throw new Error('OUTBOX_INDEX_CORRUPT');
+  return parsed;
+}
+
+async function writeIndex(ids: string[]): Promise<void> {
+  await SecureStore.setItemAsync(INDEX_KEY, JSON.stringify(ids));
+}
+
+async function readItem(id: string): Promise<SyncQueueItem | null> {
+  const raw = await SecureStore.getItemAsync(`${ITEM_PREFIX}${id}`);
+  return raw ? JSON.parse(raw) as SyncQueueItem : null;
+}
+
+async function writeItem(item: SyncQueueItem): Promise<void> {
+  const serialized = JSON.stringify(item);
+  if (new TextEncoder().encode(serialized).length > MAX_SERIALIZED_BYTES) throw new Error('OUTBOX_COMMAND_TOO_LARGE');
+  await SecureStore.setItemAsync(`${ITEM_PREFIX}${item.id}`, serialized);
+}
+
 class SyncService {
-  private isOnline = true;
   private syncInProgress = false;
   private lastSyncTime = 0;
-  private syncInterval = 30000; // 30 seconds
 
-  /**
-   * Initialize sync service
-   */
-  async initialize() {
-    console.log('[Sync] Initializing sync service...');
-    // Start periodic sync
-    this.startPeriodicSync();
+  async initialize(): Promise<void> {
+    // Sync is user/session driven. No background timer transmits health-related
+    // commands without current authentication and server-side reauthorization.
   }
 
-  /**
-   * Start periodic sync timer
-   */
-  private startPeriodicSync() {
-    setInterval(async () => {
-      if (this.isOnline && !this.syncInProgress) {
-        await this.syncAllPending();
-      }
-    }, this.syncInterval);
+  async enqueuePatientCommand(input: Omit<SyncQueueItem, 'id' | 'issuedAt' | 'state'>): Promise<string> {
+    if (!Number.isSafeInteger(input.baseVersion) || input.baseVersion < 0) throw new Error('BASE_VERSION_REQUIRED');
+    if (!input.patientId || !input.resourceId) throw new Error('RESOURCE_CONTEXT_REQUIRED');
+    const index = await readIndex();
+    if (index.length >= MAX_COMMANDS) throw new Error('OUTBOX_CAPACITY_REACHED');
+    const item: SyncQueueItem = {
+      ...input,
+      id: Crypto.randomUUID(),
+      issuedAt: new Date().toISOString(),
+      state: 'queued',
+    };
+    await writeItem(item);
+    await writeIndex([...index, item.id]);
+    return item.id;
   }
 
-  /**
-   * Enqueue an action for sync (for offline support)
-   */
-  async enqueueAction(type: string, payload: any): Promise<string> {
-    try {
-      const id = `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const item: SyncQueueItem = {
-        id,
-        type: type as any,
-        payload,
-        createdAt: Date.now(),
-        synced: false,
-      };
+  async enqueueAction(): Promise<string> {
+    throw new Error('Legacy offline action format is disabled. Use a versioned patient command.');
+  }
 
-      // Store locally for offline support
-      const existingQueue = await this.getLocalQueue();
-      existingQueue.push(item);
-      await SecureStore.setItemAsync('medichain_sync_queue', JSON.stringify(existingQueue));
-
-      console.log(`[Sync] Enqueued ${type}: ${id}`);
-
-      // Try to sync immediately if online
-      if (this.isOnline) {
-        await this.syncItem(item);
-      }
-
-      return id;
-    } catch (error) {
-      console.error('[Sync] Enqueue error:', error);
-      throw error;
+  private async syncItem(item: SyncQueueItem, authToken: string): Promise<'synced' | 'retained'> {
+    const response = await fetch(`${apiBaseUrl()}/api/platform/sync/commands`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+        'Idempotency-Key': item.id,
+      },
+      body: JSON.stringify({
+        id: item.id,
+        type: item.type,
+        resourceId: item.resourceId,
+        baseVersion: item.baseVersion,
+        issuedAt: item.issuedAt,
+        payload: item.payload,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.status !== 'conflict' && result.status !== 'denied') return 'synced';
+    if (response.status === 409) {
+      item.state = 'conflict';
+      item.serverVersion = result.serverVersion;
+      await writeItem(item);
+      return 'retained';
     }
-  }
-
-  /**
-   * Get local sync queue
-   */
-  private async getLocalQueue(): Promise<SyncQueueItem[]> {
-    try {
-      const queue = await SecureStore.getItemAsync('medichain_sync_queue');
-      return queue ? JSON.parse(queue) : [];
-    } catch (error) {
-      console.error('[Sync] Get queue error:', error);
-      return [];
+    if (response.status === 401) throw new Error('REAUTHENTICATION_REQUIRED');
+    if (response.status === 403) {
+      item.state = 'denied';
+      item.denialCode = result.code || result.error?.code || 'AUTHORIZATION_REVOKED';
+      await writeItem(item);
+      return 'retained';
     }
+    throw new Error('SYNC_TEMPORARILY_UNAVAILABLE');
   }
 
-  /**
-   * Sync a single item to backend
-   */
-  private async syncItem(item: SyncQueueItem): Promise<boolean> {
-    try {
-      const endpoint = `/api/sync/${item.type}`;
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`,
-        },
-        body: JSON.stringify(item.payload),
-      });
-
-      if (response.ok) {
-        console.log(`[Sync] Successfully synced ${item.type}: ${item.id}`);
-        return true;
-      }
-
-      console.error(`[Sync] Failed to sync ${item.type}: ${response.status}`);
-      return false;
-    } catch (error) {
-      console.error(`[Sync] Error syncing ${item.id}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Sync all pending items
-   */
   async syncAllPending(): Promise<SyncStatus> {
-    if (this.syncInProgress) {
-      return { pending: 0, synced: 0, failed: 0 };
-    }
-
+    if (this.syncInProgress) return this.getSyncStatus();
+    const authToken = await SecureStore.getItemAsync('medichain_session_token');
+    if (!authToken) throw new Error('REAUTHENTICATION_REQUIRED');
     this.syncInProgress = true;
-
+    let synced = 0;
+    let failed = 0;
     try {
-      const queue = await this.getLocalQueue();
-      const pending = queue.filter(item => !item.synced);
-
-      if (pending.length === 0) {
-        console.log('[Sync] No pending items');
-        this.syncInProgress = false;
-        return { pending: 0, synced: 0, failed: 0 };
-      }
-
-      console.log(`[Sync] Syncing ${pending.length} pending items...`);
-
-      let synced = 0;
-      let failed = 0;
-
-      for (const item of pending) {
-        const success = await this.syncItem(item);
-        if (success) {
-          synced++;
-          item.synced = true;
-        } else {
-          failed++;
+      const ids = await readIndex();
+      const retained: string[] = [];
+      for (const id of ids) {
+        const item = await readItem(id);
+        if (!item) continue;
+        if (item.state !== 'queued') { retained.push(id); continue; }
+        try {
+          if (await this.syncItem(item, authToken) === 'synced') {
+            await SecureStore.deleteItemAsync(`${ITEM_PREFIX}${id}`);
+            synced += 1;
+          } else retained.push(id);
+        } catch (error) {
+          retained.push(id);
+          failed += 1;
+          if (error instanceof Error && error.message === 'REAUTHENTICATION_REQUIRED') throw error;
         }
       }
-
-      // Update local queue
-      await SecureStore.setItemAsync('medichain_sync_queue', JSON.stringify(queue));
-
-      const status = { pending: pending.length - synced, synced, failed, lastSync: Date.now() };
-      console.log('[Sync] Sync complete:', status);
-
+      await writeIndex(retained);
       this.lastSyncTime = Date.now();
+      const status = await this.getSyncStatus();
+      return { ...status, synced, failed, lastSync: this.lastSyncTime };
+    } finally {
       this.syncInProgress = false;
-
-      return status;
-    } catch (error) {
-      console.error('[Sync] Error during sync:', error);
-      this.syncInProgress = false;
-      return { pending: 0, synced: 0, failed: 0 };
     }
   }
 
-  /**
-   * Get sync status
-   */
   async getSyncStatus(): Promise<SyncStatus> {
-    try {
-      const queue = await this.getLocalQueue();
-      const pending = queue.filter(item => !item.synced);
-      const synced = queue.filter(item => item.synced);
-
-      return {
-        pending: pending.length,
-        synced: synced.length,
-        failed: 0,
-        lastSync: this.lastSyncTime,
-      };
-    } catch (error) {
-      console.error('[Sync] Get status error:', error);
-      return { pending: 0, synced: 0, failed: 0 };
-    }
+    const items = (await Promise.all((await readIndex()).map(readItem))).filter(Boolean) as SyncQueueItem[];
+    return {
+      pending: items.filter(item => item.state === 'queued').length,
+      conflicts: items.filter(item => item.state === 'conflict').length,
+      failed: items.filter(item => item.state === 'denied').length,
+      synced: 0,
+      lastSync: this.lastSyncTime || undefined,
+    };
   }
 
-  /**
-   * Sync patient record to blockchain and doctor app
-   */
-  async syncRecordToDoctors(recordId: string, recipientDoctorIds: string[]) {
-    try {
-      await this.enqueueAction('record', {
-        recordId,
-        recipientDoctorIds,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('[Sync] Error syncing record to doctors:', error);
-    }
+  async clearQueue(): Promise<void> {
+    const ids = await readIndex();
+    await Promise.all(ids.map(id => SecureStore.deleteItemAsync(`${ITEM_PREFIX}${id}`)));
+    await SecureStore.deleteItemAsync(INDEX_KEY);
   }
 
-  /**
-   * Sync access request approval
-   */
-  async syncAccessApproval(accessRequestId: string, approved: boolean) {
-    try {
-      await this.enqueueAction('access', {
-        accessRequestId,
-        approved,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('[Sync] Error syncing access approval:', error);
-    }
-  }
-
-  /**
-   * Sync consent update
-   */
-  async syncConsent(consentId: string, consentData: any) {
-    try {
-      await this.enqueueAction('consent', {
-        consentId,
-        ...consentData,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('[Sync] Error syncing consent:', error);
-    }
-  }
-
-  /**
-   * Sync audit log
-   */
-  async syncAuditLog(action: string, details: any) {
-    try {
-      await this.enqueueAction('audit', {
-        action,
-        details,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('[Sync] Error syncing audit log:', error);
-    }
-  }
-
-  /**
-   * Get authentication token
-   */
-  private async getAuthToken(): Promise<string> {
-    try {
-      const token = await SecureStore.getItemAsync('auth_token');
-      return token || '';
-    } catch (error) {
-      console.error('[Sync] Error getting auth token:', error);
-      return '';
-    }
-  }
-
-  /**
-   * Set online/offline status
-   */
-  setOnlineStatus(online: boolean) {
-    this.isOnline = online;
-    console.log(`[Sync] Online status: ${online}`);
-  }
-
-  /**
-   * Force sync
-   */
   async forceSyncNow(): Promise<SyncStatus> {
-    console.log('[Sync] Force sync requested');
-    return await this.syncAllPending();
+    return this.syncAllPending();
   }
 
-  /**
-   * Clear sync queue
-   */
-  async clearQueue() {
-    try {
-      await SecureStore.setItemAsync('medichain_sync_queue', JSON.stringify([]));
-      console.log('[Sync] Queue cleared');
-    } catch (error) {
-      console.error('[Sync] Error clearing queue:', error);
-    }
-  }
+  setOnlineStatus(): void {}
+
+  async syncRecordToDoctors(): Promise<never> { throw new Error('Clinical record sync begins in Phase 5.'); }
+  async syncAccessApproval(): Promise<never> { throw new Error('Legacy access approvals are disabled.'); }
+  async syncConsent(): Promise<never> { throw new Error('Use enqueuePatientCommand with a base version.'); }
+  async syncAuditLog(): Promise<never> { throw new Error('Clients cannot submit audit events.'); }
 }
 
 export const SyncServiceInstance = new SyncService();

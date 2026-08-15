@@ -9,10 +9,14 @@
 
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { readSecurityConfig } from '../config/environment';
 
-const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || 'dev-qr-secret-change-in-production';
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production';
-const JWT_EXPIRY = process.env.JWT_EXPIRY || '8h';
+const securityConfig = readSecurityConfig();
+const QR_TOKEN_SECRET = securityConfig.qrTokenSecret;
+const JWT_SECRET = securityConfig.jwtSecret;
+// These HMAC tokens exist only for the explicit synthetic sandbox. Keep them
+// short lived so test behavior does not normalize long-lived bearer sessions.
+const JWT_EXPIRY = process.env.JWT_EXPIRY || '15m';
 
 export type QRType = 'NORMAL' | 'EMERGENCY' | 'SESSION';
 
@@ -24,29 +28,24 @@ export interface QRPayload {
   v: number;             // version
 }
 
-export type ClinicalRole = 'doctor' | 'nurse' | 'staff' | 'admin' | 'patient';
+export type ClinicalRole = 'doctor' | 'nurse' | 'laboratory' | 'pharmacy' | 'staff' | 'admin' | 'government' | 'patient';
 
 export interface DoctorJWT {
   sub: string;           // doctorId, patientId, or staffId
   role: ClinicalRole;
   clinicId?: string;
   fullName?: string;     // actor's display name for audit logs
+  sid: string;
+  mfa: boolean;
+  tokenVersion: number;
+  authTime: number;
+  identityIssuer?: string;
+  identitySubject?: string;
   iat: number;
   exp: number;
 }
 
 export class TokenService {
-  static {
-    if (process.env.NODE_ENV === 'production') {
-      if (!process.env.QR_TOKEN_SECRET || process.env.QR_TOKEN_SECRET === 'dev-qr-secret-change-in-production') {
-        throw new Error('CRITICAL SECURITY ERROR: QR_TOKEN_SECRET must be set to a secure secret in production mode.');
-      }
-      if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret-change-in-production') {
-        throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET must be set to a secure secret in production mode.');
-      }
-    }
-  }
-
   // ── QR token issuance ─────────────────────────────────────
 
   static generateRawToken(): string {
@@ -73,6 +72,10 @@ export class TokenService {
    * Fast client-side tamper detection.
    */
   static verifyQRSignature(payload: QRPayload): boolean {
+    if (payload.v !== 1 || !['NORMAL', 'EMERGENCY', 'SESSION'].includes(payload.type)) return false;
+    if (!/^[0-9a-f-]{36}$/i.test(payload.token) && payload.type !== 'SESSION') return false;
+    if (!/^[0-9a-f]{64}$/i.test(payload.sig)) return false;
+    if (payload.type === 'NORMAL' && !payload.exp) return false;
     const expected = this.signQRPayload(payload.token, payload.type, payload.exp);
     try {
       return crypto.timingSafeEqual(
@@ -86,7 +89,7 @@ export class TokenService {
 
   static isQRExpired(payload: QRPayload): boolean {
     if (!payload.exp) return false;
-    return Math.floor(Date.now() / 1000) > payload.exp;
+    return Math.floor(Date.now() / 1000) >= payload.exp;
   }
 
   /** Hash a token before storing in DB — never store the raw token */
@@ -96,12 +99,40 @@ export class TokenService {
 
   // ── Doctor JWT ────────────────────────────────────────────
 
-  static signDoctorJWT(doctorId: string, role: ClinicalRole, clinicId?: string, fullName?: string): string {
-    return jwt.sign({ sub: doctorId, role, clinicId, fullName }, JWT_SECRET, { expiresIn: JWT_EXPIRY } as jwt.SignOptions);
+  static signDoctorJWT(
+    doctorId: string,
+    role: ClinicalRole,
+    clinicId?: string,
+    fullName?: string,
+    options: { sessionId?: string; mfa?: boolean; tokenVersion?: number; authTime?: number } = {}
+  ): string {
+    return jwt.sign({
+      sub: doctorId,
+      role,
+      clinicId,
+      fullName,
+      sid: options.sessionId ?? crypto.randomUUID(),
+      mfa: options.mfa ?? false,
+      tokenVersion: options.tokenVersion ?? 0,
+      authTime: options.authTime ?? Math.floor(Date.now() / 1000),
+    }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRY,
+      issuer: 'palmchain-api',
+      audience: 'palmchain-apps',
+      jwtid: crypto.randomUUID(),
+    } as jwt.SignOptions);
   }
 
   static verifyDoctorJWT(token: string): DoctorJWT {
-    return jwt.verify(token, JWT_SECRET) as DoctorJWT;
+    const payload = jwt.verify(token, JWT_SECRET, {
+      issuer: 'palmchain-api',
+      audience: 'palmchain-apps',
+      algorithms: ['HS256'],
+    }) as DoctorJWT;
+    if (!payload.sid || typeof payload.mfa !== 'boolean' || !Number.isInteger(payload.tokenVersion)) {
+      throw new Error('TOKEN_ASSURANCE_CLAIMS_MISSING');
+    }
+    return payload;
   }
 
   /** 

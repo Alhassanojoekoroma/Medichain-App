@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Users, UserPlus, Bell, Settings, LogOut, ChevronUp, ChevronDown,
-  Lock, X, Menu, ShieldAlert, HeartPulse, Activity
+  LayoutDashboard, Users, Settings, LogOut, ChevronUp, ChevronDown,
+  Lock, X, Menu, Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LOGGED_IN_DOCTOR, MOCK_BLOCKCHAIN_STATUS, MOCK_NOTIFICATIONS } from '@/data/mockData';
 import { logoutDoctor } from '@/services/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -16,12 +16,9 @@ interface SidebarProps {
 }
 
 const mainNavItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/users', icon: Users, label: 'Manage Users' },
-  { href: '/register', icon: UserPlus, label: 'Register User' },
-  { href: '/access', icon: ShieldAlert, label: 'Access Logs' },
-  { href: '/audit', icon: Activity, label: 'Fabric Audit' },
-  { href: '/health', icon: HeartPulse, label: 'System Health' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'System Home' },
+  { href: '/users', icon: Users, label: 'Users' },
+  { href: '/audit', icon: Activity, label: 'Audit' },
 ];
 
 const helpNavItems = [
@@ -31,21 +28,10 @@ const helpNavItems = [
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [mainMenuExpanded, setMainMenuExpanded] = useState(true);
   const [helpMenuExpanded, setHelpMenuExpanded] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const u = sessionStorage.getItem('mc_user');
-      if (u) { try { setCurrentUser(JSON.parse(u)); } catch {} }
-    }
-  }, []);
-
-  const displayName = currentUser?.name || 'Admin Officer';
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
+  const { user } = useAuth();
+  const displayName = user?.name || 'Signed-in administrator';
 
   const handleLogout = async () => {
     await logoutDoctor();
@@ -178,17 +164,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
           <div className="rounded-2xl p-4 text-white" style={{ backgroundColor: accentColor }}>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <span className="text-white text-xs font-semibold">Fabric Network</span>
+              <div className="w-2 h-2 bg-white/70 rounded-full" />
+              <span className="text-white text-xs font-semibold">Operations status</span>
             </div>
             <p className="text-white/80 text-xs mb-1">
-              {MOCK_BLOCKCHAIN_STATUS.network}
+              Open System Health for live evidence.
             </p>
             <p className="text-white/80 text-xs mb-3">
-              Channel: system-administration
+              No demo connection is displayed.
             </p>
             <div className="w-full bg-black/20 text-white rounded-full py-2 px-3 text-xs font-medium text-center">
-              ✓ Admin CA Enrolled
+              Backend verification required
             </div>
           </div>
         </div>

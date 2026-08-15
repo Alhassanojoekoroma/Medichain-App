@@ -1,22 +1,14 @@
 {
   "name": "medichain-api-gateway",
   "version": "1.0.0",
-  "description": "Node.js API Gateway for MediChain",
+  "description": "Local-only tombstone for the decommissioned MediChain legacy gateway",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "@google/genai": "^1.50.1",
-    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
-    "fabric-network": "^2.2.19",
-    "fabric-ca-client": "^2.2.19",
-    "uuid": "^9.0.0",
-    "web3.storage": "^4.5.8",
-    "pg": "^8.11.3"
+    "express": "^4.18.2"
   }
 }

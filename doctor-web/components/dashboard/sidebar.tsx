@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Users, Calendar, FileText,
-  QrCode, BarChart2, Bell, ShieldCheck,
+  LayoutDashboard, Users, FileText,
   Settings, LogOut, ChevronUp, ChevronDown,
-  Lock, Menu, X, Stethoscope,
+  Lock, Menu, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LOGGED_IN_DOCTOR, MOCK_BLOCKCHAIN_STATUS, MOCK_NOTIFICATIONS } from '@/data/mockData';
 import { logoutDoctor } from '@/services/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,15 +17,9 @@ interface SidebarProps {
 }
 
 const mainNavItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/patients', icon: Users, label: 'Patients' },
-  { href: '/staff', icon: Stethoscope, label: 'Triage / Staff' },
-  { href: '/appointments', icon: Calendar, label: 'Appointments' },
-  { href: '/records', icon: FileText, label: 'Records' },
-  { href: '/scan', icon: QrCode, label: 'Scan QR Code' },
-  { href: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { href: '/notifications', icon: Bell, label: 'Notifications' },
-  { href: '/access-log', icon: ShieldCheck, label: 'Access Log' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+  { href: '/patients', icon: Users, label: 'Find Patient' },
+  { href: '/records/upload', icon: FileText, label: 'Upload Record' },
 ];
 
 const helpNavItems = [
@@ -36,29 +29,11 @@ const helpNavItems = [
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [mainMenuExpanded, setMainMenuExpanded] = useState(true);
   const [helpMenuExpanded, setHelpMenuExpanded] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const u = sessionStorage.getItem('mc_user');
-      if (u) { try { setCurrentUser(JSON.parse(u)); } catch {} }
-    }
-  }, []);
-
-  const displayName = currentUser?.name || LOGGED_IN_DOCTOR.name;
-
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
-  const lastSyncDate = MOCK_BLOCKCHAIN_STATUS.lastSync
-    ? new Date(MOCK_BLOCKCHAIN_STATUS.lastSync)
-    : null;
-  const minutesAgo = mounted && lastSyncDate
-    ? Math.floor((Date.now() - lastSyncDate.getTime()) / 60000)
-    : null;
+  const { user } = useAuth();
+  const displayName = user?.name || 'Signed-in clinician';
 
   const handleLogout = async () => {
     await logoutDoctor();
@@ -89,37 +64,32 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <span className="text-white font-bold text-lg">M</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-lg text-[#101326]">MediChain</span>
-            <span className="bg-[#8F76FF] text-white text-xs font-medium px-2 py-0.5 rounded-full">SL</span>
+              <span className="font-semibold text-lg text-[var(--ink-900)]">MediChain</span>
+              <span className="bg-[var(--primary-100)] text-[var(--primary-700)] text-xs font-medium px-2 py-0.5 rounded-full">SL</span>
+            </div>
+            <button className="lg:hidden ml-auto" onClick={onToggle}>
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button className="lg:hidden ml-auto" onClick={onToggle}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        <div className="px-5 pb-3">
-          <div className="flex items-center gap-1.5 text-xs text-[#8C91A8]">
-            <Lock className="w-3 h-3" />
-            <span>Hyperledger Fabric</span>
+          <div className="px-5 pb-3">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--gray-500)]">
+              <Lock className="w-3 h-3" />
+              <span>Hyperledger Fabric</span>
+            </div>
           </div>
-        </div>
 
-        {/* Welcome section */}
-        <div className="px-5 pb-4 border-b border-[#D8DCE8]">
-          <div className="flex items-center gap-2 text-xs text-[#8C91A8] mb-2">
-            <span>MediChain</span>
-            <span>&gt;</span>
-            <span className="text-[#101326] font-medium">Dashboard</span>
-          </div>
-          <h1 className="text-xl font-bold text-[#101326] leading-tight">Welcome Back,</h1>
-          <h1 className="text-xl font-bold text-brand leading-tight">{displayName}</h1>
-        </div>
-
-        {/* Main Menu */}
-        <div className="px-4 flex-1 pt-4 overflow-y-auto">
+          {/* Welcome section */}
+          <div className="px-5 pb-4 border-b border-[var(--gray-200)]">
+            <div className="flex items-center gap-2 text-xs text-[var(--gray-500)] mb-2">
+              <span>MediChain</span>
+              <span>&gt;</span>
+              <span className="text-[var(--ink-900)] font-medium">Dashboard</span>
+            </div>
+            <h1 className="text-xl font-bold text-[var(--ink-900)] leading-tight">Welcome Back,</h1>
           <button
             onClick={() => setMainMenuExpanded(!mainMenuExpanded)}
-            className="flex items-center justify-between w-full py-2 px-2 text-xs font-medium text-[#8C91A8] uppercase tracking-wider"
+            className="flex items-center justify-between w-full py-2 px-2 text-xs font-medium text-[var(--gray-500)] uppercase tracking-wider"
           >
             <span>Main Menu</span>
             {mainMenuExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -137,16 +107,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative',
                       isActive
                         ? 'bg-brand-light text-brand border-l-4 border-brand'
-                        : 'text-[#5D6582] hover:bg-brand-light border-l-4 border-transparent'
+                        : 'text-[var(--gray-500)] hover:bg-brand-light border-l-4 border-transparent'
                     )}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
                     <span>{item.label}</span>
-                    {item.label === 'Notifications' && unreadCount > 0 && (
-                      <span className="ml-auto bg-[#E53E3E] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
                   </a>
                 );
               })}
@@ -157,9 +122,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <div className="mt-6">
             <button
               onClick={() => setHelpMenuExpanded(!helpMenuExpanded)}
-              className="flex items-center justify-between w-full py-2 px-2 text-xs font-medium text-[#8C91A8] uppercase tracking-wider"
+              className="flex items-center justify-between w-full py-2 px-2 text-xs font-medium text-[var(--gray-500)] uppercase tracking-wider"
             >
-              <span>Settings</span>
+              <span>Help menu</span>
               {helpMenuExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
@@ -175,7 +140,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors border-l-4',
                         isActive
                           ? 'bg-brand-light text-brand border-brand'
-                          : 'text-[#5D6582] hover:bg-brand-light border-transparent'
+                          : 'text-[var(--gray-600)] hover:bg-brand-light border-transparent'
                       )}
                     >
                       <item.icon className="w-4 h-4" />
@@ -200,17 +165,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
           <div className="bg-brand rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <span className="text-white text-xs font-semibold">Fabric Network</span>
+              <div className="w-2 h-2 bg-white/70 rounded-full" />
+              <span className="text-white text-xs font-semibold">Secure record service</span>
             </div>
             <p className="text-brand-tint text-xs mb-1">
-              {MOCK_BLOCKCHAIN_STATUS.network} • {MOCK_BLOCKCHAIN_STATUS.totalRecords} records
+              Status is checked during every record action.
             </p>
             <p className="text-brand-tint text-xs mb-3">
-              Last sync: {minutesAgo !== null ? `${minutesAgo} min ago` : 'unknown'}
+              No hard-coded network status is displayed.
             </p>
             <div className="w-full bg-brand-dark text-white rounded-full py-2 px-3 text-xs font-medium text-center">
-              ✓ Connected to Fabric CA
+              Backend verified per request
             </div>
           </div>
         </div>
@@ -225,7 +190,7 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="lg:hidden p-2 hover:bg-brand-light rounded-xl transition-colors"
     >
-      <Menu className="w-5 h-5 text-[#5D6582]" />
+      <Menu className="w-5 h-5 text-[var(--gray-500)]" />
     </button>
   );
 }

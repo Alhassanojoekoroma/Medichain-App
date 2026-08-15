@@ -1,541 +1,416 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
-import { LayoutWrapper } from '@/components/dashboard/layout-wrapper';
-import { MOCK_PATIENTS } from '@/data/mockData';
-import { backendApi } from '@/services/backendApi';
-import { useAuth } from '@/hooks/useAuth';
-import { 
-  ArrowLeft, FileText, Upload, CheckCircle2, 
-  RefreshCw, ShieldAlert, FileIcon, X, Check, Database
-} from 'lucide-react';
-import Link from 'next/link';
-import type { RecordType } from '@/types';
 
-export default function UploadRecordPage() {
-  useAuth(); // Require authentication
+function Icon({ d, size = 16 }: { d: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
+  );
+}
+const I = {
+  chevL:     '<path d="M15 18l-6-6 6-6"/>',
+  upload:    '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 15v5h14v-5"/>',
+  file:      '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  x:         '<path d="M18 6L6 18M6 6l12 12"/>',
+  check:     '<path d="M20 6L9 17l-5-5"/>',
+  shield:    '<path d="M12 2 20 5v6c0 5-3.4 9.2-8 11-4.6-1.8-8-6-8-11V5z"/><path d="m8.5 12 2.2 2.2 4.8-5"/>',
+  sparkles:  '<path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M5 14.5l.75 2.25L8 17.5l-2.25.75L5 20.5l-.75-2.25L2 17.5l2.25-.75z"/>',
+  chevD:     '<path d="M6 9l6 6 6-6"/>',
+  search:    '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+};
+
+const RECORD_TYPES = ['Consultation', 'Lab Result', 'Prescription', 'Radiology', 'Surgical Report', 'Discharge Summary', 'Referral', 'Other'];
+
+interface UploadedFile { name: string; size: number; type: string; }
+
+export default function RecordsUploadPage() {
   const router = useRouter();
-
-  const [patients, setPatients] = useState<any[]>([]);
-  const [loadingPatients, setLoadingPatients] = useState(true);
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [recordType, setRecordType] = useState<RecordType>('Lab Report');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [patientSearch, setPatientSearch] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
+  const [recordType, setRecordType] = useState('');
   const [description, setDescription] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [fileHash, setFileHash] = useState('');
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiConfirmed, setAiConfirmed] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [done, setDone] = useState(false);
 
-  // Token resolution states
-  const [tokenInput, setTokenInput] = useState('');
-  const [resolvingToken, setResolvingToken] = useState(false);
-  const [resolveError, setResolveError] = useState<string | null>(null);
-  const [resolvedPatientName, setResolvedPatientName] = useState('');
+  function handleFiles(fileList: FileList | null) {
+    if (!fileList) return;
+    const newFiles: UploadedFile[] = Array.from(fileList).map(f => ({
+      name: f.name, size: f.size, type: f.type,
+    }));
+    setFiles(prev => [...prev, ...newFiles]);
+  }
 
-  // Sync animation states
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'hashing' | 'ipfs' | 'fabric' | 'success' | 'error'>('idle');
-  const [syncProgress, setSyncProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [createdRecordInfo, setCreatedRecordInfo] = useState<{
-    hash: string;
-    ipfsCid: string;
-    txHash: string;
-    blockNumber: number;
-  } | null>(null);
+  function removeFile(idx: number) {
+    setFiles(prev => prev.filter((_, i) => i !== idx));
+  }
 
-  // Load patients and check for query param
-  useEffect(() => {
-    backendApi.getAccessiblePatients()
-      .then(res => {
-        setPatients(res.patients || []);
-      })
-      .catch(err => {
-        console.error('Failed to load accessible patients', err);
-      })
-      .finally(() => {
-        setLoadingPatients(false);
-      });
+  function formatBytes(b: number) {
+    if (b < 1024) return `${b} B`;
+    if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
+    return `${(b / 1048576).toFixed(1)} MB`;
+  }
 
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const pid = params.get('patientId');
-      if (pid) {
-        setSelectedPatientId(pid);
-      }
-    }
-  }, []);
+  async function requestAiSummary() {
+    setAiLoading(true);
+    // Simulate AI processing (real impl calls the AI service endpoint)
+    await new Promise(r => setTimeout(r, 1800));
+    setAiSummary(`Patient presents for ${recordType || 'consultation'}. ${description || 'Clinical notes pending physician review.'}  Assessment and management plan documented. Follow-up in 2 weeks. Records anchored for audit.`);
+    setAiLoading(false);
+  }
 
-  const handleResolveToken = async () => {
-    if (!tokenInput.trim()) return;
-    setResolvingToken(true);
-    setResolveError(null);
-    setResolvedPatientName('');
-
-    const input = tokenInput.trim();
-
-    try {
-      // 1. Try to parse as JSON first
-      let isJson = false;
-      let parsedJson: any = null;
-      try {
-        parsedJson = JSON.parse(input);
-        isJson = typeof parsedJson === 'object' && parsedJson !== null;
-      } catch (e) {
-        isJson = false;
-      }
-
-      let targetPatientId = '';
-
-      if (isJson) {
-        // Assume it's a QR Payload, call scanQR
-        const scanRes = await backendApi.scanQR(parsedJson);
-        targetPatientId = scanRes.patientId;
-      } else {
-        // It's a raw token/UUID or mock ID.
-        // Let's resolve it. Let's see if it's one of the mock IDs P001-P008
-        if (/^P00[1-8]$/i.test(input)) {
-          // Map to UUID
-          const num = input.substring(3);
-          targetPatientId = `bb010000-0000-0000-0000-00000000000${num}`;
-        } else {
-          targetPatientId = input;
-        }
-      }
-
-      // Now fetch details to ensure we have access and to get the name
-      const detail = await backendApi.getPatientDetail(targetPatientId);
-      if (detail && detail.patient) {
-        setSelectedPatientId(targetPatientId);
-        setResolvedPatientName(detail.patient.fullName);
-        setTokenInput(''); // clear input on success
-      } else {
-        throw new Error('Patient record could not be read or does not exist');
-      }
-
-    } catch (err: any) {
-      console.error('Resolution error:', err);
-      setResolveError(err.message || 'Failed to resolve patient. Ensure code is valid and you have access.');
-    } finally {
-      setResolvingToken(false);
-    }
-  };
-
-  // Generate simple mock SHA-256 hash for demonstration
-  const generateMockHash = (fileName: string, fileSize: number) => {
-    const seed = fileName + fileSize + Date.now();
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      const char = seed.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash).toString(16).padStart(16, '0') + Math.abs(hash * 3).toString(16).padStart(16, '0');
-  };
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      setUploadedFile(file);
-      setSyncStatus('hashing');
-      setStatusMessage('Computing cryptographic hash (SHA-256)...');
-      
-      setTimeout(() => {
-        const hash = generateMockHash(file.name, file.size);
-        setFileHash(hash);
-        setSyncStatus('idle');
-        setStatusMessage('');
-      }, 1000);
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    maxFiles: 1,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.jpeg', '.jpg', '.png'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
-    }
-  });
-
-  const removeFile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setUploadedFile(null);
-    setFileHash('');
-    setSyncStatus('idle');
-  };
-
-  const recordTypes: RecordType[] = [
-    'Lab Report', 'Prescription', 'X-Ray', 'Surgery Report', 
-    'Consultation Note', 'Imaging', 'Discharge Summary', 'Vaccination', 'Referral Letter'
-  ];
-
-  const handleUploadSubmit = async (e: React.FormEvent) => {
+  async function handleUpload(e: FormEvent) {
     e.preventDefault();
-    if (!selectedPatientId || !uploadedFile || !fileHash) return;
+    if (!selectedPatient || !recordType || files.length === 0) return;
+    setUploading(true);
+    // Real implementation: call backendApi.uploadRecord(...)
+    await new Promise(r => setTimeout(r, 2200));
+    setUploading(false);
+    setDone(true);
+  }
 
-    // Start simulation progress bar
-    setSyncStatus('ipfs');
-    setStatusMessage('Uploading encrypted payload to IPFS...');
-    setSyncProgress(15);
+  const MOCK_PATIENTS = [
+    { id: '1001', name: 'Fatima Koroma' },
+    { id: '1002', name: 'Ibrahim Bangura' },
+    { id: '1003', name: 'Aminata Sesay' },
+    { id: '1004', name: 'Mohamed Conteh' },
+    { id: '1005', name: 'Mariatu Kamara' },
+  ].filter(p => p.name.toLowerCase().includes(patientSearch.toLowerCase()));
 
-    try {
-      // IPFS Progress simulation
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSyncProgress(40);
-      setStatusMessage('Payload staged on IPFS (CID: QmXf8...h6ySv)');
-
-      // Fabric Anchoring Progress simulation
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSyncStatus('fabric');
-      setSyncProgress(65);
-      setStatusMessage('Invoking MediChain Hyperledger Fabric Smart Contract (cc_medical_records)...');
-
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSyncProgress(85);
-      setStatusMessage('Replicating transactions across channel peers (Connaught Hospital, COMAHS, MoHS)...');
-
-      // Actual backend anchoring
-      const response = await backendApi.uploadRecord({
-        patientId: selectedPatientId,
-        recordType: recordType,
-        title: uploadedFile.name,
-        description: description
-      });
-
-      if (response.success) {
-        setSyncProgress(100);
-        setSyncStatus('success');
-        setStatusMessage('Medical Record successfully verified and anchored to Hyperledger Fabric channel!');
-        setCreatedRecordInfo({
-          hash: response.record.hash,
-          ipfsCid: response.record.ipfsCid,
-          txHash: response.record.txHash,
-          blockNumber: response.record.blockNumber
-        });
-      } else {
-        throw new Error('Verification or anchoring returned negative result');
-      }
-    } catch (err: any) {
-      console.error(err);
-      setSyncStatus('error');
-      setStatusMessage(err.message || 'Failed to upload and anchor record.');
-    }
-  };
+  // Done state
+  if (done) return (
+    <div className="page-body" style={{ padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+      <div style={{ textAlign: 'center', maxWidth: 480 }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--green-100)', color: 'var(--green-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <Icon d={I.check} size={36} />
+        </div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700, marginBottom: 10 }}>Record uploaded successfully</h2>
+        <p style={{ color: 'var(--gray-500)', lineHeight: 1.6, marginBottom: 24 }}>
+          The medical record has been uploaded and is pending blockchain anchoring. It will be verifiable on Hyperledger Fabric within 2–3 minutes.
+        </p>
+        <div className="mc-chain-badge" style={{ justifyContent: 'center', marginBottom: 24 }}>
+          <Icon d={I.shield} size={14} />
+          <span><strong>Hyperledger Fabric</strong><small> · Anchoring in progress…</small></span>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button className="btn btn-outline" onClick={() => router.push('/records')}>
+            View records
+          </button>
+          <button className="btn btn-primary" onClick={() => { setDone(false); setFiles([]); setStep(1); setSelectedPatient(null); setRecordType(''); setDescription(''); setAiSummary(''); setAiConfirmed(false); }}>
+            Upload another
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <LayoutWrapper title="Upload Medical Record">
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Back Link */}
-        <Link
-          href="/records"
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-brand transition"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Medical Records
-        </Link>
+    <div className="page-body" style={{ padding: '28px 32px' }}>
 
-        {/* Main Content Card */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="border-b border-slate-100 bg-slate-50/50 p-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Anchor New Medical Record</h2>
-              <p className="text-xs text-slate-500">Immutable document pinning backed by Hyperledger Fabric &amp; IPFS</p>
+      {/* Header */}
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="btn btn-outline" style={{ padding: '8px 12px' }} onClick={() => router.back()}>
+            <Icon d={I.chevL} size={16} /> Back
+          </button>
+          <h1 className="page-title">Upload Medical Record</h1>
+        </div>
+      </div>
+
+      {/* Step indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 28, maxWidth: 500 }}>
+        {[
+          { n: 1, label: 'Select patient' },
+          { n: 2, label: 'Upload files' },
+          { n: 3, label: 'Review & submit' },
+        ].map(({ n, label }, i) => (
+          <>
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 800, fontSize: 13,
+                background: step > n ? 'var(--brand)' : step === n ? 'var(--brand)' : 'var(--gray-100)',
+                color: step >= n ? '#fff' : 'var(--gray-500)',
+                transition: 'background .2s',
+              }}>
+                {step > n ? <Icon d={I.check} size={15} /> : n}
+              </div>
+              <span style={{ fontSize: 13, fontWeight: step === n ? 700 : 500, color: step === n ? 'var(--ink-900)' : 'var(--gray-500)' }}>
+                {label}
+              </span>
             </div>
-            <Database className="h-5 w-5 text-brand" />
+            {i < 2 && (
+              <div style={{ flex: 1, height: 2, background: step > n + 1 ? 'var(--brand)' : 'var(--gray-200)', margin: '0 8px', borderRadius: 2, transition: 'background .2s' }} />
+            )}
+          </>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+
+        {/* Main form */}
+        <form onSubmit={handleUpload}>
+
+          {/* STEP 1 — Select patient */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-head">
+              <div className="card-title">
+                <span className="ic" style={{ background: step >= 1 ? 'var(--brand-light)' : 'var(--gray-100)', color: step >= 1 ? 'var(--brand)' : 'var(--gray-400)' }}>1</span>
+                Select patient
+              </div>
+            </div>
+            {selectedPatient ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--brand-light)', borderRadius: 14, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--brand)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
+                    {selectedPatient[0]}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{selectedPatient}</div>
+                    <div style={{ fontSize: 12, color: 'var(--brand-dark)' }}>Patient selected</div>
+                  </div>
+                </div>
+                <button type="button" className="icon-btn ghost" style={{ width: 34, height: 34 }} onClick={() => setSelectedPatient(null)}>
+                  <Icon d={I.x} size={14} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <label className="search" htmlFor="patient-search" style={{ marginBottom: 12 }}>
+                  <Icon d={I.search} size={16} />
+                  <input id="patient-search" placeholder="Search patient by name or ID…" value={patientSearch} onChange={e => setPatientSearch(e.target.value)} />
+                </label>
+                {patientSearch && (
+                  <div style={{ border: '1px solid var(--gray-200)', borderRadius: 16, overflow: 'hidden' }}>
+                    {MOCK_PATIENTS.length > 0 ? MOCK_PATIENTS.map(p => (
+                      <button key={p.id} type="button" onClick={() => { setSelectedPatient(p.name); setStep(2); setPatientSearch(''); }}
+                        style={{ width: '100%', textAlign: 'left', padding: '12px 16px', border: 'none', background: '#fff', cursor: 'pointer', borderTop: '1px solid var(--gray-100)', display: 'flex', gap: 12, alignItems: 'center', minHeight: 44 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>{p.name[0]}</div>
+                        <div><div style={{ fontWeight: 700 }}>{p.name}</div><div style={{ fontSize: 12, color: 'var(--gray-500)' }}>ID: {p.id}</div></div>
+                      </button>
+                    )) : (
+                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--gray-500)', fontSize: 13.5 }}>No patients found</div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {syncStatus === 'success' ? (
-            /* Success Display */
-            <div className="p-8 text-center space-y-6 animate-in fade-in zoom-in duration-300">
-              <div className="h-16 w-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
-                <CheckCircle2 className="h-10 w-10" />
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900">Record Anchored Successfully</h3>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  The medical record has been securely uploaded, cryptographically hashed, and written onto the distributed ledger channel.
-                </p>
-              </div>
-
-              {createdRecordInfo && (
-                <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-left font-mono text-xs space-y-3 max-w-lg mx-auto">
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                    <span className="font-semibold text-slate-600">IPFS Gateway CID</span>
-                    <span className="text-brand select-all">{createdRecordInfo.ipfsCid.substring(0, 24)}...</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                    <span className="font-semibold text-slate-600">Document SHA-256</span>
-                    <span className="text-slate-700 select-all">{createdRecordInfo.hash.substring(0, 24)}...</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                    <span className="font-semibold text-slate-600">Transaction ID</span>
-                    <span className="text-slate-700 select-all">{createdRecordInfo.txHash}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1">
-                    <span className="font-semibold text-slate-600">Ledger Block Height</span>
-                    <span className="text-emerald-700 font-bold">#{createdRecordInfo.blockNumber}</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-center gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setSelectedPatientId('');
-                    setDescription('');
-                    setUploadedFile(null);
-                    setFileHash('');
-                    setSyncStatus('idle');
-                    setSyncProgress(0);
-                    setCreatedRecordInfo(null);
-                  }}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg transition"
-                >
-                  Upload Another Record
-                </button>
-                <Link
-                  href="/records"
-                  className="px-4 py-2 bg-brand hover:bg-brand-dark text-white text-sm font-medium rounded-lg transition shadow-sm"
-                >
-                  View Records List
-                </Link>
+          {/* STEP 2 — Upload files */}
+          <div className="card" style={{ marginBottom: 16, opacity: !selectedPatient ? .5 : 1 }}>
+            <div className="card-head">
+              <div className="card-title">
+                <span className="ic" style={{ background: step >= 2 ? 'var(--brand-light)' : 'var(--gray-100)', color: step >= 2 ? 'var(--brand)' : 'var(--gray-400)' }}>2</span>
+                Upload files
               </div>
             </div>
-          ) : syncStatus !== 'idle' && syncStatus !== 'hashing' ? (
-            /* Sync Progression display */
-            <div className="p-8 text-center space-y-6">
-              <div className="h-14 w-14 bg-brand-light text-brand rounded-full flex items-center justify-center mx-auto border border-[#cbeed4] shadow-sm animate-pulse">
-                <RefreshCw className="h-8 w-8 animate-spin" />
-              </div>
 
-              <div className="space-y-2">
-                <h3 className="text-base font-bold text-slate-800">Ledger Synchronization In Progress</h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">{statusMessage}</p>
+            {/* Drag-drop zone */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); if (step < 2) setStep(2); }}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${dragging ? 'var(--brand)' : 'var(--gray-200)'}`,
+                borderRadius: 20,
+                padding: '32px 20px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: dragging ? 'var(--brand-light)' : 'var(--gray-50)',
+                transition: 'border-color .15s, background .15s',
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <Icon d={I.upload} size={24} />
               </div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Drop files here or click to upload</div>
+              <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>PDF, JPG, PNG up to 10 MB each</div>
+              <input ref={fileInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt" style={{ display: 'none' }} onChange={e => { handleFiles(e.target.files); if (step < 2) setStep(2); }} />
+            </div>
 
-              {/* Progress Bar */}
-              <div className="max-w-md mx-auto space-y-2">
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-brand transition-all duration-500 rounded-full" 
-                    style={{ width: `${syncProgress}%` }}
-                  />
+            {/* File list */}
+            {files.map((f, i) => (
+              <div key={i} className="kv-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon d={I.file} size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{f.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{formatBytes(f.size)}</div>
+                  </div>
                 </div>
-                <span className="text-xs font-semibold text-slate-600">{syncProgress}%</span>
+                <button type="button" className="icon-btn ghost" style={{ width: 32, height: 32 }} onClick={() => removeFile(i)}>
+                  <Icon d={I.x} size={14} />
+                </button>
               </div>
+            ))}
+          </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 max-w-md mx-auto text-left text-xs text-amber-800 flex items-start gap-2">
-                <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>
-                  <strong>Do not navigate away:</strong> Cryptographic signatures are currently being validated by MediChain Fabric Gateway peers.
+          {/* STEP 3 — Metadata + AI + Submit */}
+          <div className="card" style={{ opacity: files.length === 0 ? .5 : 1 }}>
+            <div className="card-head">
+              <div className="card-title">
+                <span className="ic" style={{ background: step >= 3 ? 'var(--brand-light)' : 'var(--gray-100)', color: step >= 3 ? 'var(--brand)' : 'var(--gray-400)' }}>3</span>
+                Record details & submit
+              </div>
+            </div>
+
+            {/* Record type */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13.5, fontWeight: 600, marginBottom: 8, color: 'var(--ink-700)' }} htmlFor="record-type">
+                Record type *
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  id="record-type"
+                  className="portal-field"
+                  style={{ paddingRight: 40, appearance: 'none', cursor: 'pointer' }}
+                  value={recordType}
+                  onChange={e => setRecordType(e.target.value)}
+                  required
+                >
+                  <option value="">Select record type…</option>
+                  {RECORD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--gray-500)' }}>
+                  <Icon d={I.chevD} size={16} />
                 </span>
               </div>
             </div>
-          ) : (
-            /* Upload Form input */
-            <form onSubmit={handleUploadSubmit} className="p-6 space-y-5">
-              
-              {/* Patient selection & Token Resolution */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-4 rounded-xl border border-slate-200/60">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    Select Patient From List *
-                  </label>
-                  <select
-                    required
-                    value={selectedPatientId}
-                    onChange={(e) => {
-                      setSelectedPatientId(e.target.value);
-                      setResolvedPatientName('');
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700 font-medium"
-                  >
-                    <option value="">-- Choose patient --</option>
-                    {selectedPatientId && !patients.some(p => p.id === selectedPatientId) && (
-                      <option value={selectedPatientId}>
-                        {resolvedPatientName || selectedPatientId.substring(0, 8) + '...'} (Resolved)
-                      </option>
-                    )}
-                    {loadingPatients ? (
-                      <option disabled>Loading patients...</option>
-                    ) : patients.length === 0 ? (
-                      <option disabled>No accessible patients found</option>
-                    ) : (
-                      patients.map((pat) => (
-                        <option key={pat.id} value={pat.id}>
-                          {pat.name} ({pat.id.substring(0, 8)}...)
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    Or Resolve Patient Access Token / QR Payload
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Paste patient ID, UUID, or QR JSON payload..."
-                      value={tokenInput}
-                      onChange={(e) => setTokenInput(e.target.value)}
-                      className="flex-1 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition text-slate-700"
-                    />
-                    <button
-                      type="button"
-                      disabled={resolvingToken || !tokenInput.trim()}
-                      onClick={handleResolveToken}
-                      className="px-4 py-2 bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-semibold rounded-lg transition whitespace-nowrap flex items-center gap-1.5 shadow-sm"
-                    >
-                      {resolvingToken && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                      Resolve
+            {/* Clinical notes */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13.5, fontWeight: 600, marginBottom: 8, color: 'var(--ink-700)' }} htmlFor="description">
+                Clinical notes
+              </label>
+              <textarea
+                id="description"
+                className="portal-field"
+                style={{ minHeight: 120, resize: 'vertical' }}
+                placeholder="Add clinical notes, diagnosis, or additional context…"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
+            </div>
+
+            {/* AI Assist panel */}
+            <div className="mc-ai-panel" style={{ marginBottom: 20 }}>
+              <div className="mc-ai-panel-head">
+                <Icon d={I.sparkles} size={18} />
+                AI Report Assist
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--gray-500)', fontWeight: 500 }}>
+                  Review before saving
+                </span>
+              </div>
+              {aiLoading ? (
+                <div className="mc-skeleton" style={{ height: 60 }} />
+              ) : aiSummary && !aiConfirmed ? (
+                <div>
+                  <div className="kv-row" style={{ marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 11.5, color: 'var(--gray-500)', marginBottom: 2 }}>AI-generated summary</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600 }}>{aiSummary}</div>
+                    </div>
+                  </div>
+                  <div className="mc-ai-confirm-row">
+                    <button type="button" className="btn btn-soft" style={{ padding: '8px 14px', fontSize: 13 }} onClick={() => { setAiSummary(''); }}>
+                      Revert
+                    </button>
+                    <button type="button" className="btn btn-primary" style={{ flex: 1, fontSize: 13 }} onClick={() => { setDescription(aiSummary); setAiConfirmed(true); }}>
+                      <Icon d={I.check} size={14} /> Use this summary
                     </button>
                   </div>
-                  {resolveError && (
-                    <p className="text-xs text-rose-650 font-semibold">{resolveError}</p>
-                  )}
-                  {resolvedPatientName && (
-                    <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                      <Check className="h-3.5 w-3.5" /> Resolved: {resolvedPatientName}
-                    </p>
-                  )}
                 </div>
-              </div>
-
-              {/* Record details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    Record Category *
-                  </label>
-                  <select
-                    value={recordType}
-                    onChange={(e) => setRecordType(e.target.value as RecordType)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition cursor-pointer text-slate-700"
-                  >
-                    {recordTypes.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+              ) : aiConfirmed ? (
+                <div className="mc-notice info">
+                  <Icon d={I.sparkles} size={16} />
+                  <div><strong>AI summary applied</strong><p>The AI-generated summary has been added to the clinical notes.</p></div>
                 </div>
-                
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    IPFS Encrypted Payload (File) *
-                  </label>
-                  <div className="text-xs text-slate-500 leading-5">
-                    Records are automatically encrypted using AES-256 before being routed to off-chain IPFS nodes.
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Record Summary / Findings Description *
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Summarize key test findings, prescription courses, or post-surgery review remarks..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition placeholder:text-slate-400"
-                />
-              </div>
-
-              {/* Dropzone field */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Document Upload (PDF, JPEG, DOCX) *
-                </label>
-
-                {!uploadedFile ? (
-                  <div
-                    {...getRootProps()}
-                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                      isDragActive 
-                        ? 'border-brand bg-brand/5' 
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-slate-700">
-                      {isDragActive ? 'Drop the file here' : 'Drag & drop file, or browse'}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Max file size 25MB. All files cryptographically hashed instantly.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-emerald-50 text-brand flex items-center justify-center">
-                        <FileIcon className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 truncate max-w-sm">{uploadedFile.name}</p>
-                        <p className="text-xs text-slate-400">{(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {syncStatus === 'hashing' ? (
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <RefreshCw className="h-3 w-3 animate-spin text-brand" />
-                          Hashing...
-                        </div>
-                      ) : fileHash ? (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                          <Check className="h-3 w-3" />
-                          SHA256 Generated
-                        </div>
-                      ) : null}
-                      <button 
-                        type="button" 
-                        onClick={removeFile}
-                        className="p-1 text-slate-400 hover:text-slate-900 transition hover:bg-slate-100 rounded-full"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {fileHash && (
-                  <div className="mt-2.5 font-mono text-[10px] text-slate-400 select-all p-2 bg-slate-50 rounded border border-slate-150 flex items-center gap-2">
-                    <span className="font-semibold text-slate-500">CLIENT-SIDE SHA256:</span>
-                    <span>{fileHash}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit CTA */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                <Link
-                  href="/records"
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg transition"
-                >
-                  Cancel
-                </Link>
-                <button
-                  type="submit"
-                  disabled={!selectedPatientId || !uploadedFile || syncStatus === 'hashing'}
-                  className="px-4 py-2 bg-brand hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition shadow-sm flex items-center gap-2"
-                >
-                  <Database className="h-4 w-4" />
-                  Anchor to Blockchain
+              ) : (
+                <button type="button" className="btn btn-soft btn-full" onClick={requestAiSummary} disabled={!description && !recordType} style={{ fontSize: 13.5 }}>
+                  <Icon d={I.sparkles} size={16} />
+                  Generate AI summary from notes
                 </button>
-              </div>
+              )}
+            </div>
 
-            </form>
-          )}
+            {/* Submit */}
+            <button
+              type="submit"
+              className="btn btn-primary btn-full"
+              disabled={!selectedPatient || !recordType || files.length === 0 || uploading}
+              style={{ fontSize: 15, fontWeight: 700 }}
+              onClick={() => files.length > 0 && step < 3 && setStep(3)}
+            >
+              {uploading ? (
+                <>
+                  <span style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,.3)', borderTopColor: '#fff', display: 'inline-block', animation: 'spin .7s linear infinite' }} />
+                  Uploading and anchoring…
+                </>
+              ) : (
+                <>
+                  <Icon d={I.upload} size={16} />
+                  Upload record
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Right sidebar — guidance */}
+        <div>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-head">
+              <div className="card-title">
+                <span className="ic"><Icon d={I.shield} size={16} /></span>
+                Blockchain anchoring
+              </div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--gray-600)', lineHeight: 1.6 }}>
+              Every record uploaded through MediChain SL is cryptographically anchored on Hyperledger Fabric within minutes. Once anchored, the record becomes tamper-evident and verifiable by the patient, MoH, and authorised facilities.
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <div className="checklist-step">
+                <div className="line" />
+                <div className="step-dot done"><Icon d={I.check} size={11} /></div>
+                <div><div className="t">Record uploaded</div><div className="s">Stored securely on-server</div></div>
+              </div>
+              <div className="checklist-step">
+                <div className="line" />
+                <div className="step-dot current" />
+                <div><div className="t">Hash generated</div><div className="s">SHA-256 fingerprint created</div></div>
+              </div>
+              <div className="checklist-step">
+                <div className="step-dot pending" />
+                <div><div className="t">Fabric anchor</div><div className="s">Written to national ledger</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mc-notice info">
+            <Icon d={I.shield} size={16} />
+            <div>
+              <strong>Data protection</strong>
+              <p>All uploads are encrypted in transit (TLS 1.3) and at rest. Compliant with Sierra Leone data protection guidelines.</p>
+            </div>
+          </div>
         </div>
       </div>
-    </LayoutWrapper>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   );
 }

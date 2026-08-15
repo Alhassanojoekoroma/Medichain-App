@@ -1,5 +1,7 @@
 # 🎉 MediChain - COMPLETION REPORT
 
+> **Historical prototype document — not release evidence.** Phase 0 issued a FAIL/STOP SHIP decision and Phase 1 containment disables unsafe legacy, demo, AI, emergency and clinical paths. Do not use credentials or deployment instructions in this file. The controlling status is `docs/audit/07_Release_Decision.md`.
+
 **Project Status:** ✅ **100% COMPLETE**  
 **Blockchain Engineer Ready:** ✅ **YES**  
 **Date:** May 31, 2026

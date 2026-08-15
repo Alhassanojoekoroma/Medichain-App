@@ -1,20 +1,60 @@
 import { Router, Response } from 'express';
 import { body, validationResult } from 'express-validator';
+import { syntheticSandboxOnly } from '../middleware/containment.middleware';
 import { db } from '../config/db';
 import { requireDoctor, requirePatient, AuthRequest } from '../middleware/auth.middleware';
 import { FabricGateway } from '../services/FabricGateway';
 import { QRService } from '../services/QRService';
+import VerificationService, { VerificationStage } from '../services/VerificationService';
 import { logger } from '../utils/logger';
 
 const router = Router();
 
 /**
+ * GET /api/patients/me
+ * Returns the authenticated patient's own demographic profile.
+ */
+router.get('/me', requirePatient, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const result = await db.query(
+      `SELECT id, full_name, date_of_birth, blood_type, phone, email
+         FROM patients
+        WHERE id = $1`,
+      [req.patientId]
+    );
+    const patient = result.rows[0];
+    if (!patient) {
+      res.status(404).json({ error: 'Patient profile not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      patient: {
+        id: patient.id,
+        fullName: patient.full_name,
+        dateOfBirth: patient.date_of_birth,
+        bloodType: patient.blood_type,
+        phone: patient.phone,
+        email: patient.email,
+      },
+    });
+  } catch (err: any) {
+    logger.error(`[PatientsRoutes] Failed to fetch patient profile: ${err.message}`);
+    res.status(500).json({ error: 'Failed to fetch your profile' });
+  }
+});
+
+/**
  * POST /api/patients
- * Create a new patient record (Doctors/Admins only)
+ * Create a new patient record (Doctors, Nurses, and Admins only)
+ * Per Tech Health Africa meeting (June 2026): Nurses are responsible for patient registration
  */
 router.post(
   '/',
   requireDoctor,
+  syntheticSandboxOnly('Patient enrollment with automatic broad consent'),
   [
     body('fullName').notEmpty().withMessage('Full name is required'),
     body('dateOfBirth').notEmpty().isDate().withMessage('Valid Date of Birth is required'),
@@ -23,9 +63,10 @@ router.post(
     body('email').optional().isEmail().withMessage('Valid email is required'),
   ],
   async (req: AuthRequest, res: Response): Promise<void> => {
-    // Role Check
-    if (req.doctor?.role !== 'doctor' && req.doctor?.role !== 'admin') {
-      res.status(403).json({ error: 'Forbidden: Nurses and other staff cannot register new patients' });
+    // Role Check - Updated per Tech Health Africa meeting: Nurses can register patients
+    const allowedRoles = ['doctor', 'nurse', 'admin'];
+    if (!req.doctor || !allowedRoles.includes(req.doctor.role)) {
+      res.status(403).json({ error: 'Forbidden: Only doctors, nurses, and admins can register new patients' });
       return;
     }
 
@@ -40,6 +81,36 @@ router.post(
     const clinicId = req.doctor!.clinicId;
 
     try {
+      // Step-by-step verification per Tech Health Africa meeting requirements
+      const verificationContext = {
+        actorId: doctorId,
+        actorRole: req.doctor!.role,
+        facilityId: clinicId,
+      };
+
+      const verificationResults = await VerificationService.runVerificationPipeline(
+        verificationContext,
+        [VerificationStage.IDENTITY, VerificationStage.FACILITY]
+      );
+
+      // Log verification results to audit trail
+      await VerificationService.logVerificationResults(verificationContext, verificationResults);
+
+      // Check if critical verifications failed
+      const identityCheck = verificationResults.find((r: any) => r.stage === VerificationStage.IDENTITY);
+      if (identityCheck?.status === 'FAILED') {
+        logger.warn(`[PatientsRoutes] Identity verification failed for ${doctorId}`);
+        res.status(403).json({ error: 'Identity verification failed', details: identityCheck.error });
+        return;
+      }
+
+      const facilityCheck = verificationResults.find((r: any) => r.stage === VerificationStage.FACILITY);
+      if (facilityCheck?.status === 'FAILED') {
+        logger.warn(`[PatientsRoutes] Facility verification failed for ${doctorId} at ${clinicId}`);
+        res.status(403).json({ error: 'Facility verification failed', details: facilityCheck.error });
+        return;
+      }
+
       // 1. Insert patient
       const patientResult = await db.query(
         `INSERT INTO patients (full_name, date_of_birth, blood_type, phone, email)

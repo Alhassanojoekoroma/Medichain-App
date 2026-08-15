@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import {
   TextInput as RNTextInput,
   View,
+  Text,
   StyleSheet,
   TextInputProps as RNTextInputProps,
   ViewStyle,
@@ -42,7 +43,7 @@ export const TextInput = React.forwardRef<RNTextInput, TextInputProps>(
 
     return (
       <View style={containerStyle}>
-        {label && <View style={styles.label} />}
+        {label ? <Text style={styles.label}>{label}</Text> : null}
         <RNTextInput
           ref={ref}
           style={[
@@ -56,7 +57,7 @@ export const TextInput = React.forwardRef<RNTextInput, TextInputProps>(
           onBlur={handleBlur}
           {...props}
         />
-        {error && <View style={styles.error} />}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
     );
   }

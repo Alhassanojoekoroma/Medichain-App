@@ -1,0 +1,120 @@
+name: PalmChain Phase 1-10 security, UX and build gates
+
+on:
+  pull_request:
+  push:
+    branches: [main, "codex/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  core-containment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            backend/api/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install primary API dependencies
+        run: npm ci --ignore-scripts
+        working-directory: backend
+
+      - name: Install legacy tombstone dependencies
+        run: npm ci --ignore-scripts
+        working-directory: backend/api
+
+      - name: Mobile type and secret/containment checks
+        run: npm run check
+
+      - name: Shared domain model typecheck
+        run: npm run typecheck
+        working-directory: packages/domain-model
+
+      - name: Central policy engine negative-authorization suite
+        run: npm test
+        working-directory: packages/policy-engine
+
+      - name: Identity boundary and patient OTP tests
+        run: npm test
+        working-directory: services/auth
+
+      - name: Medical file lifecycle and activation-gate tests
+        run: npm test
+        working-directory: services/file-pipeline
+
+      - name: Transactional outbox dispatch tests
+        run: npm test
+        working-directory: packages/outbox
+
+      - name: Report pilot release gate without overriding STOP SHIP
+        run: node scripts/phase10-release-gate.mjs --report
+
+      - name: Primary API type and unit checks
+        run: npm run check
+        working-directory: backend
+        env:
+          APP_ENVIRONMENT: test
+          DATA_CLASSIFICATION: synthetic
+          JWT_SECRET: ci-only-jwt-secret-that-is-not-used-outside-tests
+          QR_TOKEN_SECRET: ci-only-qr-secret-that-is-not-used-outside-tests
+          FABRIC_MODE: disabled
+          AUDIT_PEPPER: ci-only-audit-pepper-that-is-not-used-outside-tests
+          FABRIC_ANCHOR_DIGEST_SECRET: ci-only-anchor-secret-that-is-not-used-outside-tests
+
+      - name: Legacy gateway decommission tests
+        run: npm test
+        working-directory: backend/api
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Compile governed Fabric anchor chaincode
+        run: go test ./...
+        working-directory: backend/chaincode/anchor
+
+      - name: Reject high or critical dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Reject backend dependency advisories
+        run: npm audit --omit=dev --audit-level=moderate
+        working-directory: backend
+
+      - name: Reject legacy gateway dependency advisories
+        run: npm audit --omit=dev --audit-level=moderate
+        working-directory: backend/api
+
+  web-portals:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        portal: [admin-web, doctor-web, government-web, nurse-web, staff-web, apps/clinical-portal]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.portal }}/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: ${{ matrix.portal }}
+      - run: npm run lint
+        working-directory: ${{ matrix.portal }}
+      - run: npm run build
+        working-directory: ${{ matrix.portal }}
+      - run: npm audit --omit=dev --audit-level=moderate
+        working-directory: ${{ matrix.portal }}

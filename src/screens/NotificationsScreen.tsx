@@ -1,341 +1,160 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  Image,
+  View, Text, FlatList, TouchableOpacity,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { Card, CardBody, Toast } from '../components';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '../theme';
 
-const NOTIFICATIONS = [
-  {
-    id: '1',
-    type: 'appointment',
-    title: 'Appointment Confirmed',
-    message: 'Your appointment with Dr. Sarah Wilson is confirmed for tomorrow at 10:30 AM',
-    timestamp: 'Today',
-    avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'medication',
-    title: 'Medication Reminder',
-    message: 'Take your daily medication: Aspirin 100mg',
-    timestamp: 'Yesterday',
-    icon: 'pill',
-    read: true,
-  },
-  {
-    id: '3',
-    type: 'access',
-    title: 'Data Access Request',
-    message: 'City Hospital is requesting access to your medical records',
-    timestamp: '2 days ago',
-    icon: 'shield-checkmark',
-    read: false,
-  },
-  {
-    id: '4',
-    type: 'general',
-    title: 'Health Tip',
-    message: 'Stay hydrated! Drink at least 8 glasses of water per day',
-    timestamp: '3 days ago',
-    icon: 'water',
-    read: true,
-  },
+type NotifType = 'record' | 'appointment' | 'access' | 'blockchain' | 'system';
+type FilterTab = 'All' | 'Records' | 'Access' | 'System';
+
+interface Notification {
+  id:       string;
+  type:     NotifType;
+  title:    string;
+  body:     string;
+  time:     string;
+  isRead:   boolean;
+  icon:     string;
+  iconBg:   string;
+  iconColor:string;
+}
+
+const MOCK_NOTIFS: Notification[] = [
+  { id: 'n1', type: 'record',      title: 'New record available',  body: 'Your Orthopedic Report from Connaught Hospital has been secured.', time: '09:14 AM', isRead: false, icon: 'document-text',  iconBg: Colors.primaryLight, iconColor: Colors.primary },
+  { id: 'n2', type: 'access',      title: 'Record accessed',       body: 'Dr. Niall Horan viewed your records via QR scan.', time: '09:05 AM', isRead: false, icon: 'eye',           iconBg: Colors.purpleLight,  iconColor: Colors.purple },
+  { id: 'n3', type: 'appointment', title: 'Appointment reminder',  body: 'You have an appointment with Dr. Fatima Conteh tomorrow at 10:00 AM.', time: 'Yesterday', isRead: true, icon: 'calendar', iconBg: Colors.greenLight, iconColor: Colors.green },
+  { id: 'n4', type: 'blockchain',  title: 'Blockchain confirmed',  body: '12 confirmations — your Lab Report is now immutably secured.', time: 'Yesterday', isRead: true, icon: 'shield-checkmark', iconBg: Colors.greenLight, iconColor: Colors.successDark },
+  { id: 'n5', type: 'system',      title: 'Security alert',        body: 'Emergency access was activated at Lumley Government Hospital.', time: 'Mon',      isRead: false, icon: 'warning', iconBg: Colors.orangeLight, iconColor: Colors.orange },
+  { id: 'n6', type: 'record',      title: 'AI extraction complete',body: 'MediChain AI has analysed your Blood Test report and found no flags.', time: 'Sun', isRead: true, icon: 'sparkles', iconBg: Colors.purpleLight, iconColor: Colors.purple },
 ];
+
+const FILTER_TABS: FilterTab[] = ['All', 'Records', 'Access', 'System'];
 
 export default function NotificationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const toastRef = useRef<any>(null);
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const [filter, setFilter]      = useState<FilterTab>('All');
+  const [notifs, setNotifs]      = useState(MOCK_NOTIFS);
 
-  const handleClearAll = () => {
-    setNotifications([]);
-    toastRef.current?.show({
-      message: 'All notifications cleared',
-      type: 'success',
-    });
-  };
+  const filtered = filter === 'All'    ? notifs
+    : filter === 'Records' ? notifs.filter((n) => n.type === 'record' || n.type === 'blockchain')
+    : filter === 'Access'  ? notifs.filter((n) => n.type === 'access')
+    : notifs.filter((n) => n.type === 'system' || n.type === 'appointment');
 
-  const handleOpenNotification = (notification: typeof NOTIFICATIONS[0]) => {
-    setNotifications((prev) =>
-      prev.map((item) =>
-        item.id === notification.id ? { ...item, read: true } : item
-      )
-    );
+  const unreadCount = notifs.filter((n) => !n.isRead).length;
 
-    if (notification.type === 'appointment') {
-      navigation.navigate('Appointments');
-      return;
-    }
-
-    if (notification.type === 'medication') {
-      navigation.navigate('Medications');
-      return;
-    }
-
-    if (notification.type === 'access') {
-      navigation.navigate('AccessRequests');
-      return;
-    }
-
-    toastRef.current?.show({
-      message: 'Notification opened',
-      type: 'info',
-    });
-  };
+  const markAllRead = () => setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const markRead    = (id: string) => setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={styles.screen}>
+      <StatusBar style="dark" />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ═══ HEADER ═══ */}
-        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.white} />
-          </TouchableOpacity>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
+          <Ionicons name="arrow-back" size={22} color={Colors.dark} />
+        </TouchableOpacity>
+        <View>
           <Text style={styles.headerTitle}>Notifications</Text>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleClearAll}
-          >
-            <MaterialCommunityIcons name="check-all" size={24} color={Colors.white} />
+          {unreadCount > 0 && <Text style={styles.unreadCount}>{unreadCount} unread</Text>}
+        </View>
+        {unreadCount > 0 ? (
+          <TouchableOpacity onPress={markAllRead} accessibilityRole="button" accessibilityLabel="Mark all as read">
+            <Text style={styles.markAll}>Mark all read</Text>
           </TouchableOpacity>
-        </View>
+        ) : <View style={{ width: 60 }} />}
+      </View>
 
-        {/* ═══ NOTIFICATIONS LIST ═══ */}
-        <View style={styles.section}>
-          {notifications.length === 0 ? (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons
-                name="bell-off-outline"
-                size={64}
-                color={Colors.neutral300}
-              />
-              <Text style={styles.emptyTitle}>No Notifications</Text>
-              <Text style={styles.emptySubtitle}>
-                You're all caught up! Check back later for updates
-              </Text>
+      {/* Filter tabs */}
+      <View style={styles.filterRow}>
+        {FILTER_TABS.map((t) => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.tab, filter === t && styles.tabActive]}
+            onPress={() => setFilter(t)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: filter === t }}
+          >
+            <Text style={[styles.tabText, filter === t && styles.tabTextActive]}>{t}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Notifications list */}
+      <FlatList
+        data={filtered}
+        keyExtractor={(n) => n.id}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Ionicons name="notifications-off-outline" size={40} color={Colors.textMuted} />
+            <Text style={styles.emptyText}>No notifications here</Text>
+          </View>
+        }
+        renderItem={({ item: notif }) => (
+          <TouchableOpacity
+            style={[styles.notifItem, !notif.isRead && styles.notifItemUnread]}
+            onPress={() => markRead(notif.id)}
+            accessibilityRole="button"
+            accessibilityLabel={notif.title}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.notifIcon, { backgroundColor: notif.iconBg }]}>
+              <Ionicons name={notif.icon as any} size={18} color={notif.iconColor} />
             </View>
-          ) : (
-            notifications.map((notification) => (
-              <Card
-                key={notification.id}
-                style={[styles.flatCard, !notification.read && styles.unreadCard]}
-                onPress={() => handleOpenNotification(notification)}
-              >
-                <CardBody>
-                  <View style={styles.notificationContent}>
-                    {/* Avatar or Icon */}
-                    {notification.avatar ? (
-                      <Image
-                        source={{ uri: notification.avatar }}
-                        style={styles.avatar}
-                      />
-                    ) : (
-                      <View style={[styles.iconBox, getIconColor(notification.type).bgColor]}>
-                        <MaterialCommunityIcons
-                          name={(notification.icon || 'bell') as any}
-                          size={24}
-                          color={getIconColor(notification.type).color}
-                        />
-                      </View>
-                    )}
-
-                    {/* Content */}
-                    <View style={styles.contentSection}>
-                      <View style={styles.titleRow}>
-                        <Text style={styles.notificationTitle}>
-                          {notification.title}
-                        </Text>
-                        {!notification.read && <View style={styles.unreadDot} />}
-                      </View>
-                      <Text style={styles.message} numberOfLines={2}>
-                        {notification.message}
-                      </Text>
-                      <Text style={styles.timestamp}>{notification.timestamp}</Text>
-                    </View>
-
-                    {/* Action */}
-                    {notification.type !== 'general' && (
-                      <View style={styles.notifActionButton}>
-                        <Ionicons name="arrow-forward" size={20} color={Colors.primary} />
-                      </View>
-                    )}
-                  </View>
-                </CardBody>
-              </Card>
-            ))
-          )}
-        </View>
-
-        <View style={{ height: Spacing.xxxl }} />
-      </ScrollView>
-
-      <Toast ref={toastRef} />
+            <View style={styles.notifBody}>
+              <View style={styles.notifTitleRow}>
+                <Text style={styles.notifTitle}>{notif.title}</Text>
+                <Text style={styles.notifTime}>{notif.time}</Text>
+              </View>
+              <Text style={styles.notifText} numberOfLines={2}>{notif.body}</Text>
+            </View>
+            {!notif.isRead && <View style={styles.unreadDot} />}
+          </TouchableOpacity>
+        )}
+      />
     </View>
   );
 }
 
-function getIconColor(type: string) {
-  switch (type) {
-    case 'appointment':
-      return { color: Colors.primary, bgColor: { backgroundColor: Colors.primaryLight } };
-    case 'medication':
-      return { color: Colors.success, bgColor: { backgroundColor: Colors.successLight } };
-    case 'access':
-      return { color: Colors.warning, bgColor: { backgroundColor: Colors.warningLight } };
-    default:
-      return { color: Colors.neutral600, bgColor: { backgroundColor: Colors.neutral100 } };
-  }
-}
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.lg,
-  },
+  screen: { flex: 1, backgroundColor: Colors.white },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
+    borderBottomWidth: 1, borderBottomColor: Colors.border, gap: Spacing.md },
+  headerTitle:  { fontSize: FontSize.h4, fontWeight: FontWeight.bold, color: Colors.dark },
+  unreadCount:  { fontSize: FontSize.caption, color: Colors.primary, marginTop: 1 },
+  markAll:      { fontSize: FontSize.bodySmall, color: Colors.primary, fontWeight: FontWeight.medium },
 
-  // ═══ HEADER ═══
-  header: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomLeftRadius: Radius.lg,
-    borderBottomRightRadius: Radius.lg,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: FontSize.h2,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    letterSpacing: -0.5,
-  },
-  actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  filterRow: { flexDirection: 'row', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+    gap: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  tab:       { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: Radius.pill, backgroundColor: Colors.bg },
+  tabActive: { backgroundColor: Colors.primary },
+  tabText:   { fontSize: FontSize.bodySmall, color: Colors.textMuted, fontWeight: FontWeight.medium },
+  tabTextActive:{ color: Colors.white },
 
-  // ═══ SECTIONS ═══
-  section: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-    marginTop: Spacing.md,
-  },
+  list:        { flex: 1 },
+  listContent: { paddingVertical: Spacing.sm },
+  separator:   { height: 1, backgroundColor: Colors.border },
 
-  // ═══ CARDS ═══
-  flatCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    marginBottom: Spacing.md,
-  },
-  unreadCard: {
-    backgroundColor: Colors.primary + '08',
-  },
+  notifItem:       { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md, gap: Spacing.md },
+  notifItemUnread: { backgroundColor: Colors.primaryLight + '44' },
+  notifIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center',
+    justifyContent: 'center', flexShrink: 0 },
+  notifBody: { flex: 1 },
+  notifTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.sm },
+  notifTitle: { flex: 1, fontSize: FontSize.bodySmall, fontWeight: FontWeight.bold, color: Colors.dark },
+  notifTime:  { fontSize: FontSize.label, color: Colors.textMuted, flexShrink: 0 },
+  notifText:  { fontSize: FontSize.caption, color: Colors.textMuted, marginTop: 3, lineHeight: 16 },
+  unreadDot:  { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, marginTop: 6, flexShrink: 0 },
 
-  // ═══ NOTIFICATION CONTENT ═══
-  notificationContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-  },
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: Radius.lg,
-  },
-  iconBox: {
-    width: 54,
-    height: 54,
-    borderRadius: Radius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentSection: {
-    flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  notificationTitle: {
-    fontSize: FontSize.body,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    flex: 1,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  message: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral600,
-    marginBottom: Spacing.sm,
-    lineHeight: 18,
-  },
-  timestamp: {
-    fontSize: FontSize.bodySmall,
-    color: Colors.neutral500,
-  },
-  notifActionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // ═══ EMPTY STATE ═══
-  emptyState: {
-    alignItems: 'center',
-    marginTop: Spacing.xxxl,
-  },
-  emptyTitle: {
-    fontSize: FontSize.h3,
-    fontWeight: FontWeight.bold,
-    color: Colors.neutral900,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: FontSize.body,
-    color: Colors.neutral600,
-    textAlign: 'center',
-  },
+  empty:     { alignItems: 'center', paddingVertical: 64, gap: Spacing.md },
+  emptyText: { fontSize: FontSize.body, color: Colors.textMuted },
 });
